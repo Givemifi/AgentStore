@@ -27,6 +27,7 @@ import BootstrapPage from './pages/BootstrapPage';
 
 // App pages (eager — core experience)
 import DashboardPage from './pages/app/DashboardPage';
+import ChatPage from './pages/app/ChatPage';
 import TeamPage from './pages/app/TeamPage';
 import SettingsPage from './pages/app/SettingsPage';
 import PlanPage from './pages/app/PlanPage';
@@ -56,6 +57,7 @@ const AdminPromotionsPage = lazy(() => import('./pages/admin/PromotionsPage'));
 const AdminAnnouncementsPage = lazy(() => import('./pages/admin/AnnouncementsPage'));
 const AdminRootMembersPage = lazy(() => import('./pages/admin/RootMembersPage'));
 const AdminPMPage = lazy(() => import('./pages/admin/PMPage'));
+const LLMConfigPage = lazy(() => import('./pages/admin/LLMConfigPage'));
 
 // Public pages
 import LandingPage from './pages/public/LandingPage';
@@ -84,6 +86,12 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+function LastAdminRedirect() {
+  const location = useLocation();
+  const nextPath = location.pathname.replace(/^\/last/, '/admin');
+  return <Navigate to={`${nextPath}${location.search}`} replace />;
 }
 
 function BootstrapGuard({ children }: { children: React.ReactNode }) {
@@ -153,19 +161,23 @@ export default function App() {
 
                       <Route element={<Layout />}>
                         <Route path="/dashboard" element={<DashboardPage />} />
+                        <Route path="/chat" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/chat/:agentId" element={<ChatPage />} />
                         <Route path="/team" element={<TeamPage />} />
                         <Route path="/plan" element={<PlanPage />} />
                         <Route path="/buy-credits" element={<BuyCreditsPage />} />
                         <Route path="/billing/success" element={<BillingSuccessPage />} />
                         <Route path="/billing/cancel" element={<BillingCancelPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/settings/agents" element={<SettingsPage />} />
+                        <Route path="/settings/models" element={<SettingsPage />} />
                         <Route path="/activity" element={<ActivityPage />} />
                         <Route path="/test-entitlements" element={<TestEntitlementsPage />} />
                         <Route path="/messages" element={<Suspense fallback={<LazyFallback />}><AdminMessagesPage /></Suspense>} />
                       </Route>
 
                       {/* Admin routes (root tenant only, enforced by AdminLayout) */}
-                      <Route path="/last" element={<AdminLayout />}>
+                      <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<Suspense fallback={<LazyFallback />}><AdminDashboardPage /></Suspense>} />
                         <Route path="messages" element={<Suspense fallback={<LazyFallback />}><AdminMessagesPage /></Suspense>} />
                         <Route path="users" element={<Suspense fallback={<LazyFallback />}><AdminUsersPage /></Suspense>} />
@@ -184,7 +196,9 @@ export default function App() {
                         <Route path="api" element={<Suspense fallback={<LazyFallback />}><AdminAPIPage /></Suspense>} />
                         <Route path="branding" element={<Suspense fallback={<LazyFallback />}><AdminBrandingPage /></Suspense>} />
                         <Route path="about" element={<Suspense fallback={<LazyFallback />}><AdminAboutPage /></Suspense>} />
+                        <Route path="llm-config" element={<Suspense fallback={<LazyFallback />}><LLMConfigPage /></Suspense>} />
                       </Route>
+                      <Route path="/last/*" element={<LastAdminRedirect />} />
                     </Route>
 
                     {/* Fallback */}

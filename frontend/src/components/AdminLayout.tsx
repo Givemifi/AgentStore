@@ -19,6 +19,7 @@ import {
   Megaphone,
   UserPlus,
   BarChart3,
+  Cpu,
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import { messagesApi } from '../api/client';
@@ -27,14 +28,18 @@ import { Navigate } from 'react-router-dom';
 
 export default function AdminLayout() {
   const location = useLocation();
-  const { isRootTenant } = useTenant();
+  const { isRootTenant, role } = useTenant();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (!isRootTenant) {
+      return;
+    }
+
     messagesApi.unreadCount()
       .then((data) => setUnreadCount(data.count))
       .catch(() => { /* non-critical: badge just won't show */ });
-  }, []);
+  }, [isRootTenant]);
 
   if (!isRootTenant) {
     return <Navigate to="/dashboard" replace />;
@@ -43,22 +48,23 @@ export default function AdminLayout() {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: '/last', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/last/messages', icon: Mail, label: 'Messages' },
-    { path: '/last/users', icon: Users, label: 'Users' },
-    { path: '/last/tenants', icon: Building2, label: 'Tenants' },
-    { path: '/last/members', icon: UserPlus, label: 'Root Members' },
-    { path: '/last/plans', icon: CreditCard, label: 'Plans' },
-    { path: '/last/financial', icon: DollarSign, label: 'Financial' },
-    { path: '/last/pm', icon: BarChart3, label: 'Product' },
-    { path: '/last/promotions', icon: Tag, label: 'Promotions' },
-    { path: '/last/announcements', icon: Megaphone, label: 'Announcements' },
-    { path: '/last/health', icon: Activity, label: 'System Health' },
-    { path: '/last/logs', icon: FileText, label: 'Logs' },
-    { path: '/last/config', icon: Settings, label: 'Configuration' },
-    { path: '/last/branding', icon: Paintbrush, label: 'Branding' },
-    { path: '/last/api', icon: Code2, label: 'API' },
-    { path: '/last/about', icon: Info, label: 'About' },
+    { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/admin/messages', icon: Mail, label: 'Messages' },
+    { path: '/admin/users', icon: Users, label: 'Users' },
+    { path: '/admin/tenants', icon: Building2, label: 'Tenants' },
+    { path: '/admin/members', icon: UserPlus, label: 'Root Members' },
+    { path: '/admin/plans', icon: CreditCard, label: 'Plans' },
+    { path: '/admin/financial', icon: DollarSign, label: 'Financial' },
+    { path: '/admin/pm', icon: BarChart3, label: 'Product' },
+    { path: '/admin/promotions', icon: Tag, label: 'Promotions' },
+    { path: '/admin/announcements', icon: Megaphone, label: 'Announcements' },
+    { path: '/admin/health', icon: Activity, label: 'System Health' },
+    { path: '/admin/logs', icon: FileText, label: 'Logs' },
+    { path: '/admin/config', icon: Settings, label: 'Configuration' },
+    { path: '/admin/branding', icon: Paintbrush, label: 'Branding' },
+    { path: '/admin/api', icon: Code2, label: 'API' },
+    ...(role === 'owner' ? [{ path: '/admin/llm-config', icon: Cpu, label: 'LLM Config' }] : []),
+    { path: '/admin/about', icon: Info, label: 'About' },
   ];
 
   return (

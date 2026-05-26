@@ -3,8 +3,8 @@ import type { BrandingConfig } from '../types';
 import { brandingApi } from '../api/client';
 
 const defaultBranding: BrandingConfig = {
-  appName: 'LastSaaS',
-  tagline: '',
+  appName: 'AgentStore',
+  tagline: 'Launch, sell, and monetize AI agents',
   logoMode: 'text',
   logoUrl: '',
   faviconUrl: '',

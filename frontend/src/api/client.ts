@@ -1,5 +1,6 @@
 import axios from 'axios';
-import type { AuthResponse, MFARequiredResponse, AuthProviders, ActiveSession, ActivityLogEntry, PasskeyCredential, ImpersonationResponse, TenantMember, TenantDetail, TenantListItem, UserListItem, Message, AboutInfo, SystemLog, ConfigVar, UserDetail, UserMembershipDetail, DeletePreflightResponse, Plan, EntitlementKeyInfo, PublicPlansResponse, CreditBundle, SystemNode, SystemMetric, FinancialTransaction, DailyMetricPoint, IntegrationCheck, APIKey, Webhook, WebhookDelivery, WebhookEventTypeInfo, BrandingConfig, MediaItem, CustomPage, Promotion, EligibleProduct, Announcement, UsageSummary, Invitation, FunnelData, CohortRow, EngagementData, KPIData, CustomEventData, EventTypeSummary, EventDefinition, SankeyData } from '../types';
+import type { AuthResponse, MFARequiredResponse, AuthProviders, ActiveSession, ActivityLogEntry, PasskeyCredential, ImpersonationResponse, TenantMember, TenantDetail, TenantListItem, UserListItem, Message, AboutInfo, SystemLog, ConfigVar, UserDetail, UserMembershipDetail, DeletePreflightResponse, Plan, EntitlementKeyInfo, PublicPlansResponse, CreditBundle, SystemNode, SystemMetric, FinancialTransaction, DailyMetricPoint, IntegrationCheck, APIKey, Webhook, WebhookDelivery, WebhookEventTypeInfo, BrandingConfig, MediaItem, CustomPage, Promotion, EligibleProduct, Announcement, UsageSummary, Invitation, FunnelData, CohortRow, EngagementData, KPIData, CustomEventData, EventTypeSummary, EventDefinition, SankeyData, Agent, ChatMessage, Conversation, ChatRequest, ChatResponse, ModelProvider, ModelConfig } from '../types';
+import { getStoredValue, removeStoredValue, setStoredValue, storageKeys } from '../utils/storageKeys';
 
 const api = axios.create({
   baseURL: '/api',
@@ -52,9 +53,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const refreshToken = localStorage.getItem('lastsaas_refresh_token');
+    const refreshToken = getStoredValue(storageKeys.refreshToken);
     if (!refreshToken) {
-      localStorage.removeItem('lastsaas_access_token');
+      removeStoredValue(storageKeys.accessToken);
       delete api.defaults.headers.common['Authorization'];
       window.location.href = '/login';
       return Promise.reject(error);
@@ -76,16 +77,16 @@ api.interceptors.response.use(
 
     try {
       const { data } = await api.post<AuthResponse>('/auth/refresh', { refreshToken });
-      localStorage.setItem('lastsaas_access_token', data.accessToken);
-      localStorage.setItem('lastsaas_refresh_token', data.refreshToken);
+      setStoredValue(storageKeys.accessToken, data.accessToken);
+      setStoredValue(storageKeys.refreshToken, data.refreshToken);
       setAuthToken(data.accessToken);
       onRefreshComplete(data.accessToken);
       originalRequest.headers['Authorization'] = `Bearer ${data.accessToken}`;
       return api(originalRequest);
     } catch {
       onRefreshFailed();
-      localStorage.removeItem('lastsaas_access_token');
-      localStorage.removeItem('lastsaas_refresh_token');
+      removeStoredValue(storageKeys.accessToken);
+      removeStoredValue(storageKeys.refreshToken);
       delete api.defaults.headers.common['Authorization'];
       window.location.href = '/login';
       return Promise.reject(error);
@@ -255,6 +256,12 @@ export const adminApi = {
     api.get('/admin/users/export', { params, responseType: 'blob' }).then(r => r.data),
   exportTenantsCSV: (params?: { search?: string; status?: string; billingStatus?: string }) =>
     api.get('/admin/tenants/export', { params, responseType: 'blob' }).then(r => r.data),
+
+  // LLM Configuration
+  getLLMConfig: () =>
+    api.get<{ id?: string; apiKey: string; baseURL: string; model: string; isActive: boolean }>('/admin/llm-config').then(r => r.data),
+  updateLLMConfig: (data: { apiKey: string; baseURL: string; model: string; isActive: boolean }) =>
+    api.put('/admin/llm-config', data).then(r => r.data),
   listConfig: () =>
     api.get<{ configs: ConfigVar[] }>('/admin/config').then(r => r.data),
   getConfig: (name: string) =>
@@ -413,6 +420,112 @@ export const usageApi = {
     api.post<{ id: string; type: string; quantity: number }>('/usage/record', data).then(r => r.data),
   summary: () =>
     api.get<UsageSummary>('/usage/summary').then(r => r.data),
+};
+
+// --- AI Agents / Expert Chat ---
+export const agentsApi = {
+  list: () =>
+    api.get<Agent[]>('/chat/agents').then(r => r.data),
+  get: (agentId: string) =>
+    api.get<Agent>(`/chat/agents/${agentId}`).then(r => r.data),
+};
+
+export const tenantAgentsApi = {
+  list: () => api.get<Agent[]>('/tenant/agents').then(r => r.data),
+  get: (id: string) => api.get<Agent>(`/tenant/agents/${id}`).then(r => r.data),
+  create: (data: Partial<Agent>) => api.post<Agent>('/tenant/agents', data).then(r => r.data),
+  update: (id: string, data: Partial<Agent>) => api.put<Agent>(`/tenant/agents/${id}`, data).then(r => r.data),
+  publish: (id: string) => api.post<{ status: string }>(`/tenant/agents/${id}/publish`).then(r => r.data),
+  archive: (id: string) => api.post<{ status: string }>(`/tenant/agents/${id}/archive`).then(r => r.data),
+  delete: (id: string) => api.delete(`/tenant/agents/${id}`).then(r => r.data),
+};
+
+export const tenantModelsApi = {
+  listProviders: () => api.get<ModelProvider[]>('/tenant/model-providers').then(r => r.data),
+  getProvider: (id: string) => api.get<ModelProvider>(`/tenant/model-providers/${id}`).then(r => r.data),
+  createProvider: (data: Partial<ModelProvider>) => api.post<ModelProvider>('/tenant/model-providers', data).then(r => r.data),
+  updateProvider: (id: string, data: Partial<ModelProvider>) => api.put<ModelProvider>(`/tenant/model-providers/${id}`, data).then(r => r.data),
+  deleteProvider: (id: string) => api.delete(`/tenant/model-providers/${id}`).then(r => r.data),
+  testProvider: (id: string) => api.post<{ status: string }>(`/tenant/model-providers/${id}/test`).then(r => r.data),
+  listModels: () => api.get<ModelConfig[]>('/tenant/model-configs').then(r => r.data),
+  getModel: (id: string) => api.get<ModelConfig>(`/tenant/model-configs/${id}`).then(r => r.data),
+  createModel: (data: Partial<ModelConfig>) => api.post<ModelConfig>('/tenant/model-configs', data).then(r => r.data),
+  updateModel: (id: string, data: Partial<ModelConfig>) => api.put<ModelConfig>(`/tenant/model-configs/${id}`, data).then(r => r.data),
+  deleteModel: (id: string) => api.delete(`/tenant/model-configs/${id}`).then(r => r.data),
+  updateDefaults: (data: { defaultTextModelConfigId?: string; defaultImageModelConfigId?: string; defaultVideoModelConfigId?: string }) => api.post('/tenant/model-defaults', data).then(r => r.data),
+};
+
+// Streaming chat types
+export type ChatStreamEvent =
+  | { event: 'message_start'; data: { conversationId: string; messageId: string } }
+  | { event: 'delta'; data: { text: string } }
+  | { event: 'message_done'; data: { conversationId: string; messageId: string; creditsCharged: number; remainingCredits: number; model: string } }
+  | { event: 'error'; data: { message: string } };
+
+export type StreamChatError = Error & {
+  response?: {
+    status?: number;
+    data?: unknown;
+  };
+};
+
+export async function streamChat(data: ChatRequest, onEvent: (event: ChatStreamEvent) => void, signal?: AbortSignal) {
+  const response = await fetch('/api/chat/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(api.defaults.headers.common.Authorization ? { Authorization: String(api.defaults.headers.common.Authorization) } : {}),
+      ...(api.defaults.headers.common['X-Tenant-ID'] ? { 'X-Tenant-ID': String(api.defaults.headers.common['X-Tenant-ID']) } : {}),
+    },
+    body: JSON.stringify(data),
+    signal,
+  });
+  if (!response.ok || !response.body) {
+    const text = await response.text().catch(() => '');
+    let data: unknown = text;
+
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
+
+    const error = new Error('Unable to start chat stream') as StreamChatError;
+    error.response = {
+      status: response.status,
+      data,
+    };
+    throw error;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop() ?? '';
+    for (const raw of events) {
+      const lines = raw.split('\n');
+      const event = lines.find((line) => line.startsWith('event: '))?.slice(7) as ChatStreamEvent['event'] | undefined;
+      const dataLine = lines.find((line) => line.startsWith('data: '));
+      if (!event || !dataLine) continue;
+      onEvent({ event, data: JSON.parse(dataLine.slice(6)) } as ChatStreamEvent);
+    }
+  }
+}
+
+export const chatApi = {
+  send: (data: ChatRequest) =>
+    api.post<ChatResponse>('/chat', data).then(r => r.data),
+  stream: streamChat,
+  conversations: (agentId?: string) =>
+    api.get<Conversation[]>('/chat/conversations', { params: { agentId } }).then(r => r.data),
+  messages: (conversationId: string) =>
+    api.get<ChatMessage[]>(`/chat/conversations/${conversationId}/messages`).then(r => r.data),
 };
 
 // --- Billing ---

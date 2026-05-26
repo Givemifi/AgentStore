@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { setTenantHeader } from '../api/client';
 import { useAuth } from './AuthContext';
 import type { MembershipInfo } from '../types';
+import { getStoredValue, setStoredValue, storageKeys } from '../utils/storageKeys';
 
 interface TenantContextType {
   activeTenant: MembershipInfo | null;
@@ -12,7 +13,7 @@ interface TenantContextType {
 
 const TenantContext = createContext<TenantContextType | null>(null);
 
-const ACTIVE_TENANT_KEY = 'lastsaas_active_tenant';
+const ACTIVE_TENANT_KEY = storageKeys.activeTenant;
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { memberships, isAuthenticated } = useAuth();
@@ -21,7 +22,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const setActiveTenant = useCallback((membership: MembershipInfo) => {
     setActiveTenantState(membership);
     setTenantHeader(membership.tenantId);
-    localStorage.setItem(ACTIVE_TENANT_KEY, membership.tenantId);
+    setStoredValue(ACTIVE_TENANT_KEY, membership.tenantId);
   }, []);
 
   // Restore or auto-select tenant when memberships change
@@ -32,7 +33,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const savedTenantId = localStorage.getItem(ACTIVE_TENANT_KEY);
+    const savedTenantId = getStoredValue(ACTIVE_TENANT_KEY);
     const saved = savedTenantId ? memberships.find(m => m.tenantId === savedTenantId) : null;
 
     if (saved) {

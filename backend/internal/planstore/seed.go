@@ -2,11 +2,10 @@ package planstore
 
 import (
 	"context"
-	"log/slog"
-	"time"
-
 	"lastsaas/internal/db"
 	"lastsaas/internal/models"
+	"log/slog"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,6 +21,7 @@ func Seed(ctx context.Context, database *db.MongoDB) error {
 		plan := models.Plan{
 			Name:                 "Free",
 			Description:          "Default free plan",
+			PricingModel:         models.PricingModelFlat,
 			MonthlyPriceCents:    0,
 			AnnualDiscountPct:    0,
 			UsageCreditsPerMonth: 0,

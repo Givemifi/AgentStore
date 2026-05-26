@@ -2,18 +2,19 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { setAuthToken } from '../api/client';
+import { getStoredValue, removeStoredValue, storageKeys } from '../utils/storageKeys';
 
 export default function ImpersonationBanner() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const isImpersonating = localStorage.getItem('lastsaas_impersonating') === 'true';
+  const isImpersonating = getStoredValue(storageKeys.impersonating) === 'true';
 
   if (!isImpersonating || !user) return null;
 
   const endImpersonation = async () => {
-    localStorage.removeItem('lastsaas_impersonating');
-    localStorage.removeItem('lastsaas_access_token');
-    localStorage.removeItem('lastsaas_refresh_token');
+    removeStoredValue(storageKeys.impersonating);
+    removeStoredValue(storageKeys.accessToken);
+    removeStoredValue(storageKeys.refreshToken);
     setAuthToken(null);
     await logout();
     navigate('/login');

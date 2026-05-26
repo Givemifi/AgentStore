@@ -83,6 +83,8 @@ func setupTestServer(t *testing.T) *testEnv {
 	billingHandler := NewBillingHandler(nil, sharedDB, emitter, sysLogger, cfgStore)
 	apiKeysHandler := NewAPIKeysHandler(sharedDB, emitter, sysLogger)
 	webhooksHandler := NewWebhooksHandler(sharedDB, sysLogger, nil)
+	agentHandler := NewAgentHandler(sharedDB)
+	modelSettingsHandler := NewModelSettingsHandler(sharedDB)
 
 	// Middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, sharedDB)
@@ -136,6 +138,29 @@ func setupTestServer(t *testing.T) *testEnv {
 	ownerRouter.Use(middleware.RequireRole(models.RoleOwner))
 	ownerRouter.HandleFunc("/role", tenantHandler.ChangeRole).Methods("PATCH")
 	ownerRouter.HandleFunc("/transfer-ownership", tenantHandler.TransferOwnership).Methods("POST")
+
+	// Agent CRUD (tenant-scoped)
+	tenantAPI.HandleFunc("/agents", agentHandler.ListAgents).Methods("GET")
+	tenantAPI.HandleFunc("/agents/{agentId}", agentHandler.GetAgent).Methods("GET")
+	agentWriteRouter := tenantAPI.PathPrefix("/agents").Subrouter()
+	agentWriteRouter.Use(middleware.RequireRole(models.RoleAdmin))
+	agentWriteRouter.HandleFunc("", agentHandler.CreateAgent).Methods("POST")
+	agentWriteRouter.HandleFunc("/{agentId}", agentHandler.UpdateAgent).Methods("PUT")
+	agentWriteRouter.HandleFunc("/{agentId}", agentHandler.DeleteAgent).Methods("DELETE")
+
+	// Model settings (tenant admin only)
+	modelSettingsRouter := tenantAPI.PathPrefix("").Subrouter()
+	modelSettingsRouter.Use(middleware.RequireRole(models.RoleAdmin))
+	modelSettingsRouter.HandleFunc("/model-providers", modelSettingsHandler.ListProviders).Methods("GET")
+	modelSettingsRouter.HandleFunc("/model-providers", modelSettingsHandler.CreateProvider).Methods("POST")
+	modelSettingsRouter.HandleFunc("/model-providers/{providerId}", modelSettingsHandler.UpdateProvider).Methods("PUT")
+	modelSettingsRouter.HandleFunc("/model-providers/{providerId}", modelSettingsHandler.DeleteProvider).Methods("DELETE")
+	modelSettingsRouter.HandleFunc("/model-providers/{providerId}/test", modelSettingsHandler.TestProvider).Methods("POST")
+	modelSettingsRouter.HandleFunc("/model-configs", modelSettingsHandler.ListModels).Methods("GET")
+	modelSettingsRouter.HandleFunc("/model-configs", modelSettingsHandler.CreateModel).Methods("POST")
+	modelSettingsRouter.HandleFunc("/model-configs/{modelId}", modelSettingsHandler.UpdateModel).Methods("PUT")
+	modelSettingsRouter.HandleFunc("/model-configs/{modelId}", modelSettingsHandler.DeleteModel).Methods("DELETE")
+	modelSettingsRouter.HandleFunc("/model-defaults", modelSettingsHandler.UpdateDefaults).Methods("POST")
 
 	// Billing routes
 	billingAPI := guarded.PathPrefix("/billing").Subrouter()

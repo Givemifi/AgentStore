@@ -303,9 +303,50 @@ func (m *MongoDB) ensureIndexes() {
 				{Keys: bson.D{{Key: "parentId", Value: 1}}, Options: options.Index().SetSparse(true)},
 			},
 		},
+		{
+			"conversations",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "userId", Value: 1}, {Key: "agentId", Value: 1}}},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "updatedAt", Value: -1}}},
+			},
+		},
+		{
+			"chat_messages",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "conversationId", Value: 1}, {Key: "createdAt", Value: 1}}},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "userId", Value: 1}}},
+			},
+		},
+		{
+			"llm_configs",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "key", Value: 1}}, Options: options.Index().SetUnique(true)},
+			},
+		},
+		{
+			"agents",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "slug", Value: 1}}, Options: options.Index().SetUnique(true)},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "status", Value: 1}}},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "updatedAt", Value: -1}}},
+			},
+		},
+		{
+			"model_providers",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "name", Value: 1}}, Options: options.Index().SetUnique(true)},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "enabled", Value: 1}}},
+			},
+		},
+		{
+			"model_configs",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "providerId", Value: 1}, {Key: "modality", Value: 1}}},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "modality", Value: 1}, {Key: "enabled", Value: 1}}},
+			},
+		},
 	}
 
-	// Collections where unique index failure is a data integrity risk
 	criticalCollections := map[string]bool{
 		"users": true, "tenants": true, "financial_transactions": true,
 		"api_keys": true, "config_vars": true, "stripe_mappings": true,
@@ -480,4 +521,28 @@ func (m *MongoDB) TelemetryEvents() *mongo.Collection {
 
 func (m *MongoDB) EventDefinitions() *mongo.Collection {
 	return m.Database.Collection("event_definitions")
+}
+
+func (m *MongoDB) Conversations() *mongo.Collection {
+	return m.Database.Collection("conversations")
+}
+
+func (m *MongoDB) ChatMessages() *mongo.Collection {
+	return m.Database.Collection("chat_messages")
+}
+
+func (m *MongoDB) LLMConfigs() *mongo.Collection {
+	return m.Database.Collection("llm_configs")
+}
+
+func (m *MongoDB) Agents() *mongo.Collection {
+	return m.Database.Collection("agents")
+}
+
+func (m *MongoDB) ModelProviders() *mongo.Collection {
+	return m.Database.Collection("model_providers")
+}
+
+func (m *MongoDB) ModelConfigs() *mongo.Collection {
+	return m.Database.Collection("model_configs")
 }

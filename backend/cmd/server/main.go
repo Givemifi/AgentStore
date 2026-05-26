@@ -16,10 +16,13 @@ import (
 	"lastsaas/internal/auth"
 	"lastsaas/internal/config"
 	"lastsaas/internal/configstore"
+	"lastsaas/internal/credits"
+	"lastsaas/internal/datadog"
 	"lastsaas/internal/db"
 	"lastsaas/internal/email"
 	"lastsaas/internal/events"
 	"lastsaas/internal/health"
+	"lastsaas/internal/llm"
 	"lastsaas/internal/metrics"
 	"lastsaas/internal/middleware"
 	"lastsaas/internal/models"
@@ -27,7 +30,6 @@ import (
 	stripeservice "lastsaas/internal/stripe"
 	"lastsaas/internal/syslog"
 	"lastsaas/internal/telemetry"
-	"lastsaas/internal/datadog"
 	"lastsaas/internal/version"
 	"lastsaas/internal/webhooks"
 
@@ -361,6 +363,13 @@ func main() {
 	brandingHandler := handlers.NewBrandingHandler(database, cfgStore, sysLogger)
 	announcementsHandler := handlers.NewAnnouncementsHandler(database, sysLogger)
 	usageHandler := handlers.NewUsageHandler(database)
+	chatCreditsService := credits.NewService(database)
+	chatLLMClient := llm.NewClientWithDB(database)
+	chatModelRouter := llm.NewRouter(database)
+	chatHandler := handlers.NewChatHandler(database, chatCreditsService, chatLLMClient, chatModelRouter)
+	llmConfigHandler := handlers.NewLLMConfigHandler(database)
+	agentHandler := handlers.NewAgentHandler(database)
+	modelSettingsHandler := handlers.NewModelSettingsHandler(database)
 	brandingHandler.SetAuthProviders(map[string]bool{
 		"google":    googleOAuth != nil,
 		"github":    githubOAuth != nil,
@@ -569,6 +578,31 @@ func main() {
 	ownerRouter.HandleFunc("/role", tenantHandler.ChangeRole).Methods("PATCH")
 	ownerRouter.HandleFunc("/transfer-ownership", tenantHandler.TransferOwnership).Methods("POST")
 
+	// Agent CRUD (tenant-scoped)
+	tenantAPI.HandleFunc("/agents", agentHandler.ListAgents).Methods("GET")
+	tenantAPI.HandleFunc("/agents/{agentId}", agentHandler.GetAgent).Methods("GET")
+	agentWriteRouter := tenantAPI.PathPrefix("/agents").Subrouter()
+	agentWriteRouter.Use(middleware.RequireRole(models.RoleAdmin))
+	agentWriteRouter.HandleFunc("", agentHandler.CreateAgent).Methods("POST")
+	agentWriteRouter.HandleFunc("/{agentId}", agentHandler.UpdateAgent).Methods("PUT")
+	agentWriteRouter.HandleFunc("/{agentId}", agentHandler.DeleteAgent).Methods("DELETE")
+	agentWriteRouter.HandleFunc("/{agentId}/publish", agentHandler.PublishAgent).Methods("POST")
+	agentWriteRouter.HandleFunc("/{agentId}/archive", agentHandler.ArchiveAgent).Methods("POST")
+
+	// Model settings (tenant admin only)
+	modelSettingsRouter := tenantAPI.PathPrefix("").Subrouter()
+	modelSettingsRouter.Use(middleware.RequireRole(models.RoleAdmin))
+	modelSettingsRouter.HandleFunc("/model-providers", modelSettingsHandler.ListProviders).Methods("GET")
+	modelSettingsRouter.HandleFunc("/model-providers", modelSettingsHandler.CreateProvider).Methods("POST")
+	modelSettingsRouter.HandleFunc("/model-providers/{providerId}", modelSettingsHandler.UpdateProvider).Methods("PUT")
+	modelSettingsRouter.HandleFunc("/model-providers/{providerId}", modelSettingsHandler.DeleteProvider).Methods("DELETE")
+	modelSettingsRouter.HandleFunc("/model-providers/{providerId}/test", modelSettingsHandler.TestProvider).Methods("POST")
+	modelSettingsRouter.HandleFunc("/model-configs", modelSettingsHandler.ListModels).Methods("GET")
+	modelSettingsRouter.HandleFunc("/model-configs", modelSettingsHandler.CreateModel).Methods("POST")
+	modelSettingsRouter.HandleFunc("/model-configs/{modelId}", modelSettingsHandler.UpdateModel).Methods("PUT")
+	modelSettingsRouter.HandleFunc("/model-configs/{modelId}", modelSettingsHandler.DeleteModel).Methods("DELETE")
+	modelSettingsRouter.HandleFunc("/model-defaults", modelSettingsHandler.UpdateDefaults).Methods("POST")
+
 	// Message routes (require JWT, user-scoped)
 	messageAPI := guarded.PathPrefix("/messages").Subrouter()
 	messageAPI.Use(authMiddleware.RequireAuth)
@@ -596,6 +630,23 @@ func main() {
 		usageHandler.RecordUsage,
 	)).Methods("POST")
 	usageAPI.HandleFunc("/summary", usageHandler.GetSummary).Methods("GET")
+
+	// AI Expert Chat routes (require JWT + tenant)
+	chatAPI := guarded.PathPrefix("/chat").Subrouter()
+	chatAPI.Use(authMiddleware.RequireAuth)
+	chatAPI.Use(tenantMiddleware.RequireTenant)
+	chatAPI.Use(middleware.RequireActiveBilling())
+	chatAPI.HandleFunc("/agents", chatHandler.ListAgents).Methods("GET")
+	chatAPI.HandleFunc("/agents/{agentId}", chatHandler.GetAgent).Methods("GET")
+	chatAPI.HandleFunc("", chatHandler.SendMessage).Methods("POST")
+	chatAPI.HandleFunc("/stream", chatHandler.StreamMessage).Methods("POST")
+	chatAPI.HandleFunc("/conversations", chatHandler.ListConversations).Methods("GET")
+	chatAPI.HandleFunc("/conversations/{conversationId}/messages", chatHandler.ListMessages).Methods("GET")
+
+	// Agent media generation routes (coming soon)
+	agentsAPI := chatAPI.PathPrefix("/agents/{agentId}").Subrouter()
+	agentsAPI.HandleFunc("/generate-image", chatHandler.GenerateImage).Methods("POST")
+	agentsAPI.HandleFunc("/generate-video", chatHandler.GenerateVideo).Methods("POST")
 
 	// Anonymous telemetry route (rate-limited by IP, no auth)
 	guarded.HandleFunc("/telemetry/track", rateLimiter.RateLimitHandler(
@@ -773,6 +824,10 @@ func main() {
 	adminOwner.HandleFunc("/branding/pages", brandingHandler.CreatePage).Methods("POST")
 	adminOwner.HandleFunc("/branding/pages/{id}", brandingHandler.UpdatePage).Methods("PUT")
 	adminOwner.HandleFunc("/branding/pages/{id}", brandingHandler.DeletePage).Methods("DELETE")
+
+	// LLM Configuration API (admin only)
+	adminWrite.HandleFunc("/llm-config", llmConfigHandler.GetConfig).Methods("GET")
+	adminWrite.HandleFunc("/llm-config", llmConfigHandler.UpdateConfig).Methods("PUT")
 
 	// Serve frontend static files in production
 	if cfg.Frontend.StaticDir != "" {

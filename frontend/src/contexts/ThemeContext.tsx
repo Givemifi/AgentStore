@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { authApi } from '../api/client';
+import { getStoredValue, setStoredValue, storageKeys } from '../utils/storageKeys';
 
 type ThemeMode = 'dark' | 'light' | 'system';
 type ResolvedTheme = 'dark' | 'light';
@@ -13,7 +14,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
-const THEME_KEY = 'lastsaas_theme';
+const THEME_KEY = storageKeys.theme;
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches) {
@@ -32,8 +33,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const getInitialTheme = (): ThemeMode => {
     if (user?.themePreference) return user.themePreference;
-    const stored = localStorage.getItem(THEME_KEY) as ThemeMode | null;
-    return stored || 'dark';
+    const stored = getStoredValue(THEME_KEY) as ThemeMode | null;
+    return (stored as ThemeMode) || 'dark';
   };
 
   const [theme, setThemeState] = useState<ThemeMode>(getInitialTheme);
@@ -51,7 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const resolved = resolveTheme(theme);
     setResolvedTheme(resolved);
     document.documentElement.setAttribute('data-theme', resolved);
-    localStorage.setItem(THEME_KEY, theme);
+    setStoredValue(THEME_KEY, theme);
   }, [theme]);
 
   // Listen for system theme changes

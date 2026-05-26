@@ -55,6 +55,25 @@ func init() {
 		s := fl.Field().String()
 		return s == "" || s == "text" || s == "image" || s == "both"
 	})
+	v.RegisterValidation("valid_agent_status", func(fl validator.FieldLevel) bool {
+		return models.ValidAgentStatus(models.AgentStatus(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_agent_visibility", func(fl validator.FieldLevel) bool {
+		return models.ValidAgentVisibility(models.AgentVisibility(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_agent_capability", func(fl validator.FieldLevel) bool {
+		return models.ValidAgentCapability(models.AgentCapability(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_provider_type", func(fl validator.FieldLevel) bool {
+		return models.ValidProviderType(models.ProviderType(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_model_modality", func(fl validator.FieldLevel) bool {
+		return models.ValidModelModality(models.ModelModality(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_chat_message_status", func(fl validator.FieldLevel) bool {
+		return models.ValidChatMessageStatus(models.ChatMessageStatus(fl.Field().String()))
+	})
+	v.RegisterStructValidation(validateChatMessage, models.ChatMessage{})
 }
 
 // Validate validates a struct using go-playground/validator tags.
@@ -96,5 +115,15 @@ func formatFieldError(fe validator.FieldError) string {
 		return fmt.Sprintf("%s must be one of: %s", fe.Field(), fe.Param())
 	default:
 		return fmt.Sprintf("%s failed %s validation", fe.Field(), fe.Tag())
+	}
+}
+
+func validateChatMessage(sl validator.StructLevel) {
+	msg, ok := sl.Current().Interface().(models.ChatMessage)
+	if !ok {
+		return
+	}
+	if msg.ContentRequired() && !msg.HasContent() {
+		sl.ReportError(msg.Content, "Content", "Content", "required", "")
 	}
 }

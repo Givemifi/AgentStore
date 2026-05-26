@@ -101,6 +101,20 @@ func TestValidate_ValidTenant(t *testing.T) {
 	}
 }
 
+func TestValidate_TenantNegativeCredits(t *testing.T) {
+	tenant := models.Tenant{
+		Name:                "Acme Corp",
+		Slug:                "acme-corp",
+		SubscriptionCredits: -1,
+		PurchasedCredits:    -1,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+	}
+	if err := Validate(&tenant); err == nil {
+		t.Fatal("expected validation error for negative tenant credits")
+	}
+}
+
 func TestValidate_TenantMissingName(t *testing.T) {
 	tenant := models.Tenant{Slug: "slug", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	if err := Validate(&tenant); err == nil {
@@ -167,7 +181,7 @@ func TestValidate_ValidPlan(t *testing.T) {
 	p := models.Plan{
 		Name: "Pro", PricingModel: models.PricingModelFlat,
 		CreditResetPolicy: models.CreditResetPolicyReset,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		CreatedAt:         time.Now(), UpdatedAt: time.Now(),
 	}
 	if err := Validate(&p); err != nil {
 		t.Errorf("expected valid plan to pass: %v", err)
@@ -178,7 +192,7 @@ func TestValidate_PlanInvalidPricingModel(t *testing.T) {
 	p := models.Plan{
 		Name: "Bad", PricingModel: "usage_based",
 		CreditResetPolicy: models.CreditResetPolicyReset,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		CreatedAt:         time.Now(), UpdatedAt: time.Now(),
 	}
 	if err := Validate(&p); err == nil {
 		t.Fatal("expected validation error for invalid pricing model")
@@ -190,7 +204,7 @@ func TestValidate_PlanNegativePrice(t *testing.T) {
 		Name: "Bad", PricingModel: models.PricingModelFlat,
 		CreditResetPolicy: models.CreditResetPolicyReset,
 		MonthlyPriceCents: -100,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		CreatedAt:         time.Now(), UpdatedAt: time.Now(),
 	}
 	if err := Validate(&p); err == nil {
 		t.Fatal("expected validation error for negative price")
@@ -299,6 +313,92 @@ func TestValidate_TransactionInvalidType(t *testing.T) {
 	}
 }
 
+func TestValidate_ValidChatModels(t *testing.T) {
+	conversation := models.Conversation{
+		TenantID:  primitive.NewObjectID(),
+		UserID:    primitive.NewObjectID(),
+		AgentID:   "legal-expert",
+		Title:     "Contract review",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := Validate(&conversation); err != nil {
+		t.Errorf("expected valid conversation to pass: %v", err)
+	}
+
+	message := models.ChatMessage{
+		TenantID:       primitive.NewObjectID(),
+		UserID:         primitive.NewObjectID(),
+		ConversationID: primitive.NewObjectID(),
+		AgentID:        "legal-expert",
+		Role:           "assistant",
+		Content:        "Here is the answer.",
+		CreditsCharged: 3,
+		Model:          "gpt-test",
+		CreatedAt:      time.Now(),
+	}
+	if err := Validate(&message); err != nil {
+		t.Errorf("expected valid chat message to pass: %v", err)
+	}
+}
+
+func TestValidate_InvalidChatModels(t *testing.T) {
+	conversation := models.Conversation{
+		TenantID:  primitive.NewObjectID(),
+		UserID:    primitive.NewObjectID(),
+		AgentID:   "",
+		Title:     "",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := Validate(&conversation); err == nil {
+		t.Fatal("expected validation error for invalid conversation")
+	}
+
+	message := models.ChatMessage{
+		TenantID:       primitive.NewObjectID(),
+		UserID:         primitive.NewObjectID(),
+		ConversationID: primitive.NewObjectID(),
+		AgentID:        "legal-expert",
+		Role:           "system",
+		Content:        "",
+		CreditsCharged: -1,
+		Model:          strings.Repeat("m", 101),
+		CreatedAt:      time.Now(),
+	}
+	if err := Validate(&message); err == nil {
+		t.Fatal("expected validation error for invalid chat message")
+	}
+}
+
+func TestValidate_ValidLLMConfig(t *testing.T) {
+	config := models.LLMConfig{
+		APIKey:    "sk-test",
+		BaseURL:   "https://api.example.com/v1",
+		Model:     "gpt-test",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := Validate(&config); err != nil {
+		t.Errorf("expected valid LLM config to pass: %v", err)
+	}
+}
+
+func TestValidate_InvalidActiveLLMConfig(t *testing.T) {
+	config := models.LLMConfig{
+		APIKey:    "",
+		BaseURL:   "",
+		Model:     "",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := Validate(&config); err == nil {
+		t.Fatal("expected validation error for invalid active LLM config")
+	}
+}
+
 func TestValidate_ErrorFormatting(t *testing.T) {
 	u := models.User{} // all required fields missing
 	err := Validate(&u)
@@ -308,5 +408,151 @@ func TestValidate_ErrorFormatting(t *testing.T) {
 	msg := err.Error()
 	if !strings.HasPrefix(msg, "validation failed: ") {
 		t.Errorf("expected 'validation failed:' prefix, got: %s", msg)
+	}
+}
+
+func validAgent() models.Agent {
+	return models.Agent{
+		TenantID:         primitive.NewObjectID(),
+		Name:             "Growth Strategist",
+		Slug:             "growth-strategist",
+		Category:         "Marketing",
+		Description:      "Plans launch and growth work",
+		Icon:             "rocket",
+		Color:            "#7C3AED",
+		Status:           models.AgentStatusDraft,
+		Visibility:       models.AgentVisibilityPrivate,
+		SystemPrompt:     "You are a growth strategist.",
+		WelcomeMessage:   "Tell me about your launch.",
+		SuggestedPrompts: []string{"Draft a launch plan"},
+		Capabilities:     []models.AgentCapability{models.AgentCapabilityTextChat},
+		CreditCost:       models.AgentCreditCost{TextMessageCredits: 3},
+		CreatedBy:        primitive.NewObjectID(),
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+}
+
+func TestValidate_ValidAgent(t *testing.T) {
+	agent := validAgent()
+	if err := Validate(&agent); err != nil {
+		t.Fatalf("expected valid agent to pass: %v", err)
+	}
+}
+
+func TestValidate_AgentInvalidStatus(t *testing.T) {
+	agent := validAgent()
+	agent.Status = "deleted"
+	if err := Validate(&agent); err == nil {
+		t.Fatal("expected invalid agent status to fail")
+	}
+}
+
+func TestValidate_AgentRequiresTextCapability(t *testing.T) {
+	agent := validAgent()
+	agent.Capabilities = []models.AgentCapability{"spreadsheet_magic"}
+	if err := Validate(&agent); err == nil {
+		t.Fatal("expected invalid capability to fail")
+	}
+}
+
+func TestValidate_ValidModelProvider(t *testing.T) {
+	provider := models.ModelProvider{
+		TenantID:     primitive.NewObjectID(),
+		Name:         "OpenAI Compatible",
+		ProviderType: models.ProviderTypeOpenAICompatible,
+		BaseURL:      "https://api.example.com/v1",
+		APIKey:       "sk-test",
+		Enabled:      true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	if err := Validate(&provider); err != nil {
+		t.Fatalf("expected valid model provider to pass: %v", err)
+	}
+}
+
+func TestValidate_ModelProviderInvalidType(t *testing.T) {
+	provider := models.ModelProvider{
+		TenantID:     primitive.NewObjectID(),
+		Name:         "Bad",
+		ProviderType: "unknown",
+		BaseURL:      "https://api.example.com/v1",
+		APIKey:       "sk-test",
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	if err := Validate(&provider); err == nil {
+		t.Fatal("expected invalid provider type to fail")
+	}
+}
+
+func TestValidate_ValidModelConfig(t *testing.T) {
+	config := models.ModelConfig{
+		TenantID:      primitive.NewObjectID(),
+		ProviderID:    primitive.NewObjectID(),
+		Name:          "Default Text",
+		DisplayName:   "Default Text Model",
+		Modality:      models.ModelModalityText,
+		ModelID:       "gpt-4o-mini",
+		DefaultParams: map[string]interface{}{"temperature": 0.7},
+		Enabled:       true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+	if err := Validate(&config); err != nil {
+		t.Fatalf("expected valid model config to pass: %v", err)
+	}
+}
+
+func TestValidate_ModelConfigInvalidModality(t *testing.T) {
+	config := models.ModelConfig{
+		TenantID:    primitive.NewObjectID(),
+		ProviderID:  primitive.NewObjectID(),
+		Name:        "Bad",
+		DisplayName: "Bad",
+		Modality:    "audio",
+		ModelID:     "model",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := Validate(&config); err == nil {
+		t.Fatal("expected invalid model modality to fail")
+	}
+}
+
+func TestValidate_ChatMessageStatus(t *testing.T) {
+	msg := models.ChatMessage{
+		TenantID:       primitive.NewObjectID(),
+		UserID:         primitive.NewObjectID(),
+		ConversationID: primitive.NewObjectID(),
+		AgentID:        "growth-strategist",
+		Role:           "assistant",
+		Content:        "Working on it",
+		Status:         models.ChatMessageStatusGenerating,
+		CreatedAt:      time.Now(),
+	}
+	if err := Validate(&msg); err != nil {
+		t.Fatalf("expected generating chat message to pass: %v", err)
+	}
+	msg.Status = "vanished"
+	if err := Validate(&msg); err == nil {
+		t.Fatal("expected invalid chat message status to fail")
+	}
+}
+
+func TestValidate_GeneratingChatMessageAllowsEmptyContent(t *testing.T) {
+	msg := models.ChatMessage{
+		TenantID:       primitive.NewObjectID(),
+		UserID:         primitive.NewObjectID(),
+		ConversationID: primitive.NewObjectID(),
+		AgentID:        "growth-strategist",
+		Role:           "assistant",
+		Content:        "",
+		Status:         models.ChatMessageStatusGenerating,
+		CreatedAt:      time.Now(),
+	}
+	if err := Validate(&msg); err != nil {
+		t.Fatalf("expected generating placeholder message to pass: %v", err)
 	}
 }

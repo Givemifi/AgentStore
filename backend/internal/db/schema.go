@@ -33,6 +33,12 @@ func AllSchemas() []CollectionSchema {
 		usageEventsSchema(),
 		ssoConnectionsSchema(),
 		eventDefinitionsSchema(),
+		conversationsSchema(),
+		chatMessagesSchema(),
+		llmConfigsSchema(),
+		agentsSchema(),
+		modelProvidersSchema(),
+		modelConfigsSchema(),
 	}
 }
 
@@ -143,8 +149,25 @@ func tenantsSchema() CollectionSchema {
 						"bsonType": "string",
 						"enum":     bson.A{"none", "active", "past_due", "canceled", ""},
 					},
+					"subscriptionCredits": bson.M{
+						"bsonType": "long",
+						"minimum":  0,
+					},
+					"purchasedCredits": bson.M{
+						"bsonType": "long",
+						"minimum":  0,
+					},
 					"seatQuantity": bson.M{
 						"bsonType": "int",
+					},
+					"defaultTextModelConfigId": bson.M{
+						"bsonType": "objectId",
+					},
+					"defaultImageModelConfigId": bson.M{
+						"bsonType": "objectId",
+					},
+					"defaultVideoModelConfigId": bson.M{
+						"bsonType": "objectId",
 					},
 				},
 			},
@@ -627,4 +650,203 @@ func eventDefinitionsSchema() CollectionSchema {
 			},
 		},
 	}
+}
+
+func conversationsSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "conversations",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"tenantId", "userId", "agentId", "title", "createdAt", "updatedAt"},
+				"properties": bson.M{
+					"tenantId": bson.M{
+						"bsonType": "objectId",
+					},
+					"userId": bson.M{
+						"bsonType": "objectId",
+					},
+					"agentId": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+						"maxLength": 100,
+					},
+					"title": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+						"maxLength": 200,
+					},
+					"createdAt": bson.M{
+						"bsonType": "date",
+					},
+					"updatedAt": bson.M{
+						"bsonType": "date",
+					},
+				},
+			},
+		},
+	}
+}
+
+func chatMessagesSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "chat_messages",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"tenantId", "userId", "conversationId", "agentId", "role", "content", "createdAt"},
+				"properties": bson.M{
+					"tenantId": bson.M{
+						"bsonType": "objectId",
+					},
+					"userId": bson.M{
+						"bsonType": "objectId",
+					},
+					"conversationId": bson.M{
+						"bsonType": "objectId",
+					},
+					"agentId": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+						"maxLength": 100,
+					},
+					"role": bson.M{
+						"bsonType": "string",
+						"enum":     bson.A{"user", "assistant"},
+					},
+					"content": bson.M{
+						"bsonType": "string",
+					},
+					"creditsCharged": bson.M{
+						"bsonType": "int",
+						"minimum":  0,
+					},
+					"model": bson.M{
+						"bsonType":  "string",
+						"maxLength": 100,
+					},
+					"status": bson.M{
+						"bsonType": "string",
+						"enum":     bson.A{"generating", "completed", "error", "interrupted", ""},
+					},
+					"createdAt": bson.M{
+						"bsonType": "date",
+					},
+				},
+			},
+		},
+	}
+}
+
+func llmConfigsSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "llm_configs",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"key", "apiKey", "baseURL", "model", "isActive", "createdAt", "updatedAt"},
+				"properties": bson.M{
+					"key": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+						"maxLength": 100,
+					},
+					"apiKey": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+					},
+					"baseURL": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+					},
+					"model": bson.M{
+						"bsonType":  "string",
+						"minLength": 1,
+						"maxLength": 100,
+					},
+					"isActive": bson.M{
+						"bsonType": "bool",
+					},
+					"createdAt": bson.M{
+						"bsonType": "date",
+					},
+					"updatedAt": bson.M{
+						"bsonType": "date",
+					},
+				},
+			},
+		},
+	}
+}
+
+func agentsSchema() CollectionSchema {
+	return CollectionSchema{Collection: "agents", Schema: bson.M{"$jsonSchema": bson.M{
+		"bsonType": "object",
+		"required": bson.A{"tenantId", "name", "slug", "category", "description", "status", "visibility", "systemPrompt", "capabilities", "creditCost", "createdBy", "createdAt", "updatedAt"},
+		"properties": bson.M{
+			"tenantId":         bson.M{"bsonType": "objectId"},
+			"name":             bson.M{"bsonType": "string", "minLength": 1, "maxLength": 120},
+			"slug":             bson.M{"bsonType": "string", "minLength": 1, "maxLength": 120},
+			"category":         bson.M{"bsonType": "string", "minLength": 1, "maxLength": 80},
+			"description":      bson.M{"bsonType": "string", "minLength": 1, "maxLength": 500},
+			"avatar":           bson.M{"bsonType": "string", "maxLength": 500},
+			"icon":             bson.M{"bsonType": "string", "maxLength": 80},
+			"color":            bson.M{"bsonType": "string", "maxLength": 32},
+			"status":           bson.M{"bsonType": "string", "enum": bson.A{"draft", "published", "archived"}},
+			"visibility":       bson.M{"bsonType": "string", "enum": bson.A{"private", "public"}},
+			"systemPrompt":     bson.M{"bsonType": "string", "minLength": 1},
+			"welcomeMessage":   bson.M{"bsonType": "string", "maxLength": 1000},
+			"suggestedPrompts": bson.M{"bsonType": "array", "items": bson.M{"bsonType": "string", "maxLength": 300}},
+			"capabilities":     bson.M{"bsonType": "array", "minItems": 1, "items": bson.M{"bsonType": "string", "enum": bson.A{"text_chat", "image_generation", "video_generation"}}},
+			"creditCost": bson.M{"bsonType": "object", "properties": bson.M{
+				"textMessageCredits":     bson.M{"bsonType": "int", "minimum": 0},
+				"imageGenerationCredits": bson.M{"bsonType": "int", "minimum": 0},
+				"videoGenerationCredits": bson.M{"bsonType": "int", "minimum": 0},
+			}},
+			"modelConfig": bson.M{"bsonType": "object", "properties": bson.M{
+				"textModelId":  bson.M{"bsonType": "objectId"},
+				"imageModelId": bson.M{"bsonType": "objectId"},
+				"videoModelId": bson.M{"bsonType": "objectId"},
+			}},
+			"createdBy": bson.M{"bsonType": "objectId"},
+			"createdAt": bson.M{"bsonType": "date"},
+			"updatedAt": bson.M{"bsonType": "date"},
+		},
+	}}}
+}
+
+func modelProvidersSchema() CollectionSchema {
+	return CollectionSchema{Collection: "model_providers", Schema: bson.M{"$jsonSchema": bson.M{
+		"bsonType": "object",
+		"required": bson.A{"tenantId", "name", "providerType", "baseUrl", "apiKey", "enabled", "createdAt", "updatedAt"},
+		"properties": bson.M{
+			"tenantId":     bson.M{"bsonType": "objectId"},
+			"name":         bson.M{"bsonType": "string", "minLength": 1, "maxLength": 120},
+			"providerType": bson.M{"bsonType": "string", "enum": bson.A{"openai_compatible", "anthropic", "gemini"}},
+			"baseUrl":      bson.M{"bsonType": "string", "minLength": 1, "maxLength": 500},
+			"apiKey":       bson.M{"bsonType": "string", "minLength": 1},
+			"enabled":      bson.M{"bsonType": "bool"},
+			"createdAt":    bson.M{"bsonType": "date"},
+			"updatedAt":    bson.M{"bsonType": "date"},
+		},
+	}}}
+}
+
+func modelConfigsSchema() CollectionSchema {
+	return CollectionSchema{Collection: "model_configs", Schema: bson.M{"$jsonSchema": bson.M{
+		"bsonType": "object",
+		"required": bson.A{"tenantId", "providerId", "name", "displayName", "modality", "modelId", "enabled", "createdAt", "updatedAt"},
+		"properties": bson.M{
+			"tenantId":      bson.M{"bsonType": "objectId"},
+			"providerId":    bson.M{"bsonType": "objectId"},
+			"name":          bson.M{"bsonType": "string", "minLength": 1, "maxLength": 120},
+			"displayName":   bson.M{"bsonType": "string", "minLength": 1, "maxLength": 160},
+			"modality":      bson.M{"bsonType": "string", "enum": bson.A{"text", "image", "video"}},
+			"modelId":       bson.M{"bsonType": "string", "minLength": 1, "maxLength": 200},
+			"defaultParams": bson.M{"bsonType": "object"},
+			"enabled":       bson.M{"bsonType": "bool"},
+			"createdAt":     bson.M{"bsonType": "date"},
+			"updatedAt":     bson.M{"bsonType": "date"},
+		},
+	}}}
 }

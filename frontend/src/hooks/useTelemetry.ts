@@ -2,10 +2,16 @@ import { useCallback, useRef } from 'react';
 import { telemetryApi } from '../api/client';
 
 function getSessionId(): string {
-  let id = sessionStorage.getItem('lastsaas_session_id');
+  const SESSION_KEY = 'agentstore_session_id';
+  let id = sessionStorage.getItem(SESSION_KEY);
   if (!id) {
     id = crypto.randomUUID();
-    sessionStorage.setItem('lastsaas_session_id', id);
+    sessionStorage.setItem(SESSION_KEY, id);
+    // Also check legacy key
+    const legacyId = sessionStorage.getItem('lastsaas_session_id');
+    if (legacyId && legacyId !== id) {
+      sessionStorage.removeItem('lastsaas_session_id');
+    }
   }
   return id;
 }

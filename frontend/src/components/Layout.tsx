@@ -13,7 +13,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
-  LayoutDashboard, Users, Settings, CreditCard, FileText, Image, Globe, Shield, Zap, Star, Heart, BookOpen, MessageCircle, HelpCircle,
+  LayoutDashboard, Users, Settings, CreditCard, FileText, Image, Globe, Shield, Zap, Star, Heart, BookOpen, MessageCircle, HelpCircle, Sun, Moon, Megaphone,
 };
 
 export default function Layout() {
@@ -38,7 +38,7 @@ export default function Layout() {
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && activeTenant) {
       Promise.allSettled([
         messagesApi.unreadCount(),
         plansApi.list(),
@@ -66,7 +66,7 @@ export default function Layout() {
         }
       });
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeTenant]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -85,7 +85,7 @@ export default function Layout() {
 
   // Build nav items from branding config or fallback to defaults
   const defaultNavItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/dashboard', icon: MessageCircle, label: 'Agents' },
     ...(showTeam ? [{ path: '/team', icon: Users, label: 'Team' }] : []),
     { path: '/plan', icon: CreditCard, label: 'Plan' },
     { path: '/settings', icon: Settings, label: 'Settings' },
@@ -108,11 +108,11 @@ export default function Layout() {
     : defaultNavItems;
 
   // Resolve logo display
-  const appName = branding.appName || 'LastSaaS';
+  const appName = branding.appName || 'AgentStore';
   const logoMode = branding.logoMode || 'text';
   const logoUrl = branding.logoUrl;
 
-  const isImpersonating = localStorage.getItem('lastsaas_impersonating') === 'true';
+  const isImpersonating = localStorage.getItem('agentstore_impersonating') === 'true' || localStorage.getItem('lastsaas_impersonating') === 'true';
 
   return (
     <div className="min-h-screen bg-dark-950">
@@ -154,9 +154,9 @@ export default function Layout() {
                   ))}
                   {memberships.some(m => m.isRoot) && (
                     <Link
-                      to="/last"
+                      to="/admin"
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        location.pathname.startsWith('/last')
+                        location.pathname.startsWith('/admin')
                           ? 'bg-accent-purple/20 text-accent-purple'
                           : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
                       }`}

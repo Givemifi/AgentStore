@@ -706,3 +706,111 @@ export interface UsageSummary {
   subscriptionCredits: number;
   purchasedCredits: number;
 }
+
+// --- AI Agents / Expert Chat ---
+
+export type AgentStatus = 'draft' | 'published' | 'archived';
+export type AgentVisibility = 'private' | 'public';
+export type AgentCapability = 'text_chat' | 'image_generation' | 'video_generation';
+export type ModelModality = 'text' | 'image' | 'video';
+export type ProviderType = 'openai_compatible' | 'anthropic' | 'gemini';
+
+export interface AgentCreditCost {
+  textMessageCredits: number;
+  imageGenerationCredits: number;
+  videoGenerationCredits: number;
+}
+
+export interface AgentModelConfig {
+  textModelId?: string;
+  imageModelId?: string;
+  videoModelId?: string;
+}
+
+export interface Agent {
+  id: string;
+  tenantId?: string;
+  name: string;
+  slug: string;
+  category: string;
+  description: string;
+  avatar?: string;
+  icon?: string;
+  color?: string;
+  status?: AgentStatus;
+  visibility: AgentVisibility;
+  systemPrompt?: string;
+  welcomeMessage?: string;
+  suggestedPrompts?: string[];
+  capabilities: AgentCapability[];
+  creditCost: AgentCreditCost;
+  modelConfig?: AgentModelConfig;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelProvider {
+  id: string;
+  tenantId: string;
+  name: string;
+  providerType: ProviderType;
+  baseUrl: string;
+  apiKeyPreview: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelConfig {
+  id: string;
+  tenantId: string;
+  providerId: string;
+  name: string;
+  displayName: string;
+  modality: ModelModality;
+  modelId: string;
+  defaultParams?: Record<string, unknown>;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ChatMessageStatus = 'generating' | 'completed' | 'error' | 'interrupted';
+
+export interface ChatMessage {
+  id: string;
+  tenantId: string;
+  userId: string;
+  conversationId: string;
+  agentId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  creditsCharged?: number;
+  model?: string;
+  status?: ChatMessageStatus;
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  tenantId: string;
+  userId: string;
+  agentId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatRequest {
+  agentId: string;
+  conversationId?: string;
+  message: string;
+}
+
+export interface ChatResponse {
+  conversationId: string;
+  answer: string;
+  creditsCharged: number;
+  remainingCredits: number;
+}

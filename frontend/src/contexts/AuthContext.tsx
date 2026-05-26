@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { authApi, setAuthToken } from '../api/client';
 import type { User, MembershipInfo, AuthResponse, MFARequiredResponse } from '../types';
+import { getStoredValue, removeStoredValue, setStoredValue, storageKeys } from '../utils/storageKeys';
 
 interface MFAPendingState {
   mfaToken: string;
@@ -28,8 +29,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // multi-tab support and API key-style auth headers. The app mitigates XSS risk through
 // React's built-in escaping, strict CSP headers, and validated/sanitized user inputs.
 // httpOnly cookies would require CSRF protection and complicate the SPA architecture.
-const ACCESS_TOKEN_KEY = 'lastsaas_access_token';
-const REFRESH_TOKEN_KEY = 'lastsaas_refresh_token';
+const ACCESS_TOKEN_KEY = storageKeys.accessToken;
+const REFRESH_TOKEN_KEY = storageKeys.refreshToken;
 
 function isMfaRequired(data: AuthResponse | MFARequiredResponse): data is MFARequiredResponse {
   return 'mfaRequired' in data && data.mfaRequired === true;
@@ -46,9 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearAuth = useCallback(() => {
     setUser(null);
     setMemberships([]);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem('lastsaas_impersonating');
+    removeStoredValue(ACCESS_TOKEN_KEY);
+    removeStoredValue(REFRESH_TOKEN_KEY);
+    removeStoredValue(storageKeys.impersonating);
     setAuthToken(null);
   }, []);
 
@@ -63,8 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearAuth]);
 
   const handleAuthResponse = useCallback((data: AuthResponse) => {
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    setStoredValue(ACCESS_TOKEN_KEY, data.accessToken);
+    setStoredValue(REFRESH_TOKEN_KEY, data.refreshToken);
     setAuthToken(data.accessToken);
     setUser(data.user);
     setMemberships(data.memberships);
@@ -72,8 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithTokens = useCallback(async (accessToken: string, refreshToken: string) => {
-    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    setStoredValue(ACCESS_TOKEN_KEY, accessToken);
+    setStoredValue(REFRESH_TOKEN_KEY, refreshToken);
     setAuthToken(accessToken);
     await refreshUser();
   }, [refreshUser]);
@@ -98,15 +99,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (data: { email: string; password: string; displayName: string; invitationToken?: string }) => {
     const res = await authApi.register(data);
-    localStorage.setItem(ACCESS_TOKEN_KEY, res.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, res.refreshToken);
+    setStoredValue(ACCESS_TOKEN_KEY, res.accessToken);
+    setStoredValue(REFRESH_TOKEN_KEY, res.refreshToken);
     setAuthToken(res.accessToken);
     setUser(res.user);
     setMemberships(res.memberships);
   }, []);
 
   const logout = useCallback(async () => {
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    const refreshToken = getStoredValue(REFRESH_TOKEN_KEY);
     try {
       if (refreshToken) {
         await authApi.logout(refreshToken);
@@ -119,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restore session on mount
   useEffect(() => {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const token = getStoredValue(ACCESS_TOKEN_KEY);
     if (token) {
       setAuthToken(token);
       refreshUser().finally(() => setIsLoading(false));

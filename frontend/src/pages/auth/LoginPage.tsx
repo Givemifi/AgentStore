@@ -4,6 +4,7 @@ import { LogIn, Github, Mail, KeyRound, Fingerprint } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
 import { authApi } from '../../api/client';
+import { setStoredValue, storageKeys } from '../../utils/storageKeys';
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -92,8 +93,8 @@ export default function LoginPage() {
       const credential = await navigator.credentials.get({ publicKey: options });
       if (!credential) throw new Error('No credential returned');
       const data = await authApi.passkeyLoginFinish(credential);
-      localStorage.setItem('lastsaas_access_token', data.accessToken);
-      localStorage.setItem('lastsaas_refresh_token', data.refreshToken);
+      setStoredValue(storageKeys.accessToken, data.accessToken);
+      setStoredValue(storageKeys.refreshToken, data.refreshToken);
       navigate('/dashboard');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error

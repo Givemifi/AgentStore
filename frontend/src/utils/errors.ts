@@ -19,21 +19,16 @@ export function getErrorMessage(err: unknown): string {
     const status = err.response?.status;
     const data = err.response?.data;
 
-    // Use backend error message if it provides a structured error code
-    // (these are intentionally user-safe messages from the API)
-    if (data && typeof data === 'object' && 'code' in data && 'error' in data) {
+    if (data && typeof data === 'object' && 'error' in data) {
       return String(data.error);
     }
 
-    // For errors without a structured code, use generic status-based messages
-    if (status && STATUS_MESSAGES[status]) return STATUS_MESSAGES[status];
-
-    // Fallback: use backend error string only if it looks safe (no internal details)
-    if (data && typeof data === 'object' && 'error' in data) {
-      const msg = String(data.error);
-      // Allow short, user-facing messages; block verbose internal errors
-      if (msg.length <= 200) return msg;
+    if (typeof data === 'string' && data.trim()) {
+      return data;
     }
+
+    // For errors without a backend message, use generic status-based messages.
+    if (status && STATUS_MESSAGES[status]) return STATUS_MESSAGES[status];
 
     if (err.message) return err.message;
   }

@@ -220,7 +220,7 @@ export default function UsersPage() {
                   {users.map((user) => (
                     <tr
                       key={user.id}
-                      onClick={() => navigate(`/last/users/${user.id}`)}
+                      onClick={() => navigate(`/admin/users/${user.id}`)}
                       className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-3.5">

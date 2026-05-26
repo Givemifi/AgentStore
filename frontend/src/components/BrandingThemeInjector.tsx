@@ -61,7 +61,7 @@ const isValidHex = (c: string) => /^#[0-9a-fA-F]{6}$/.test(c);
 export default function BrandingThemeInjector() {
   const { branding, loaded } = useBranding();
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith('/last');
+  const isAdmin = location.pathname.startsWith('/admin');
 
   // Apply CSS custom properties for theme colors
   useEffect(() => {

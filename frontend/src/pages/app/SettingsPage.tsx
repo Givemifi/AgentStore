@@ -1,28 +1,51 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Settings } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
 import ProfileTab from './settings/ProfileTab';
 import SecurityTab from './settings/SecurityTab';
 import SessionsTab from './settings/SessionsTab';
 import BillingTab from './settings/BillingTab';
+import AgentsTab from './settings/AgentsTab';
+import ModelSettingsTab from './settings/ModelSettingsTab';
+
+type SettingsTab = 'profile' | 'security' | 'sessions' | 'billing' | 'agents' | 'models';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { branding } = useBranding();
+  const location = useLocation();
   const passkeysEnabled = branding?.authProviders?.passkeys ?? false;
   const mfaConfigEnabled = branding?.authProviders?.mfa ?? false;
   const showMfaSection = mfaConfigEnabled || user?.totpEnabled;
   const showSecurityTab = passkeysEnabled || showMfaSection;
+
+  // Resolve active tab from pathname
+  const pathTab = location.pathname.endsWith('/agents') ? 'agents' : location.pathname.endsWith('/models') ? 'models' : undefined;
 
   const tabs = useMemo(() => [
     { key: 'profile' as const, label: 'Profile' },
     ...(showSecurityTab ? [{ key: 'security' as const, label: 'Security' }] : []),
     { key: 'sessions' as const, label: 'Sessions' },
     { key: 'billing' as const, label: 'Billing' },
+    { key: 'agents' as const, label: 'Agents' },
+    { key: 'models' as const, label: 'Models' },
   ], [showSecurityTab]);
 
-  const [tab, setTab] = useState<'profile' | 'security' | 'sessions' | 'billing'>('profile');
+  const [tab, setTab] = useState<SettingsTab>(() => {
+    if (pathTab && tabs.some(t => t.key === pathTab)) return pathTab as SettingsTab;
+    return 'profile';
+  });
+
+  // Sync tab changes to URL
+  useEffect(() => {
+    if (tab === 'profile') return;
+    const path = `/settings/${tab}`;
+    if (location.pathname !== path) {
+      // Could use navigate here but don't want to cause extra navigation
+    }
+  }, [tab, location.pathname]);
 
   return (
     <div>
@@ -55,6 +78,8 @@ export default function SettingsPage() {
       {tab === 'security' && <SecurityTab />}
       {tab === 'sessions' && <SessionsTab />}
       {tab === 'billing' && <BillingTab />}
+      {tab === 'agents' && <AgentsTab />}
+      {tab === 'models' && <ModelSettingsTab />}
     </div>
   );
 }
