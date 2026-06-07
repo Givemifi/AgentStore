@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"lastsaas/internal/testutil"
+	"agentstore/internal/testutil"
 )
 
 func TestIntegration_RegisterSuccess(t *testing.T) {
@@ -57,6 +57,42 @@ func TestIntegration_RegisterResponseContainsTokens(t *testing.T) {
 	}
 	if authResp.User == nil || authResp.User.Email != "tokens@test.com" {
 		t.Error("expected user in response")
+	}
+}
+
+func TestRegisterGrantsTrialCreditsToPersonalTenant(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	testutil.MarkSystemInitialized(t, env.DB)
+
+	body := `{"email":"trial@test.com","password":"StrongP@ss1!","displayName":"Trial User"}`
+	resp, err := env.Client.Post(env.Server.URL+"/api/auth/register", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", resp.StatusCode, testutil.ReadResponseBody(t, resp))
+	}
+
+	var authResp AuthResponse
+	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
+		t.Fatalf("decode auth response: %v", err)
+	}
+	if len(authResp.Memberships) != 1 {
+		t.Fatalf("expected one membership, got %d", len(authResp.Memberships))
+	}
+
+	const expectedTrialCredits int64 = 25
+	tenantID := authResp.Memberships[0].TenantID
+	tenant := testutil.GetTenantByID(t, env.DB, tenantID)
+	if tenant.PurchasedCredits != expectedTrialCredits {
+		t.Fatalf("expected %d purchased trial credits, got %d", expectedTrialCredits, tenant.PurchasedCredits)
 	}
 }
 

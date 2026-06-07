@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/auth"
-	"lastsaas/internal/config"
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/auth"
+	"agentstore/internal/config"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -57,7 +57,7 @@ func MustConnectTestDB(t *testing.T) (*db.MongoDB, func()) {
 	t.Helper()
 
 	loadEnvTest()
-	os.Setenv("LASTSAAS_ENV", "test")
+	os.Setenv("AGENTSTORE_ENV", "test")
 	SetConfigDir(t)
 
 	// Skip gracefully when no MongoDB URI is configured (e.g. in CI without .env.test)
@@ -101,7 +101,7 @@ func MustConnectTestDB(t *testing.T) (*db.MongoDB, func()) {
 // Returns nil and a no-op cleanup if MONGODB_URI is not set.
 func ConnectTestDB() (*db.MongoDB, func()) {
 	loadEnvTest()
-	os.Setenv("LASTSAAS_ENV", "test")
+	os.Setenv("AGENTSTORE_ENV", "test")
 	findAndSetConfigDir()
 
 	uri := os.Getenv("MONGODB_URI")
@@ -136,8 +136,11 @@ func ConnectTestDB() (*db.MongoDB, func()) {
 	return database, cleanup
 }
 
-// findAndSetConfigDir sets LASTSAAS_CONFIG_DIR without requiring *testing.T.
+// findAndSetConfigDir sets AGENTSTORE_CONFIG_DIR without requiring *testing.T.
 func findAndSetConfigDir() {
+	if os.Getenv("AGENTSTORE_CONFIG_DIR") != "" {
+		return
+	}
 	if os.Getenv("LASTSAAS_CONFIG_DIR") != "" {
 		return
 	}
@@ -148,7 +151,7 @@ func findAndSetConfigDir() {
 			filepath.Join(dir, "backend", "config"),
 		} {
 			if hasYAMLConfigs(candidate) {
-				os.Setenv("LASTSAAS_CONFIG_DIR", candidate)
+				os.Setenv("AGENTSTORE_CONFIG_DIR", candidate)
 				return
 			}
 		}
@@ -160,12 +163,12 @@ func findAndSetConfigDir() {
 	}
 }
 
-// SetConfigDir finds and sets the LASTSAAS_CONFIG_DIR env var.
+// SetConfigDir finds and sets the AGENTSTORE_CONFIG_DIR env var.
 // It looks for a directory containing YAML config files to avoid matching Go source packages.
 func SetConfigDir(t *testing.T) {
 	t.Helper()
 	findAndSetConfigDir()
-	if os.Getenv("LASTSAAS_CONFIG_DIR") == "" {
+	if os.Getenv("AGENTSTORE_CONFIG_DIR") == "" && os.Getenv("LASTSAAS_CONFIG_DIR") == "" {
 		t.Fatalf("testutil: could not find config directory")
 	}
 }
@@ -201,7 +204,7 @@ func CleanupCollections(t *testing.T, database *db.MongoDB) {
 		"branding_config", "branding_assets", "custom_pages",
 		"webauthn_credentials", "webauthn_sessions", "sso_connections",
 		"announcements", "usage_events", "rate_limits",
-			"agents", "conversations", "chat_messages", "llm_configs", "model_providers", "model_configs",
+		"agents", "conversations", "chat_messages", "llm_configs", "model_providers", "model_configs",
 	}
 	for _, name := range collections {
 		database.Database.Collection(name).DeleteMany(ctx, bson.M{})
@@ -212,7 +215,7 @@ func CleanupCollections(t *testing.T, database *db.MongoDB) {
 func TestConfig(t *testing.T) *config.Config {
 	t.Helper()
 	loadEnvTest()
-	os.Setenv("LASTSAAS_ENV", "test")
+	os.Setenv("AGENTSTORE_ENV", "test")
 	SetConfigDir(t)
 
 	cfg, err := config.Load("test")
@@ -285,6 +288,20 @@ func CreateTestTenant(t *testing.T, database *db.MongoDB, name string, ownerID p
 		t.Fatalf("testutil: failed to create test membership: %v", err)
 	}
 
+	return &tenant
+}
+
+// GetTenantByID loads a tenant by hex ObjectID.
+func GetTenantByID(t *testing.T, database *db.MongoDB, tenantID string) *models.Tenant {
+	t.Helper()
+	objectID, err := primitive.ObjectIDFromHex(tenantID)
+	if err != nil {
+		t.Fatalf("testutil: invalid tenant id %q: %v", tenantID, err)
+	}
+	var tenant models.Tenant
+	if err := database.Tenants().FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&tenant); err != nil {
+		t.Fatalf("testutil: failed to load tenant %s: %v", tenantID, err)
+	}
 	return &tenant
 }
 

@@ -9,12 +9,65 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+// TestOpenAICompatibleProvider tests connectivity to an OpenAI-compatible provider.
+// It makes an authenticated GET request to {normalizedBaseURL}/models.
+// Returns nil if the provider responds successfully, or an error if connectivity fails.
+func TestOpenAICompatibleProvider(ctx context.Context, baseURL, apiKey string) error {
+	apiKey = strings.TrimSpace(apiKey)
+	baseURL = normalizeBaseURL(strings.TrimSpace(baseURL))
+
+	if apiKey == "" {
+		return fmt.Errorf("API key is required")
+	}
+	if baseURL == "" {
+		return fmt.Errorf("base URL is required")
+	}
+
+	// Create a client with timeout
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/models", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to connect to provider: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("provider returned status %d", resp.StatusCode)
+	}
+
+	// Try to decode the response to verify it's a valid models response
+	var modelsResp struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&modelsResp); err != nil {
+		// If we can't decode, but got 200, consider it a success
+		// Some providers might not return standard format
+		return nil
+	}
+
+	return nil
+}
 
 // Message represents a chat message.
 type Message struct {

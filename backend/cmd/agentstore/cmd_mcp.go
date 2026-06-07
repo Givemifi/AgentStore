@@ -11,14 +11,14 @@ import (
 	"os"
 	"time"
 
-	"lastsaas/internal/version"
+	"agentstore/internal/version"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 // ---------------------------------------------------------------------------
-// HTTP client for proxying read-only requests to the LastSaaS API
+// HTTP client for proxying read-only requests to the AgentStore API
 // ---------------------------------------------------------------------------
 
 type mcpClient struct {
@@ -86,27 +86,34 @@ func buildQuery(params map[string]string) string {
 	return "?" + v.Encode()
 }
 
+func getEnvWithFallback(primary, legacy string) string {
+	if value := os.Getenv(primary); value != "" {
+		return value
+	}
+	return os.Getenv(legacy)
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
 func cmdMCP() {
-	baseURL := os.Getenv("LASTSAAS_URL")
-	apiKey := os.Getenv("LASTSAAS_API_KEY")
+	baseURL := getEnvWithFallback("AGENTSTORE_URL", "LASTSAAS_URL")
+	apiKey := getEnvWithFallback("AGENTSTORE_API_KEY", "LASTSAAS_API_KEY")
 
 	if baseURL == "" {
-		fmt.Fprintln(os.Stderr, "LASTSAAS_URL environment variable is required (e.g. http://localhost:3000)")
+		fmt.Fprintln(os.Stderr, "AGENTSTORE_URL environment variable is required (e.g. http://localhost:3000)")
 		os.Exit(1)
 	}
 	if apiKey == "" {
-		fmt.Fprintln(os.Stderr, "LASTSAAS_API_KEY environment variable is required (e.g. lsk_xxxxx)")
+		fmt.Fprintln(os.Stderr, "AGENTSTORE_API_KEY environment variable is required (e.g. lsk_xxxxx)")
 		os.Exit(1)
 	}
 
 	client := newMCPClient(baseURL, apiKey)
 
 	s := server.NewMCPServer(
-		"lastsaas-admin",
+		"agentstore-admin",
 		version.Current,
 		server.WithToolCapabilities(false),
 		server.WithResourceCapabilities(false, false),
@@ -848,12 +855,12 @@ func registerPMTools(s *server.MCPServer, client *mcpClient) {
 // ---------------------------------------------------------------------------
 
 func registerResources(s *server.MCPServer, client *mcpClient) {
-	// lastsaas://dashboard
+	// agentstore://dashboard
 	s.AddResource(
 		mcp.NewResource(
-			"lastsaas://dashboard",
+			"agentstore://dashboard",
 			"Dashboard Summary",
-			mcp.WithResourceDescription("LastSaaS admin dashboard: user count, tenant count, and system health status with issues"),
+			mcp.WithResourceDescription("AgentStore admin dashboard: user count, tenant count, and system health status with issues"),
 			mcp.WithMIMEType("application/json"),
 		),
 		func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -863,7 +870,7 @@ func registerResources(s *server.MCPServer, client *mcpClient) {
 			}
 			return []mcp.ResourceContents{
 				mcp.TextResourceContents{
-					URI:      "lastsaas://dashboard",
+					URI:      "agentstore://dashboard",
 					MIMEType: "application/json",
 					Text:     prettyJSON(data),
 				},
@@ -871,10 +878,10 @@ func registerResources(s *server.MCPServer, client *mcpClient) {
 		},
 	)
 
-	// lastsaas://health
+	// agentstore://health
 	s.AddResource(
 		mcp.NewResource(
-			"lastsaas://health",
+			"agentstore://health",
 			"System Health",
 			mcp.WithResourceDescription("Current system health: CPU, memory, disk, HTTP stats, MongoDB connections, and node status"),
 			mcp.WithMIMEType("application/json"),
@@ -886,7 +893,7 @@ func registerResources(s *server.MCPServer, client *mcpClient) {
 			}
 			return []mcp.ResourceContents{
 				mcp.TextResourceContents{
-					URI:      "lastsaas://health",
+					URI:      "agentstore://health",
 					MIMEType: "application/json",
 					Text:     prettyJSON(data),
 				},

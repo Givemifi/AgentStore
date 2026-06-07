@@ -111,10 +111,17 @@ export default function AgentsTab() {
 
     const slug = form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+    // For P0: only text_chat capability, image/video credits = 0
     const data = {
       ...form,
       slug,
       suggestedPrompts: form.welcomeMessage ? [form.welcomeMessage] : [],
+      capabilities: ['text_chat'], // P0: only text chat
+      creditCost: {
+        ...form.creditCost,
+        imageGenerationCredits: 0,
+        videoGenerationCredits: 0,
+      },
     };
 
     if (editingId) {
@@ -130,11 +137,23 @@ export default function AgentsTab() {
     }
   };
 
-  const capabilityOptions: AgentCapability[] = ['text_chat', 'image_generation', 'video_generation'];
+  const capabilityOptions: AgentCapability[] = ['text_chat'];
   const visibilityOptions: { value: AgentVisibility; label: string }[] = [
     { value: 'private', label: 'Private' },
     { value: 'public', label: 'Public' },
   ];
+
+  // Get display label for capability - show "coming soon" for image/video
+  const getCapabilityLabel = (cap: AgentCapability) => {
+    if (cap === 'image_generation') return 'image generation (coming soon)';
+    if (cap === 'video_generation') return 'video generation (coming soon)';
+    return cap.replace('_', ' ');
+  };
+
+  // Check if capability is "coming soon"
+  const isComingSoon = (cap: AgentCapability) => {
+    return cap === 'image_generation' || cap === 'video_generation';
+  };
 
   return (
     <div>
@@ -235,27 +254,25 @@ export default function AgentsTab() {
           <div>
             <label className="block text-sm text-dark-400 mb-1">Capabilities</label>
             <div className="flex gap-4">
-              {capabilityOptions.map(cap => (
-                <label key={cap} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.capabilities.includes(cap)}
-                    onChange={e => {
-                      if (e.target.checked) {
-                        setForm({...form, capabilities: [...form.capabilities, cap]});
-                      } else {
-                        setForm({...form, capabilities: form.capabilities.filter(c => c !== cap)});
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  {cap.replace('_', ' ')}
-                </label>
-              ))}
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.capabilities.includes('text_chat')}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setForm({...form, capabilities: [...form.capabilities, 'text_chat']});
+                    } else {
+                      setForm({...form, capabilities: form.capabilities.filter(c => c !== 'text_chat')});
+                    }
+                  }}
+                  className="rounded"
+                />
+                Text chat
+              </label>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm text-dark-400 mb-1">Text Credits</label>
               <input
@@ -266,26 +283,7 @@ export default function AgentsTab() {
                 className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
               />
             </div>
-            <div>
-              <label className="block text-sm text-dark-400 mb-1">Image Credits</label>
-              <input
-                type="number"
-                min="0"
-                value={form.creditCost.imageGenerationCredits}
-                onChange={e => setForm({...form, creditCost: {...form.creditCost, imageGenerationCredits: parseInt(e.target.value) || 0}})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-dark-400 mb-1">Video Credits</label>
-              <input
-                type="number"
-                min="0"
-                value={form.creditCost.videoGenerationCredits}
-                onChange={e => setForm({...form, creditCost: {...form.creditCost, videoGenerationCredits: parseInt(e.target.value) || 0}})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
-              />
-            </div>
+            <p className="text-xs text-dark-500">Image and video generation are coming soon. P0 Agents use text chat only.</p>
           </div>
 
           <button
@@ -318,7 +316,9 @@ export default function AgentsTab() {
                   <p className="text-sm text-dark-300 mt-2">{agent.description}</p>
                   <div className="flex gap-2 mt-2">
                     {agent.capabilities?.map(cap => (
-                      <span key={cap} className="text-xs px-2 py-0.5 bg-dark-800 rounded">{cap.replace('_', ' ')}</span>
+                      <span key={cap} className={`text-xs px-2 py-0.5 rounded ${isComingSoon(cap) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-dark-800 rounded'}`}>
+                        {getCapabilityLabel(cap)}
+                      </span>
                     ))}
                     <span className="text-xs px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded">
                       {agent.creditCost?.textMessageCredits || 1} credits

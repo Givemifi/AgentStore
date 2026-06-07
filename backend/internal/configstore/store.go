@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 )

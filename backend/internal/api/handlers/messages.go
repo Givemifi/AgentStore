@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

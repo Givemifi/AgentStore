@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
-      DATABASE_NAME: lastsaas-test
+      DATABASE_NAME: agentstore-test
     steps:
       - uses: actions/checkout@v4
 

@@ -98,7 +98,8 @@ export default function ModelSettingsTab() {
   const testConnectionMutation = useMutation({
     mutationFn: (providerId: string) => tenantModelsApi.testProvider(providerId),
     onSuccess: (result) => {
-      setTestResult({ success: result.status === 'ok', message: result.status });
+      const message = result.message || result.status;
+      setTestResult({ success: result.status === 'ok', message });
       setTimeout(() => setTestResult(null), 5000);
     },
     onError: (err: Error) => {
@@ -222,14 +223,21 @@ export default function ModelSettingsTab() {
 
   const providerTypeOptions: { value: ProviderType; label: string }[] = [
     { value: 'openai_compatible', label: 'OpenAI Compatible' },
-    { value: 'anthropic', label: 'Anthropic' },
-    { value: 'gemini', label: 'Google Gemini' },
   ];
 
+  // For P0, only show OpenAI-compatible; existing Anthropic/Gemini show "coming soon"
+  const getProviderDisplayName = (provider: ModelProvider) => {
+    if (provider.providerType === 'anthropic') {
+      return `${provider.name} (coming soon)`;
+    }
+    if (provider.providerType === 'gemini') {
+      return `${provider.name} (coming soon)`;
+    }
+    return provider.name;
+  };
+
   const modalityOptions: { value: ModelModality; label: string }[] = [
-    { value: 'text', label: 'Text' },
-    { value: 'image', label: 'Image' },
-    { value: 'video', label: 'Video' },
+    { value: 'text', label: 'Text chat' },
   ];
 
   const getModelsByProvider = (providerId: string) =>
@@ -362,6 +370,7 @@ export default function ModelSettingsTab() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+              <p className="text-xs text-dark-500 mt-1">Image and video models are coming soon and are hidden from P0 chat setup.</p>
             </div>
           </div>
 
@@ -447,7 +456,7 @@ export default function ModelSettingsTab() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-semibold text-white flex items-center gap-2">
-                    {provider.name}
+                    {getProviderDisplayName(provider)}
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       provider.enabled ? 'bg-green-500/20 text-green-400' : 'bg-dark-700 text-dark-400'
                     }`}>

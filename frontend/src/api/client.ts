@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, MFARequiredResponse, AuthProviders, ActiveSession, ActivityLogEntry, PasskeyCredential, ImpersonationResponse, TenantMember, TenantDetail, TenantListItem, UserListItem, Message, AboutInfo, SystemLog, ConfigVar, UserDetail, UserMembershipDetail, DeletePreflightResponse, Plan, EntitlementKeyInfo, PublicPlansResponse, CreditBundle, SystemNode, SystemMetric, FinancialTransaction, DailyMetricPoint, IntegrationCheck, APIKey, Webhook, WebhookDelivery, WebhookEventTypeInfo, BrandingConfig, MediaItem, CustomPage, Promotion, EligibleProduct, Announcement, UsageSummary, Invitation, FunnelData, CohortRow, EngagementData, KPIData, CustomEventData, EventTypeSummary, EventDefinition, SankeyData, Agent, ChatMessage, Conversation, ChatRequest, ChatResponse, ModelProvider, ModelConfig } from '../types';
+import type { AuthResponse, MFARequiredResponse, AuthProviders, ActiveSession, ActivityLogEntry, PasskeyCredential, ImpersonationResponse, TenantMember, TenantDetail, TenantListItem, UserListItem, Message, AboutInfo, SystemLog, ConfigVar, UserDetail, UserMembershipDetail, DeletePreflightResponse, Plan, EntitlementKeyInfo, PublicPlansResponse, CreditBundle, SystemNode, SystemMetric, FinancialTransaction, DailyMetricPoint, IntegrationCheck, APIKey, Webhook, WebhookDelivery, WebhookEventTypeInfo, BrandingConfig, MediaItem, CustomPage, Promotion, EligibleProduct, Announcement, UsageSummary, Invitation, FunnelData, CohortRow, EngagementData, KPIData, CustomEventData, EventTypeSummary, EventDefinition, SankeyData, Agent, ChatMessage, Conversation, ChatRequest, ChatResponse, ModelProvider, ModelConfig, LaunchReadinessResponse } from '../types';
 import { getStoredValue, removeStoredValue, setStoredValue, storageKeys } from '../utils/storageKeys';
 
 const api = axios.create({
@@ -343,6 +343,10 @@ export const adminApi = {
   deactivatePromotion: (id: string) =>
     api.post('/admin/promotions/deactivate', { id }).then(r => r.data),
 
+  // Launch Readiness
+  getLaunchReadiness: () =>
+    api.get<LaunchReadinessResponse>('/admin/launch-readiness').then(r => r.data),
+
   // Announcements
   listAnnouncements: () =>
     api.get<{ announcements: Announcement[] }>('/admin/announcements').then(r => r.data),
@@ -446,7 +450,7 @@ export const tenantModelsApi = {
   createProvider: (data: Partial<ModelProvider>) => api.post<ModelProvider>('/tenant/model-providers', data).then(r => r.data),
   updateProvider: (id: string, data: Partial<ModelProvider>) => api.put<ModelProvider>(`/tenant/model-providers/${id}`, data).then(r => r.data),
   deleteProvider: (id: string) => api.delete(`/tenant/model-providers/${id}`).then(r => r.data),
-  testProvider: (id: string) => api.post<{ status: string }>(`/tenant/model-providers/${id}/test`).then(r => r.data),
+  testProvider: (id: string) => api.post<{ status: string; message?: string }>(`/tenant/model-providers/${id}/test`).then(r => r.data),
   listModels: () => api.get<ModelConfig[]>('/tenant/model-configs').then(r => r.data),
   getModel: (id: string) => api.get<ModelConfig>(`/tenant/model-configs/${id}`).then(r => r.data),
   createModel: (data: Partial<ModelConfig>) => api.post<ModelConfig>('/tenant/model-configs', data).then(r => r.data),

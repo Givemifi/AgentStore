@@ -12,26 +12,26 @@ import (
 	"syscall"
 	"time"
 
-	"lastsaas/internal/api/handlers"
-	"lastsaas/internal/auth"
-	"lastsaas/internal/config"
-	"lastsaas/internal/configstore"
-	"lastsaas/internal/credits"
-	"lastsaas/internal/datadog"
-	"lastsaas/internal/db"
-	"lastsaas/internal/email"
-	"lastsaas/internal/events"
-	"lastsaas/internal/health"
-	"lastsaas/internal/llm"
-	"lastsaas/internal/metrics"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/planstore"
-	stripeservice "lastsaas/internal/stripe"
-	"lastsaas/internal/syslog"
-	"lastsaas/internal/telemetry"
-	"lastsaas/internal/version"
-	"lastsaas/internal/webhooks"
+	"agentstore/internal/api/handlers"
+	"agentstore/internal/auth"
+	"agentstore/internal/config"
+	"agentstore/internal/configstore"
+	"agentstore/internal/credits"
+	"agentstore/internal/datadog"
+	"agentstore/internal/db"
+	"agentstore/internal/email"
+	"agentstore/internal/events"
+	"agentstore/internal/health"
+	"agentstore/internal/llm"
+	"agentstore/internal/metrics"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/planstore"
+	stripeservice "agentstore/internal/stripe"
+	"agentstore/internal/syslog"
+	"agentstore/internal/telemetry"
+	"agentstore/internal/version"
+	"agentstore/internal/webhooks"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -99,7 +99,7 @@ func main() {
 		slog.Error("Failed to load config", "error", err)
 		os.Exit(1)
 	}
-	slog.Info("Starting LastSaaS", "mode", cfg.Environment)
+	slog.Info("Starting AgentStore", "mode", cfg.Environment)
 
 	// Connect to MongoDB
 	database, err := db.NewMongoDB(cfg.Database.URI, cfg.Database.Name)
@@ -163,7 +163,7 @@ func main() {
 		slog.Warn("DataDog integration not configured", "reason", "missing API key")
 	}
 
-	sysLogger.Critical(context.Background(), fmt.Sprintf("System startup: LastSaaS v%s", version.Current))
+	sysLogger.Critical(context.Background(), fmt.Sprintf("System startup: AgentStore v%s", version.Current))
 
 	// Initialize services
 	jwtService := auth.NewJWTService(
@@ -714,6 +714,7 @@ func main() {
 	// Read-only routes (user+ role)
 	adminAPI.HandleFunc("/about", adminHandler.GetAbout).Methods("GET")
 	adminAPI.HandleFunc("/dashboard", adminHandler.GetDashboard).Methods("GET")
+	adminAPI.HandleFunc("/launch-readiness", adminHandler.GetLaunchReadiness).Methods("GET")
 	adminAPI.HandleFunc("/logs", logHandler.ListLogs).Methods("GET")
 	adminAPI.HandleFunc("/logs/severity-counts", logHandler.SeverityCounts).Methods("GET")
 	adminAPI.HandleFunc("/logs/export", rateLimiter.RateLimitHandler(

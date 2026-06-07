@@ -11,15 +11,15 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/auth"
-	"lastsaas/internal/db"
-	"lastsaas/internal/email"
-	"lastsaas/internal/events"
-	"lastsaas/internal/health"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/syslog"
-	"lastsaas/internal/version"
+	"agentstore/internal/auth"
+	"agentstore/internal/db"
+	"agentstore/internal/email"
+	"agentstore/internal/events"
+	"agentstore/internal/health"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/syslog"
+	"agentstore/internal/version"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -1086,7 +1086,7 @@ func (h *AdminHandler) UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 
 	// Block root tenant ownership transfer via API
 	if tenant.IsRoot && req.Role == models.RoleOwner {
-		respondWithError(w, http.StatusForbidden, "Root tenant ownership can only be transferred via the CLI command: lastsaas transfer-root-owner")
+		respondWithError(w, http.StatusForbidden, "Root tenant ownership can only be transferred via the CLI command: agentstore transfer-root-owner")
 		return
 	}
 

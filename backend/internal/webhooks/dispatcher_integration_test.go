@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/events"
-	"lastsaas/internal/models"
-	"lastsaas/internal/testutil"
+	"agentstore/internal/events"
+	"agentstore/internal/models"
+	"agentstore/internal/testutil"
 )
 
 func TestDispatcherEmitAndDeliver(t *testing.T) {

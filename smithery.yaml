@@ -1,4 +1,4 @@
-# Smithery configuration for LastSaaS MCP server
+# Smithery configuration for AgentStore MCP server
 # https://smithery.ai/docs/build
 
 runtime: go
@@ -7,21 +7,21 @@ startCommand:
   configSchema:
     type: object
     properties:
-      lastsaasUrl:
+      agentstoreUrl:
         type: string
-        description: "Base URL of your LastSaaS instance (e.g., https://your-app.fly.dev)"
+        description: "Base URL of your AgentStore instance (e.g., https://your-app.fly.dev)"
       apiKey:
         type: string
         description: "Root-tenant API key with admin authority (starts with lsk_)"
     required:
-      - lastsaasUrl
+      - agentstoreUrl
       - apiKey
   commandFunction: |
     (config) => ({
-      command: "./lastsaas",
+      command: "./agentstore",
       args: ["mcp"],
       env: {
-        LASTSAAS_URL: config.lastsaasUrl,
-        LASTSAAS_API_KEY: config.apiKey
+        AGENTSTORE_URL: config.agentstoreUrl,
+        AGENTSTORE_API_KEY: config.apiKey
       }
     })

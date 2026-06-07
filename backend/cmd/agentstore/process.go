@@ -18,7 +18,7 @@ const (
 	frontendPIDFile = "frontend.pid"
 	backendLogFile  = "backend.log"
 	frontendLogFile = "frontend.log"
-	serverBinName   = "lastsaas-server"
+	serverBinName   = "agentstore-server"
 )
 
 // cmdStart builds and starts the backend and/or frontend.

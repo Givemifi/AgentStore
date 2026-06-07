@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/configstore"
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
-	"lastsaas/internal/syslog"
+	"agentstore/internal/configstore"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
+	"agentstore/internal/syslog"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -624,7 +624,7 @@ func (h *BrandingHandler) DeletePage(w http.ResponseWriter, r *http.Request) {
 
 func defaultBrandingConfig(appName string) models.BrandingConfig {
 	if appName == "" {
-		appName = "LastSaaS"
+		appName = "AgentStore"
 	}
 	return models.BrandingConfig{
 		AppName:  appName,

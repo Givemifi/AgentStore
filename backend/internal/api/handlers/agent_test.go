@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/testutil"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/testutil"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"

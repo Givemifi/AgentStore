@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Settings } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
 import ProfileTab from './settings/ProfileTab';
@@ -14,12 +15,14 @@ type SettingsTab = 'profile' | 'security' | 'sessions' | 'billing' | 'agents' | 
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { isRootTenant, role } = useTenant();
   const { branding } = useBranding();
   const location = useLocation();
   const passkeysEnabled = branding?.authProviders?.passkeys ?? false;
   const mfaConfigEnabled = branding?.authProviders?.mfa ?? false;
   const showMfaSection = mfaConfigEnabled || user?.totpEnabled;
   const showSecurityTab = passkeysEnabled || showMfaSection;
+  const canManageMarketplaceSupply = isRootTenant && (role === 'owner' || role === 'admin');
 
   // Resolve active tab from pathname
   const pathTab = location.pathname.endsWith('/agents') ? 'agents' : location.pathname.endsWith('/models') ? 'models' : undefined;
@@ -29,9 +32,11 @@ export default function SettingsPage() {
     ...(showSecurityTab ? [{ key: 'security' as const, label: 'Security' }] : []),
     { key: 'sessions' as const, label: 'Sessions' },
     { key: 'billing' as const, label: 'Billing' },
-    { key: 'agents' as const, label: 'Agents' },
-    { key: 'models' as const, label: 'Models' },
-  ], [showSecurityTab]);
+    ...(canManageMarketplaceSupply ? [
+      { key: 'agents' as const, label: 'Agents' },
+      { key: 'models' as const, label: 'Models' },
+    ] : []),
+  ], [showSecurityTab, canManageMarketplaceSupply]);
 
   const [tab, setTab] = useState<SettingsTab>(() => {
     if (pathTab && tabs.some(t => t.key === pathTab)) return pathTab as SettingsTab;

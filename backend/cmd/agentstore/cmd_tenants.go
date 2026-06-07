@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,7 +17,7 @@ import (
 
 func cmdTenants() {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, `Usage: lastsaas tenants <subcommand>
+		fmt.Fprintln(os.Stderr, `Usage: agentstore tenants <subcommand>
 
 Subcommands:
   list                        List all tenants
@@ -30,7 +30,7 @@ Subcommands:
 		cmdTenantsList()
 	case "get":
 		if len(os.Args) < 4 {
-			fmt.Fprintln(os.Stderr, "Usage: lastsaas tenants get <id-or-slug>")
+			fmt.Fprintln(os.Stderr, "Usage: agentstore tenants get <id-or-slug>")
 			os.Exit(1)
 		}
 		cmdTenantsGet(os.Args[3])

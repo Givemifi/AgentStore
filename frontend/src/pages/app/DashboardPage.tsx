@@ -1,9 +1,11 @@
+import { useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Landmark, MessageCircle, PenLine, Scale, Sparkles, TowerControl, Wallet, Zap, Headphones, Globe2 } from 'lucide-react';
+import { ArrowRight, Landmark, MessageCircle, PenLine, Scale, Search, Sparkles, TowerControl, Zap, Headphones, Globe2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { agentsApi, brandingApi, usageApi } from '../../api/client';
 import { useTenant } from '../../contexts/TenantContext';
+import { CreditExplainer, EmptyState, ErrorState } from '../../components/app';
 import type { Agent } from '../../types';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -87,6 +89,37 @@ export default function DashboardPage() {
     : null;
   const availableCreditsValue = availableCredits ?? 0;
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Recommended');
+
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set((agents ?? []).map((agent) => agent.category).filter(Boolean))).sort();
+    return ['Recommended', ...uniqueCategories];
+  }, [agents]);
+
+  const filteredAgents = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return (agents ?? []).filter((agent) => {
+      const matchesSearch = normalizedSearch === '' || [
+        agent.name,
+        agent.category,
+        agent.description,
+        ...(agent.suggestedPrompts ?? []),
+      ].some((value) => value.toLowerCase().includes(normalizedSearch));
+      const matchesCategory = selectedCategory === 'Recommended' || agent.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [agents, searchTerm, selectedCategory]);
+
+  const commonMessageCost = agents && agents.length > 0
+    ? Math.max(1, Math.min(...agents.map((agent) => agent.creditCost?.textMessageCredits ?? 1)))
+    : 1;
+
+  const startWithPrompt = (agent: Agent, prompt: string) => {
+    const params = new URLSearchParams({ prompt });
+    navigate(`/chat/${agent.slug}?${params.toString()}`);
+  };
+
   const handleRetry = () => {
     void refetchAgents();
     void refetchUsage();
@@ -102,47 +135,33 @@ export default function DashboardPage() {
                 <Sparkles className="h-3.5 w-3.5" />
                 Agent Marketplace
               </div>
-              <h1 className="mt-4 flex items-center gap-3 text-3xl font-bold text-white sm:text-4xl">
-                <MessageCircle className="h-8 w-8 text-primary-300" />
-                Launch your AgentStore
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Find the right AI agent for your next task.
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-dark-300 sm:text-base">
-                Choose a tenant-published agent, start a conversation, and turn specialist AI workflows into a product your team can sell and monetize.
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-dark-300 sm:text-base">
+                Search practical business Agents, try a suggested prompt, and only pay credits after a successful response.
               </p>
+              <label className="sr-only" htmlFor="agent-search">Search Agents</label>
+              <div className="mt-6 flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-dark-950 shadow-xl shadow-black/20">
+                <Search className="h-5 w-5 text-dark-400" />
+                <input
+                  id="agent-search"
+                  type="search"
+                  role="searchbox"
+                  aria-label="Search Agents"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search legal, tax, marketing, support..."
+                  className="min-w-0 flex-1 bg-transparent text-sm text-dark-950 placeholder:text-dark-400 focus:outline-none"
+                />
+              </div>
             </div>
 
-            <div className="min-w-full lg:min-w-[320px] lg:max-w-sm">
-              <div className="rounded-2xl border border-white/8 bg-dark-900/70 p-5 backdrop-blur-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-dark-400">
-                      Current balance
-                    </p>
-                    {usageLoading ? (
-                      <div className="mt-3 space-y-2">
-                        <SkeletonBlock className="h-7 w-40" />
-                        <SkeletonBlock className="h-4 w-48" />
-                      </div>
-                    ) : usageSummary ? (
-                      <>
-                        <p className="mt-3 text-2xl font-semibold text-white">
-                          {formatCredits(availableCreditsValue)} credits available
-                        </p>
-                        <p className="mt-2 text-sm text-dark-400">
-                          {formatCredits(usageSummary.subscriptionCredits)} subscription + {formatCredits(usageSummary.purchasedCredits)} purchased
-                        </p>
-                      </>
-                    ) : (
-                      <p className="mt-3 text-sm text-dark-400">
-                        Credits will appear here when usage data is available.
-                      </p>
-                    )}
-                  </div>
-                  <div className="rounded-2xl border border-primary-400/15 bg-primary-500/10 p-3 text-primary-200">
-                    <Wallet className="h-5 w-5" />
-                  </div>
-                </div>
-              </div>
+            <div className="min-w-full lg:min-w-[340px] lg:max-w-sm">
+              <CreditExplainer
+                balance={usageSummary ? availableCreditsValue : null}
+                perMessageCost={commonMessageCost}
+              />
             </div>
           </div>
         </div>
@@ -150,6 +169,8 @@ export default function DashboardPage() {
 
       {sanitizedDashboardHtml ? (
         <section
+          role="region"
+          aria-label="Custom dashboard content"
           className="rounded-[26px] border border-white/8 bg-dark-950/80 p-6 text-dark-100"
           dangerouslySetInnerHTML={{ __html: sanitizedDashboardHtml }}
         />
@@ -163,18 +184,46 @@ export default function DashboardPage() {
         />
       ) : null}
 
+      {categories.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setSelectedCategory(category)}
+              aria-pressed={selectedCategory === category}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                selectedCategory === category
+                  ? 'bg-primary-500 text-white'
+                  : 'border border-white/8 bg-dark-900/70 text-dark-300 hover:border-primary-400/30 hover:text-white'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {agentsLoading || !tenantReady ? (
         <AgentGridSkeleton />
-      ) : agents && agents.length > 0 ? (
+      ) : agents && agents.length > 0 && filteredAgents.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {agents.map((agent) => (
+          {filteredAgents.map((agent) => (
             <AgentCard
               key={agent.id}
               agent={agent}
               onStartChat={() => navigate(`/chat/${agent.slug}`)}
+              onPromptClick={(prompt) => startWithPrompt(agent, prompt)}
             />
           ))}
         </div>
+      ) : agents && agents.length > 0 ? (
+        <EmptyState
+          icon={Search}
+          title="No Agents match your search"
+          description="Try a different keyword or category to find the right Agent for your task."
+          action={{ label: 'Clear filters', onClick: () => { setSearchTerm(''); setSelectedCategory('Recommended'); } }}
+        />
       ) : agentsError ? null : (
         <EmptyExpertsState />
       )}
@@ -185,9 +234,10 @@ export default function DashboardPage() {
 interface AgentCardProps {
   agent: Agent;
   onStartChat: () => void;
+  onPromptClick: (prompt: string) => void;
 }
 
-function AgentCard({ agent, onStartChat }: AgentCardProps) {
+function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
   const badge = getExpertBadge(agent);
   const ExpertIcon = getExpertIcon(agent);
 
@@ -217,15 +267,26 @@ function AgentCard({ agent, onStartChat }: AgentCardProps) {
 
         <p className="mt-5 text-sm leading-6 text-dark-300">{agent.description}</p>
 
+        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary-300">
+          Best for {agent.category} teams
+        </p>
+
         <div className="mt-6 rounded-2xl border border-white/6 bg-dark-900/60 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-dark-400">
             Suggested prompts
           </p>
           <ul className="mt-3 space-y-2.5">
-            {agent.suggestedPrompts?.slice(0, 3).map((example, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-dark-200">
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary-400" />
-                <span>{example}</span>
+            {agent.suggestedPrompts?.slice(0, 3).map((example) => (
+              <li key={example}>
+                <button
+                  type="button"
+                  onClick={() => onPromptClick(example)}
+                  className="flex w-full items-start gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-dark-200 transition-colors hover:bg-dark-800 hover:text-white"
+                  aria-label={`Try prompt: ${example}`}
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary-400" />
+                  <span>{example}</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -240,19 +301,14 @@ function AgentCard({ agent, onStartChat }: AgentCardProps) {
             {agent.capabilities?.includes('text_chat') && (
               <span className="text-xs text-dark-400">Text chat</span>
             )}
-            {agent.capabilities?.includes('image_generation') && (
-              <span className="text-xs text-dark-400">Image</span>
-            )}
-            {agent.capabilities?.includes('video_generation') && (
-              <span className="text-xs text-dark-400">Video</span>
-            )}
           </div>
 
           <button
             onClick={onStartChat}
             className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
+            aria-label={`Start with ${agent.name}`}
           >
-            Start Chat
+            Start
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -301,43 +357,25 @@ function AgentGridSkeleton() {
   );
 }
 
-function InlineErrorBanner({
-  message,
-  onRetry,
-  isRetrying,
-}: {
-  message: string;
-  onRetry: () => void;
-  isRetrying: boolean;
-}) {
+function InlineErrorBanner({ message, onRetry, isRetrying }: { message: string; onRetry: () => void; isRetrying: boolean }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="font-semibold text-red-100">Unable to load agents right now.</p>
-        <p className="mt-1 text-red-200/80">{message}</p>
-      </div>
-      <button
-        onClick={onRetry}
-        disabled={isRetrying}
-        className="inline-flex items-center justify-center rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2 font-semibold text-red-100 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {isRetrying ? 'Retrying...' : 'Retry'}
-      </button>
-    </div>
+    <ErrorState
+      title="Unable to load agents right now."
+      message={message}
+      retryLabel="Retry"
+      onRetry={onRetry}
+      isRetrying={isRetrying}
+    />
   );
 }
 
 function EmptyExpertsState() {
   return (
-    <div className="rounded-[26px] border border-dashed border-white/10 bg-dark-950/70 px-6 py-14 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-dark-900/80 text-primary-300">
-        <MessageCircle className="h-6 w-6" />
-      </div>
-      <h2 className="mt-5 text-xl font-semibold text-white">No agents yet</h2>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-dark-400">
-        Check back soon or contact your administrator to publish agents.
-      </p>
-    </div>
+    <EmptyState
+      icon={MessageCircle}
+      title="No agents yet"
+      description="This workspace has not published any Agents yet. Check back soon or contact your administrator to publish the first Agent."
+    />
   );
 }
 
@@ -354,8 +392,4 @@ function getExpertBadge(agent: Agent) {
 
 function getExpertIcon(agent: Agent) {
   return expertIconMap[agent.id as keyof typeof expertIconMap] ?? MessageCircle;
-}
-
-function formatCredits(value: number) {
-  return new Intl.NumberFormat().format(value);
 }

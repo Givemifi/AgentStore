@@ -6,7 +6,7 @@ COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
 COPY VERSION ./VERSION
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X lastsaas/internal/version.buildVersion=$(cat VERSION)" -o lastsaas ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X agentstore/internal/version.buildVersion=$(cat VERSION)" -o agentstore ./cmd/server
 
 # Stage 2: Build frontend
 FROM node:22-alpine AS frontend-builder
@@ -22,7 +22,7 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
 # Copy backend binary
-COPY --from=backend-builder /build/lastsaas ./lastsaas
+COPY --from=backend-builder /build/agentstore ./agentstore
 
 # Copy prod config
 COPY backend/config/prod.yaml ./config/prod.yaml
@@ -30,7 +30,7 @@ COPY backend/config/prod.yaml ./config/prod.yaml
 # Copy frontend dist
 COPY --from=frontend-builder /build/dist ./static
 
-ENV LASTSAAS_ENV=prod
+ENV AGENTSTORE_ENV=prod
 EXPOSE 8080
 
-CMD ["./lastsaas"]
+CMD ["./agentstore"]

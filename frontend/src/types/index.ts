@@ -433,7 +433,7 @@ export interface DailyMetricPoint {
 
 // --- Integration Health ---
 
-export type IntegrationStatus = 'healthy' | 'unhealthy' | 'not_configured';
+export type IntegrationStatus = 'healthy' | 'unhealthy' | 'not_configured' | 'degraded';
 
 export interface IntegrationCheck {
   name: string;
@@ -813,4 +813,28 @@ export interface ChatResponse {
   answer: string;
   creditsCharged: number;
   remainingCredits: number;
+}
+
+// --- Launch Readiness ---
+
+export type LaunchReadinessStatus = 'complete' | 'warning' | 'pending';
+
+export interface LaunchReadinessItem {
+  id: string;
+  label: string;
+  status: LaunchReadinessStatus;
+  description: string;
+  actionPath: string;
+}
+
+export interface LaunchReadinessSummary {
+  complete: number;
+  warning: number;
+  pending: number;
+  total: number;
+}
+
+export interface LaunchReadinessResponse {
+  items: LaunchReadinessItem[];
+  summary: LaunchReadinessSummary;
 }

@@ -13,9 +13,9 @@ import (
 	"net/http"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/events"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/events"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"text/template"
 
-	"lastsaas/internal/models"
+	"agentstore/internal/models"
 )
 
 // injectionPatterns matches common injection vectors in template content.

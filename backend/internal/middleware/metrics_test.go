@@ -157,6 +157,14 @@ func TestPercentile(t *testing.T) {
 	}
 }
 
+func TestMetricsResponseWriterPreservesFlusher(t *testing.T) {
+	rr := httptest.NewRecorder()
+	mrw := &metricsResponseWriter{ResponseWriter: rr, statusCode: 200}
+	if _, ok := interface{}(mrw).(http.Flusher); !ok {
+		t.Fatal("expected metrics response writer to preserve http.Flusher for streaming responses")
+	}
+}
+
 func TestMetricsResponseWriterWriteHeader(t *testing.T) {
 	rr := httptest.NewRecorder()
 	mrw := &metricsResponseWriter{ResponseWriter: rr, statusCode: 200}

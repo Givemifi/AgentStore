@@ -1,0 +1,4 @@
+{"type":"server-started","port":62901,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:62901","screen_dir":"/Users/duoxianganwenaiyisheng/Desktop/AgnetStore/.superpowers/brainstorm/28114-1780800535/content","state_dir":"/Users/duoxianganwenaiyisheng/Desktop/AgnetStore/.superpowers/brainstorm/28114-1780800535/state"}
+{"type":"screen-added","file":"/Users/duoxianganwenaiyisheng/Desktop/AgnetStore/.superpowers/brainstorm/28114-1780800535/content/p0-chat-closeout-layout.html"}
+{"type":"screen-added","file":"/Users/duoxianganwenaiyisheng/Desktop/AgnetStore/.superpowers/brainstorm/28114-1780800535/content/waiting-provider-section.html"}
+{"type":"server-stopped","reason":"idle timeout"}

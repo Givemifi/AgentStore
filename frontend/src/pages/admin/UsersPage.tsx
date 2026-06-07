@@ -4,6 +4,7 @@ import { Users, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, ArrowUp
 import { toast } from 'sonner';
 import { adminApi, setAuthToken } from '../../api/client';
 import { getErrorMessage } from '../../utils/errors';
+import { setStoredValue, removeStoredValue, storageKeys } from '../../utils/storageKeys';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import type { UserListItem } from '../../types';
@@ -127,9 +128,9 @@ export default function UsersPage() {
   const handleImpersonate = async (userId: string) => {
     try {
       const data = await adminApi.impersonateUser(userId);
-      localStorage.setItem('lastsaas_access_token', data.accessToken);
-      localStorage.removeItem('lastsaas_refresh_token');
-      localStorage.setItem('lastsaas_impersonating', 'true');
+      setStoredValue(storageKeys.accessToken, data.accessToken);
+      removeStoredValue(storageKeys.refreshToken);
+      setStoredValue(storageKeys.impersonating, 'true');
       setAuthToken(data.accessToken);
       await refreshUser();
       navigate('/dashboard');

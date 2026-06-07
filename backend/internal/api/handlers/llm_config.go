@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
-	"lastsaas/internal/validation"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
+	"agentstore/internal/validation"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"

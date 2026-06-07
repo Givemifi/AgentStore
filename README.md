@@ -1,24 +1,24 @@
-# LastSaaS
+# AgentStore
 
-[![CI](https://github.com/jonradoff/lastsaas/actions/workflows/ci.yml/badge.svg)](https://github.com/jonradoff/lastsaas/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/jonradoff/lastsaas/branch/master/graph/badge.svg)](https://codecov.io/gh/jonradoff/lastsaas)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jonradoff/lastsaas)](https://goreportcard.com/report/github.com/jonradoff/lastsaas)
+[![CI](https://github.com/jonradoff/agentstore/actions/workflows/ci.yml/badge.svg)](https://github.com/jonradoff/agentstore/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jonradoff/agentstore/branch/master/graph/badge.svg)](https://codecov.io/gh/jonradoff/agentstore)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jonradoff/agentstore)](https://goreportcard.com/report/github.com/jonradoff/agentstore)
 
-**The last SaaS boilerplate you'll ever need.**
+**A marketplace for practical AI agents, built on an open-source SaaS foundation.**
 
-LastSaaS is a complete, production-ready SaaS foundation built entirely through conversation with [Claude Code](https://claude.ai/claude-code). It gives you multi-tenant account management, authentication, role-based access control, white-label branding, Stripe billing, API keys, outgoing webhooks, a full admin interface, system health monitoring, credit-based usage tracking, and product analytics with telemetry — everything you need to launch a SaaS business, ready to customize for your specific product.
+AgentStore helps operators launch a curated AI Agent marketplace where users can discover useful Agents, chat with them, understand credit usage, buy credits, and continue their work without needing to understand the underlying platform. The product experience is backed by a production-ready SaaS foundation: multi-tenant account management, authentication, role-based access control, white-label branding, Stripe billing, API keys, outgoing webhooks, admin tooling, system health monitoring, credit-based usage tracking, and product analytics with telemetry.
 
-The bottleneck for building software isn't engineering capacity anymore — it's imagination. LastSaaS proves it: a single person with a clear vision and an AI agent can stand up what used to require a team and months of work. And because it was built with [Claude Code](https://claude.ai/claude-code), the codebase is fork-ready for agentic engineering — point an AI agent at it and keep building your product through conversation.
+For builders, AgentStore is still a fork-ready SaaS/AI platform foundation built through conversation with [Claude Code](https://claude.ai/claude-code). It lets you start from a working marketplace and keep customizing the product through agentic engineering instead of rebuilding the same SaaS plumbing from scratch.
 
-**[Project Page](https://metavert.io/lastsaas)**
+**[Project Page](https://metavert.io/agentstore)**
 
 ---
 
-## Why LastSaaS Exists
+## Why AgentStore Exists
 
 Every SaaS product needs the same boring foundation: user accounts, teams, roles, authentication, admin dashboards, billing, usage limits, branding, webhooks, API keys. Historically, building that foundation meant weeks of plumbing before you could write a single line of your actual product.
 
-LastSaaS eliminates that. Fork it, point an AI agent at it, and start building your product on top of a foundation that already handles:
+AgentStore eliminates that. Fork it, point an AI agent at it, and start building your product on top of a foundation that already handles:
 
 - Multi-tenant isolation with role-based access
 - JWT authentication with refresh token rotation
@@ -51,29 +51,29 @@ This is open-source infrastructure for the agentic era of software — where the
 
 ## How It Compares
 
-If you're evaluating SaaS boilerplates, you've probably looked at ShipFast, Supastarter, MakerKit, SaaS Pegasus, and Gravity. Here's why technical founders choose LastSaaS instead.
+If you're evaluating SaaS boilerplates, you've probably looked at ShipFast, Supastarter, MakerKit, SaaS Pegasus, and Gravity. Here's why technical founders choose AgentStore instead.
 
-**Free and open-source.** ShipFast costs $169, MakerKit runs $199–599, Supastarter starts at $299, SaaS Pegasus charges $249/year, and Gravity is under $1K. LastSaaS is MIT-licensed — fork it, ship it, never pay a license fee. You own the code completely.
+**Free and open-source.** ShipFast costs $169, MakerKit runs $199–599, Supastarter starts at $299, SaaS Pegasus charges $249/year, and Gravity is under $1K. AgentStore is MIT-licensed — fork it, ship it, never pay a license fee. You own the code completely.
 
-**Go backend, not another Next.js project.** ShipFast, Supastarter, MakerKit, and Gravity are all JavaScript/TypeScript stacks. SaaS Pegasus uses Django. LastSaaS pairs a Go backend with a React + TypeScript frontend — giving you compiled-binary deployment, low memory footprint (a 14MB Alpine container), and the concurrency model that Go is known for. If your SaaS will handle real traffic or you want a backend that isn't a Node.js monolith, this matters.
+**Go backend, not another Next.js project.** ShipFast, Supastarter, MakerKit, and Gravity are all JavaScript/TypeScript stacks. SaaS Pegasus uses Django. AgentStore pairs a Go backend with a React + TypeScript frontend — giving you compiled-binary deployment, low memory footprint (a 14MB Alpine container), and the concurrency model that Go is known for. If your SaaS will handle real traffic or you want a backend that isn't a Node.js monolith, this matters.
 
-**Genuine multi-tenancy.** ShipFast has no multi-tenancy at all. SaaS Pegasus and Gravity offer basic team features but not true tenant isolation. LastSaaS gives you full multi-tenant architecture: tenant-scoped data isolation, three-tier RBAC (owner/admin/user), team invitations, ownership transfer, per-tenant activity logs, and per-tenant billing. This is the difference between "users can collaborate" and "each customer gets their own isolated workspace."
+**Genuine multi-tenancy.** ShipFast has no multi-tenancy at all. SaaS Pegasus and Gravity offer basic team features but not true tenant isolation. AgentStore gives you full multi-tenant architecture: tenant-scoped data isolation, three-tier RBAC (owner/admin/user), team invitations, ownership transfer, per-tenant activity logs, and per-tenant billing. This is the difference between "users can collaborate" and "each customer gets their own isolated workspace."
 
-**White-label branding built in.** Most boilerplates give you a theme toggle at best. LastSaaS includes a full white-label system: custom app name, logo, colors, fonts, landing page, custom pages, CSS injection, favicon, configurable navigation with entitlement gating, and auth page customization. If you're building a platform where customers see your brand (not yours-plus-a-framework), this saves weeks.
+**White-label branding built in.** Most boilerplates give you a theme toggle at best. AgentStore includes a full white-label system: custom app name, logo, colors, fonts, landing page, custom pages, CSS injection, favicon, configurable navigation with entitlement gating, and auth page customization. If you're building a platform where customers see your brand (not yours-plus-a-framework), this saves weeks.
 
-**Outgoing webhooks, not just Stripe webhooks.** None of the alternatives — ShipFast, Supastarter, MakerKit, SaaS Pegasus, or Gravity — include an outgoing webhook system. LastSaaS ships with 19 event types across billing, team lifecycle, user lifecycle, credits, and security events, with HMAC-SHA256 signing, delivery tracking, and test events. Your customers can integrate with your platform from day one.
+**Outgoing webhooks, not just Stripe webhooks.** None of the alternatives — ShipFast, Supastarter, MakerKit, SaaS Pegasus, or Gravity — include an outgoing webhook system. AgentStore ships with 19 event types across billing, team lifecycle, user lifecycle, credits, and security events, with HMAC-SHA256 signing, delivery tracking, and test events. Your customers can integrate with your platform from day one.
 
-**API keys with scoped access.** ShipFast, Supastarter, and MakerKit don't include API key management. LastSaaS provides `lsk_`-prefixed API keys with admin and user authority scopes, SHA-256 hashed storage, and last-used tracking — ready for your customers to build integrations.
+**API keys with scoped access.** ShipFast, Supastarter, and MakerKit don't include API key management. AgentStore provides `lsk_`-prefixed API keys with admin and user authority scopes, SHA-256 hashed storage, and last-used tracking — ready for your customers to build integrations.
 
-**Health monitoring and financial dashboards.** No competing boilerplate includes system health monitoring. LastSaaS collects CPU, memory, disk, HTTP, and MongoDB metrics every 60 seconds across all nodes, with 8 real-time charts, threshold alerting, and 30-day retention. The financial dashboard gives you revenue, ARR, DAU, and MAU time-series out of the box.
+**Health monitoring and financial dashboards.** No competing boilerplate includes system health monitoring. AgentStore collects CPU, memory, disk, HTTP, and MongoDB metrics every 60 seconds across all nodes, with 8 real-time charts, threshold alerting, and 30-day retention. The financial dashboard gives you revenue, ARR, DAU, and MAU time-series out of the box.
 
-**Product analytics with telemetry.** No competing boilerplate includes product analytics. LastSaaS auto-instruments the customer journey — visitor → signup → plan page → checkout → paid conversion → upgrade — and visualizes it as a conversion funnel. The PM dashboard includes SaaS KPIs (MRR, ARR, ARPU, LTV, churn rate, trial conversion), retention cohort analysis, engagement metrics (DAU/WAU/MAU for paying subscribers), and a custom event explorer. A Go SDK and REST API let you track your own events with zero configuration.
+**Product analytics with telemetry.** No competing boilerplate includes product analytics. AgentStore auto-instruments the customer journey — visitor → signup → plan page → checkout → paid conversion → upgrade — and visualizes it as a conversion funnel. The PM dashboard includes SaaS KPIs (MRR, ARR, ARPU, LTV, churn rate, trial conversion), retention cohort analysis, engagement metrics (DAU/WAU/MAU for paying subscribers), and a custom event explorer. A Go SDK and REST API let you track your own events with zero configuration.
 
-**MCP server for AI-native operations.** This is unique to LastSaaS. A built-in Model Context Protocol server with 32 read-only tools lets you connect Claude (or any MCP-compatible AI) directly to your running application. Query your ARR trend, investigate error spikes, audit API keys, or review system health — all in natural language. No other SaaS boilerplate offers agentic admin access.
+**MCP server for AI-native operations.** This is unique to AgentStore. A built-in Model Context Protocol server with 33 read-only tools lets you connect Claude (or any MCP-compatible AI) directly to your running application. Query your ARR trend, investigate error spikes, audit API keys, or review system health — all in natural language. No other SaaS boilerplate offers agentic admin access.
 
-**Built for AI-assisted development.** LastSaaS was built entirely through conversation with Claude Code, and the codebase is designed to keep being built that way. Consistent patterns, clear naming, and a structure AI agents navigate fluently. Fork it, point an agent at it, describe your product, and keep going. The competing boilerplates were built for manual development — LastSaaS is built for the way software is made now.
+**Built for AI-assisted development.** AgentStore was built entirely through conversation with Claude Code, and the codebase is designed to keep being built that way. Consistent patterns, clear naming, and a structure AI agents navigate fluently. Fork it, point an agent at it, describe your product, and keep going. The competing boilerplates were built for manual development — AgentStore is built for the way software is made now.
 
-| | LastSaaS | ShipFast | Supastarter | MakerKit | Pegasus | Gravity |
+| | AgentStore | ShipFast | Supastarter | MakerKit | Pegasus | Gravity |
 |---|---|---|---|---|---|---|
 | **Price** | **Free (MIT)** | $169 | $299+ | $199–599 | $249/yr | <$1K |
 | **Stack** | Go + React | Next.js | Next.js / Nuxt | Next.js | Django | Node + React |
@@ -84,7 +84,7 @@ If you're evaluating SaaS boilerplates, you've probably looked at ShipFast, Supa
 | **Health Monitoring** | 8 charts | — | — | — | — | — |
 | **Product Analytics** | 5-tab PM dashboard | — | — | — | — | — |
 | **Credit System** | Dual buckets | — | — | Basic | — | — |
-| **MCP Server** | 26 tools | — | — | — | — | — |
+| **MCP Server** | 33 tools | — | — | — | — | — |
 | **Admin Dashboard** | Full | — | ✓ | ✓ | ✓ | Basic |
 | **Stripe Billing** | Full | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -235,22 +235,22 @@ If you're evaluating SaaS boilerplates, you've probably looked at ShipFast, Supa
 - Auto-versioned from the VERSION file
 
 ### CLI Administration
-- `lastsaas setup` — Initialize the system (create root tenant + owner)
-- `lastsaas start` / `stop` / `restart` — Server process management
-- `lastsaas change-password` — Reset any user's password
-- `lastsaas send-message` — Send system messages to users
-- `lastsaas transfer-root-owner` — Transfer root tenant ownership
-- `lastsaas config list|get|set` — Manage configuration variables
-- `lastsaas version` — Show binary and database versions
-- `lastsaas status` — Check system health
-- `lastsaas mcp` — Start the MCP server (see [MCP Server](#mcp-server-ai-admin-access) below)
+- `agentstore setup` — Initialize the system (create root tenant + owner)
+- `agentstore start` / `stop` / `restart` — Server process management
+- `agentstore change-password` — Reset any user's password
+- `agentstore send-message` — Send system messages to users
+- `agentstore transfer-root-owner` — Transfer root tenant ownership
+- `agentstore config list|get|set` — Manage configuration variables
+- `agentstore version` — Show binary and database versions
+- `agentstore status` — Check system health
+- `agentstore mcp` — Start the MCP server (see [MCP Server](#mcp-server-ai-admin-access) below)
 
 ### MCP Server (AI Admin Access)
 
 A built-in [Model Context Protocol](https://modelcontextprotocol.io) server gives AI assistants like Claude read-only access to your admin data — dashboards, users, tenants, financials, logs, health, and more. Useful for asking questions like "what's our ARR trend?" or "show me critical logs from the last hour" in natural language.
 
-- **32 read-only tools** across 14 categories — no write operations, safe by design
-- **2 resources** — `lastsaas://dashboard` and `lastsaas://health` for automatic context
+- **33 read-only tools** across 15 categories — no write operations, safe by design
+- **2 resources** — `agentstore://dashboard` and `agentstore://health` for automatic context
 - **API key authentication** — requires a root-tenant API key, same auth as the admin API
 - **Stdio transport** — runs locally, compatible with Claude Desktop and Claude Code
 
@@ -268,6 +268,7 @@ A built-in [Model Context Protocol](https://modelcontextprotocol.io) server give
 - **Promotions** — Stripe promotion codes with coupon details
 - **Security** — API key inventory (previews only), root tenant members
 - **Webhooks** — webhook configs, event type reference, delivery history
+- **Product Analytics** — conversion funnel, SaaS KPIs, retention cohorts, engagement metrics, custom events
 
 ### Security
 - Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
@@ -334,8 +335,8 @@ A built-in [Model Context Protocol](https://modelcontextprotocol.io) server give
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/jonradoff/lastsaas.git
-cd lastsaas
+git clone https://github.com/jonradoff/agentstore.git
+cd agentstore
 ```
 
 ### 2. Run the setup script
@@ -383,7 +384,7 @@ Run the CLI setup to create the root tenant and admin account:
 
 ```bash
 cd backend
-go run ./cmd/lastsaas setup
+go run ./cmd/agentstore setup
 ```
 
 This creates the root tenant (your admin organization) and the owner account. You can now log in at `http://localhost:4280`.
@@ -392,7 +393,7 @@ This creates the root tenant (your admin organization) and the owner account. Yo
 
 ## Setting Up Stripe Billing
 
-Stripe integration is optional but required for paid subscriptions, credit bundle purchases, and invoice generation. If you skip this section, LastSaaS works as a free-tier-only platform.
+Stripe integration is optional but required for paid subscriptions, credit bundle purchases, and invoice generation. If you skip this section, AgentStore works as a free-tier-only platform.
 
 ### 1. Create a Stripe account
 
@@ -458,7 +459,7 @@ Config files live in `backend/config/`:
 - `dev.example.yaml` / `prod.example.yaml` — committed templates
 - `dev.yaml` / `prod.yaml` — your actual configs (gitignored)
 
-Set `LASTSAAS_ENV=dev` or `LASTSAAS_ENV=prod` to select which config to load. Defaults to `dev`.
+Set `AGENTSTORE_ENV=dev` or `AGENTSTORE_ENV=prod` to select which config to load. Defaults to `dev`.
 
 Secrets are referenced as `${ENV_VAR}` in YAML and expanded from environment variables at load time. Default values use `${VAR:default}` syntax.
 
@@ -480,18 +481,18 @@ Secrets are referenced as `${ENV_VAR}` in YAML and expanded from environment var
 | `GOOGLE_REDIRECT_URL` | No | Google OAuth redirect URL |
 | `RESEND_API_KEY` | No | Resend email service API key |
 | `FROM_EMAIL` | No | Sender email address (default: noreply@yourdomain.com) |
-| `FROM_NAME` | No | Sender name (default: LastSaaS) |
+| `FROM_NAME` | No | Sender name (default: AgentStore) |
 
 ---
 
 ## Project Structure
 
 ```
-lastsaas/
+agentstore/
   backend/
     cmd/
       server/main.go              Entry point (HTTP server, route wiring)
-      lastsaas/main.go            CLI administration tool + MCP server
+      agentstore/main.go            CLI administration tool + MCP server
     config/                       YAML config files
     internal/
       api/handlers/               HTTP handlers (auth, admin, tenant, billing, branding, webhooks, etc.)
@@ -534,7 +535,7 @@ lastsaas/
 
 ## API Documentation
 
-LastSaaS includes built-in, self-hosted API documentation:
+AgentStore includes built-in, self-hosted API documentation:
 
 - **Interactive HTML reference**: `GET /api/docs` — expandable endpoint cards with request/response examples
 - **Markdown reference**: `GET /api/docs/markdown` — for embedding in external documentation
@@ -545,11 +546,11 @@ The documentation is generated from code and always matches the running version.
 
 ## MCP Server Setup
 
-The MCP server lets AI assistants query your admin data in natural language. It proxies read-only requests to the LastSaaS admin API using an API key.
+The MCP server lets AI assistants query your admin data in natural language. It proxies read-only requests to the AgentStore admin API using an API key.
 
 ### Prerequisites
 
-1. A running LastSaaS instance (local or deployed)
+1. A running AgentStore instance (local or deployed)
 2. A root-tenant API key — create one in **Admin → API Keys** with **admin** authority
 
 ### Usage with Claude Desktop
@@ -559,12 +560,12 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```json
 {
   "mcpServers": {
-    "lastsaas": {
-      "command": "/path/to/lastsaas",
+    "agentstore": {
+      "command": "/path/to/agentstore",
       "args": ["mcp"],
       "env": {
-        "LASTSAAS_URL": "https://your-app.fly.dev",
-        "LASTSAAS_API_KEY": "lsk_your_api_key_here"
+        "AGENTSTORE_URL": "https://your-app.fly.dev",
+        "AGENTSTORE_API_KEY": "lsk_your_api_key_here"
       }
     }
   }
@@ -578,12 +579,12 @@ Add to your project's `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "lastsaas": {
-      "command": "/path/to/lastsaas",
+    "agentstore": {
+      "command": "/path/to/agentstore",
       "args": ["mcp"],
       "env": {
-        "LASTSAAS_URL": "https://your-app.fly.dev",
-        "LASTSAAS_API_KEY": "lsk_your_api_key_here"
+        "AGENTSTORE_URL": "https://your-app.fly.dev",
+        "AGENTSTORE_API_KEY": "lsk_your_api_key_here"
       }
     }
   }
@@ -594,17 +595,17 @@ Add to your project's `.mcp.json`:
 
 ```bash
 cd backend
-go build -o lastsaas ./cmd/lastsaas
+go build -o agentstore ./cmd/agentstore
 ```
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `LASTSAAS_URL` | Yes | Base URL of the LastSaaS instance (e.g. `http://localhost:4290` or `https://your-app.fly.dev`) |
-| `LASTSAAS_API_KEY` | Yes | Root-tenant API key with admin authority (starts with `lsk_`) |
+| `AGENTSTORE_URL` | Yes | Base URL of the AgentStore instance (e.g. `http://localhost:4290` or `https://your-app.fly.dev`) |
+| `AGENTSTORE_API_KEY` | Yes | Root-tenant API key with admin authority (starts with `lsk_`) |
 
-### Available Tools (26)
+### Available Tools (33)
 
 | Tool | Description |
 |------|-------------|
@@ -635,6 +636,12 @@ go build -o lastsaas ./cmd/lastsaas
 | `list_webhooks` | Outbound webhook configurations |
 | `list_webhook_event_types` | Available webhook event types |
 | `get_webhook` | Webhook detail with delivery history |
+| `get_funnel` | Conversion funnel analysis |
+| `get_kpis` | SaaS KPIs (MRR, ARR, ARPU, LTV, churn, trial conversion) |
+| `get_retention` | Retention cohort analysis |
+| `get_engagement` | Engagement metrics (DAU/WAU/MAU) |
+| `get_custom_events` | Custom telemetry events with filters |
+| `list_event_types` | Distinct telemetry event types with category and counts |
 
 ### MCP Examples
 
@@ -837,7 +844,7 @@ These examples show how the MCP tools work in practice. Each example lists the u
 
 ### Fly.io
 
-LastSaaS includes a Dockerfile and Fly.io configuration for production deployment.
+AgentStore includes a Dockerfile and Fly.io configuration for production deployment.
 
 ```bash
 # Install flyctl if needed
@@ -872,7 +879,7 @@ The Docker image works anywhere containers run. The only external dependency is 
 
 ## Fork It and Keep Building with AI
 
-LastSaaS was built entirely through conversation with [Claude Code](https://claude.ai/claude-code) — every feature, every handler, every component was described in natural language and implemented by an AI agent. But the real point isn't that it *was* built this way — it's that it's designed to *keep* being built this way.
+AgentStore was built entirely through conversation with [Claude Code](https://claude.ai/claude-code) — every feature, every handler, every component was described in natural language and implemented by an AI agent. But the real point isn't that it *was* built this way — it's that it's designed to *keep* being built this way.
 
 The codebase follows consistent patterns, uses clear naming, and maintains a structure that AI agents navigate fluently. Fork it, point Claude Code at it, and start describing your product. The agent already understands the patterns — authentication, tenancy, billing, middleware, events — and builds on top of them naturally. You're not starting from scratch; you're continuing a conversation.
 
@@ -895,9 +902,9 @@ Here's what's already wired up for you:
 
 ## Privacy Policy
 
-LastSaaS is self-hosted software — you control your database, your hosting, and your data. The MCP server connects to your LastSaaS instance via the HTTP API using read-only tools — no data is transmitted to Metavert LLC or any third party.
+AgentStore is self-hosted software — you control your database, your hosting, and your data. The MCP server connects to your AgentStore instance via the HTTP API using read-only tools — no data is transmitted to Metavert LLC or any third party.
 
-For the full privacy policy, see: https://www.metavert.io/lastsaas-privacy-policy
+For the full privacy policy, see: https://www.metavert.io/agentstore-privacy-policy
 
 ---
 

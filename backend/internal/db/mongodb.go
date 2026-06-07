@@ -42,7 +42,7 @@ func NewMongoDB(uri, database string) (*MongoDB, error) {
 	}
 
 	db.ensureIndexes()
-	if os.Getenv("LASTSAAS_ENV") != "test" {
+	if os.Getenv("AGENTSTORE_ENV") != "test" {
 		db.EnsureSchemaValidation()
 	}
 

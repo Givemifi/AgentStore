@@ -3,12 +3,12 @@ backend/config/dev.yaml
 backend/config/prod.yaml
 
 # Go binaries
-backend/lastsaas
-backend/lastsaas-cli
-backend/lastsaas-server
+backend/agentstore
+backend/agentstore-cli
+backend/agentstore-server
 backend/server
 backend/vendor/
-/lastsaas
+/agentstore
 /bin/
 
 # Process management
@@ -42,3 +42,6 @@ dist/
 
 # MCP registry tokens
 .mcpregistry_*
+
+# Local AI tool state
+.claude/worktrees/

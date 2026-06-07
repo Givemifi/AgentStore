@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/events"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/syslog"
-	"lastsaas/internal/validation"
+	"agentstore/internal/db"
+	"agentstore/internal/events"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/syslog"
+	"agentstore/internal/validation"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

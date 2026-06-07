@@ -41,6 +41,73 @@ describe('AgentsTab', () => {
     expect(apiMocks.create).not.toHaveBeenCalled();
   });
 
+  it('new agent form shows only text chat capability with coming soon message for image/video', async () => {
+    const user = userEvent.setup();
+    renderAgentsTab();
+    await user.click(screen.getByRole('button', { name: /new agent/i }));
+
+    // Should show the coming soon message
+    expect(screen.getByText(/Image and video generation are coming soon/)).toBeInTheDocument();
+    expect(screen.getByText(/P0 Agents use text chat only/)).toBeInTheDocument();
+
+    // Image and video credit inputs should be hidden or disabled
+    const imageCreditsInput = screen.queryByLabelText(/Image Credits/i);
+    const videoCreditsInput = screen.queryByLabelText(/Video Credits/i);
+    // These inputs should not exist or should be hidden for P0
+    expect(imageCreditsInput).not.toBeInTheDocument();
+    expect(videoCreditsInput).not.toBeInTheDocument();
+  });
+
+  it('saves new agent with only text chat capability and zero image/video credit costs', async () => {
+    const user = userEvent.setup();
+    renderAgentsTab();
+    await user.click(screen.getByRole('button', { name: /new agent/i }));
+
+    // Fill in required fields using placeholder text
+    await user.type(screen.getByPlaceholderText('My Agent'), 'Test Agent');
+    await user.type(screen.getByPlaceholderText('Marketing'), 'Marketing');
+    await user.type(screen.getByPlaceholderText('What does this agent do?'), 'A test agent');
+    await user.type(screen.getByPlaceholderText('You are a helpful AI assistant...'), 'You are a helpful assistant');
+
+    // Submit the form
+    await user.click(screen.getByRole('button', { name: /create agent/i }));
+
+    // Verify the API was called with text_chat only and zero for image/video
+    await waitFor(() => {
+      const call = apiMocks.create.mock.calls[0];
+      expect(call[0]).toEqual(
+        expect.objectContaining({
+          capabilities: ['text_chat'],
+          creditCost: {
+            textMessageCredits: 1,
+            imageGenerationCredits: 0,
+            videoGenerationCredits: 0,
+          },
+        })
+      );
+    });
+  });
+
+  it('displays (coming soon) label for existing agents with image generation capability', async () => {
+    apiMocks.list.mockResolvedValue([
+      { id: 'agent-1', name: 'Image Agent', slug: 'image-agent', category: 'Marketing', description: 'Generates images', systemPrompt: 'Prompt', visibility: 'private', capabilities: ['text_chat', 'image_generation'], creditCost: { textMessageCredits: 1, imageGenerationCredits: 5, videoGenerationCredits: 0 }, createdAt: '', updatedAt: '' },
+    ]);
+    renderAgentsTab();
+
+    expect(await screen.findByText('image generation (coming soon)')).toBeInTheDocument();
+    expect(screen.queryByText('image_generation')).not.toBeInTheDocument();
+  });
+
+  it('displays (coming soon) label for existing agents with video generation capability', async () => {
+    apiMocks.list.mockResolvedValue([
+      { id: 'agent-1', name: 'Video Agent', slug: 'video-agent', category: 'Marketing', description: 'Generates videos', systemPrompt: 'Prompt', visibility: 'private', capabilities: ['text_chat', 'video_generation'], creditCost: { textMessageCredits: 1, imageGenerationCredits: 0, videoGenerationCredits: 10 }, createdAt: '', updatedAt: '' },
+    ]);
+    renderAgentsTab();
+
+    expect(await screen.findByText('video generation (coming soon)')).toBeInTheDocument();
+    expect(screen.queryByText('video_generation')).not.toBeInTheDocument();
+  });
+
   it('refetches agents after switching tenants instead of reusing the previous tenant cache', async () => {
     apiMocks.list
       .mockResolvedValueOnce([{ id: 'agent-1', name: 'Tenant One Agent', slug: 'tenant-one-agent', category: 'Ops', description: 'First tenant agent', systemPrompt: 'Prompt', visibility: 'private', capabilities: ['text_chat'], creditCost: { textMessageCredits: 1, imageGenerationCredits: 0, videoGenerationCredits: 0 }, createdAt: '', updatedAt: '' }])

@@ -11,9 +11,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"lastsaas/internal/credits"
-	"lastsaas/internal/llm"
-	"lastsaas/internal/models"
+	"agentstore/internal/credits"
+	"agentstore/internal/llm"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/testutil"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -475,6 +477,64 @@ func TestListAgents_ReturnsTenantPublishedAgentWithObjectCreditCost(t *testing.T
 	}
 }
 
+func TestChatListAgentsIncludesRootPublishedAgentsForNormalTenants(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	rootUser, rootTenant := createAdminEnv(t, env)
+	normalUser := testutil.CreateTestUser(t, env.DB, "member@test.com", "Test1234!@#$", "Member User")
+	normalTenant := testutil.CreateTestTenant(t, env.DB, "Member Workspace", normalUser.ID, false)
+
+	now := time.Now()
+	platformAgent := models.Agent{
+		ID:           primitive.NewObjectID(),
+		TenantID:     rootTenant.ID,
+		Name:         "Growth Copywriter",
+		Slug:         "growth-copywriter",
+		Category:     "Marketing",
+		Description:  "Writes launch copy for commercial teams.",
+		Status:       models.AgentStatusPublished,
+		Visibility:   models.AgentVisibilityPublic,
+		SystemPrompt: "Write high-converting marketing copy.",
+		Capabilities: []models.AgentCapability{models.AgentCapabilityTextChat},
+		CreditCost:   models.AgentCreditCost{TextMessageCredits: 2},
+		CreatedBy:    rootUser.ID,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if _, err := env.DB.Agents().InsertOne(context.Background(), platformAgent); err != nil {
+		t.Fatalf("seed platform agent: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/chat/agents", nil)
+	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantContextKey, normalTenant))
+	rr := httptest.NewRecorder()
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+
+	handler.ListAgents(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	var got []map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("expected platform agent in normal tenant marketplace")
+	}
+	if got[0]["id"] != platformAgent.ID.Hex() {
+		t.Fatalf("expected canonical platform agent id %s, got %#v", platformAgent.ID.Hex(), got[0]["id"])
+	}
+	if got[0]["slug"] != platformAgent.Slug {
+		t.Fatalf("expected platform agent slug %q, got %#v", platformAgent.Slug, got[0]["slug"])
+	}
+}
+
 func TestStreamMessage_PersistsGeneratingPlaceholderThenCompletes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -560,6 +620,96 @@ func TestStreamMessage_PersistsGeneratingPlaceholderThenCompletes(t *testing.T) 
 	}
 	if assistant.CreditsCharged != 3 {
 		t.Fatalf("expected assistant credits 3, got %d", assistant.CreditsCharged)
+	}
+}
+
+func TestStreamMessageStoresCanonicalAgentIDForSlugRequests(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	user, tenant := createAdminEnv(t, env)
+
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+	}))
+	defer provider.Close()
+
+	ctx := context.Background()
+	_, err := env.DB.Tenants().UpdateOne(ctx,
+		bson.M{"_id": tenant.ID},
+		bson.M{"$set": bson.M{"subscriptionCredits": int64(50), "purchasedCredits": int64(0)}},
+	)
+	if err != nil {
+		t.Fatalf("seed tenant credits: %v", err)
+	}
+	_, err = env.DB.LLMConfigs().InsertOne(ctx, models.LLMConfig{
+		Key:       models.DefaultLLMConfigKey,
+		APIKey:    "test-key",
+		BaseURL:   provider.URL,
+		Model:     "test-model",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("seed llm config: %v", err)
+	}
+
+	now := time.Now()
+	dbAgent := models.Agent{
+		ID:           primitive.NewObjectID(),
+		TenantID:     tenant.ID,
+		Name:         "Support Concierge",
+		Slug:         "support-concierge",
+		Category:     "Support",
+		Description:  "Tenant support concierge",
+		Status:       models.AgentStatusPublished,
+		Visibility:   models.AgentVisibilityPublic,
+		SystemPrompt: "Help the tenant support team.",
+		Capabilities: []models.AgentCapability{models.AgentCapabilityTextChat},
+		CreditCost:   models.AgentCreditCost{TextMessageCredits: 4},
+		CreatedBy:    user.ID,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if _, err := env.DB.Agents().InsertOne(context.Background(), dbAgent); err != nil {
+		t.Fatalf("seed tenant agent: %v", err)
+	}
+
+	body, err := json.Marshal(SendMessageRequest{
+		AgentID: dbAgent.Slug,
+		Message: "Please help me debug this deploy issue.",
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/chat/stream", strings.NewReader(string(body)))
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, user))
+	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantContextKey, tenant))
+	rr := httptest.NewRecorder()
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+
+	handler.StreamMessage(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	var conv models.Conversation
+	if err := env.DB.Conversations().FindOne(ctx, bson.M{"tenantId": tenant.ID, "userId": user.ID}).Decode(&conv); err != nil {
+		t.Fatalf("find conversation: %v", err)
+	}
+	if conv.AgentID != dbAgent.ID.Hex() {
+		t.Fatalf("expected canonical agent id %s, got %s", dbAgent.ID.Hex(), conv.AgentID)
 	}
 }
 
@@ -1105,5 +1255,115 @@ func TestLLMConfigUsable(t *testing.T) {
 				t.Fatalf("expected %v, got %v", tt.want, got)
 			}
 		})
+	}
+}
+
+func TestStreamMessage_UnsupportedProviderDoesNotCreateMessagesOrChargeCredits(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	user, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+
+	_, err := env.DB.Tenants().UpdateOne(ctx,
+		bson.M{"_id": tenant.ID},
+		bson.M{"$set": bson.M{"subscriptionCredits": int64(50), "purchasedCredits": int64(0)}},
+	)
+	if err != nil {
+		t.Fatalf("seed tenant credits: %v", err)
+	}
+
+	providerID := primitive.NewObjectID()
+	modelID := primitive.NewObjectID()
+	now := time.Now()
+	_, err = env.DB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           providerID,
+		TenantID:     tenant.ID,
+		Name:         "Anthropic Provider",
+		ProviderType: models.ProviderTypeAnthropic,
+		BaseURL:      "https://api.anthropic.com",
+		APIKey:       "sk-ant-test-key",
+		Enabled:      true,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	})
+	if err != nil {
+		t.Fatalf("seed provider: %v", err)
+	}
+	_, err = env.DB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          modelID,
+		TenantID:    tenant.ID,
+		ProviderID:  providerID,
+		Name:        "Claude Text",
+		DisplayName: "Claude Text",
+		Modality:    models.ModelModalityText,
+		ModelID:     "claude-test-model",
+		Enabled:     true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	if err != nil {
+		t.Fatalf("seed model config: %v", err)
+	}
+
+	agent := models.Agent{
+		ID:           primitive.NewObjectID(),
+		TenantID:     tenant.ID,
+		Name:         "Unsupported Provider Agent",
+		Slug:         "unsupported-provider-agent",
+		Category:     "Support",
+		Description:  "Uses a provider that is not executable yet.",
+		Status:       models.AgentStatusPublished,
+		Visibility:   models.AgentVisibilityPublic,
+		SystemPrompt: "Help users.",
+		Capabilities: []models.AgentCapability{models.AgentCapabilityTextChat},
+		CreditCost:   models.AgentCreditCost{TextMessageCredits: 3},
+		ModelConfig:  models.AgentModelConfig{TextModelID: &modelID},
+		CreatedBy:    user.ID,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if _, err := env.DB.Agents().InsertOne(ctx, agent); err != nil {
+		t.Fatalf("seed agent: %v", err)
+	}
+
+	body, err := json.Marshal(SendMessageRequest{
+		AgentID: agent.Slug,
+		Message: "Will this charge credits?",
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := env.tenantRequest(t, http.MethodPost, "/api/chat/stream", strings.NewReader(string(body)), user, tenant.ID.Hex())
+	rr := httptest.NewRecorder()
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+
+	handler.StreamMessage(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusInternalServerError, rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), "This model provider is not supported for chat yet") {
+		t.Fatalf("expected friendly unsupported provider message, got %s", rr.Body.String())
+	}
+
+	messages, err := env.DB.ChatMessages().CountDocuments(ctx, bson.M{"tenantId": tenant.ID, "userId": user.ID})
+	if err != nil {
+		t.Fatalf("count chat messages: %v", err)
+	}
+	if messages != 0 {
+		t.Fatalf("expected no chat messages to be created, got %d", messages)
+	}
+
+	var updatedTenant models.Tenant
+	if err := env.DB.Tenants().FindOne(ctx, bson.M{"_id": tenant.ID}).Decode(&updatedTenant); err != nil {
+		t.Fatalf("load tenant: %v", err)
+	}
+	if updatedTenant.SubscriptionCredits != 50 || updatedTenant.PurchasedCredits != 0 {
+		t.Fatalf("expected credits unchanged, got subscription=%d purchased=%d", updatedTenant.SubscriptionCredits, updatedTenant.PurchasedCredits)
 	}
 }

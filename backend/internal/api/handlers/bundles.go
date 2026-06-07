@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/syslog"
+	"agentstore/internal/db"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/syslog"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

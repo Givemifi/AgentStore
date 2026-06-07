@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the current LastSaaS-derived app into AgentStore’s mainline product loop with tenant-scoped agents, tenant model settings, `/admin` routing, visible rebranding, and streaming chat.
+**Goal:** Turn the current AgentStore-derived app into AgentStore’s mainline product loop with tenant-scoped agents, tenant model settings, `/admin` routing, visible rebranding, and streaming chat.
 
 **Architecture:** Keep the existing Go + MongoDB + React architecture. Add focused backend models/handlers/services for agents and models, then update chat to resolve tenant-published agents and stream responses while preserving the existing non-streaming endpoint. Frontend changes reuse the existing app shell, settings page, TanStack Query API client, and route structure.
 
@@ -44,7 +44,7 @@
 
 ### Frontend routing, types, and APIs
 
-- Create `frontend/src/utils/storageKeys.ts` — compatible localStorage key migration from `lastsaas_*` to `agentstore_*`.
+- Create `frontend/src/utils/storageKeys.ts` — compatible localStorage key migration from `agentstore_*` to `agentstore_*`.
 - Modify `frontend/src/api/client.ts` — use new storage helpers, add public agent APIs, tenant agent APIs, tenant model APIs, and streaming chat helper.
 - Modify `frontend/src/types/index.ts` — add AgentStore agent/model/provider/message-status types.
 - Modify `frontend/src/App.tsx` — replace `/last` routes with `/admin`, redirect `/last/*` to `/admin/*`, add `/chat` redirect, add settings subroutes.
@@ -847,8 +847,8 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -977,10 +977,10 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/validation"
+	"agentstore/internal/db"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/validation"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -1221,7 +1221,7 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/models"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -1301,8 +1301,8 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/models"
-	"lastsaas/internal/testutil"
+	"agentstore/internal/models"
+	"agentstore/internal/testutil"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -1360,8 +1360,8 @@ import (
 	"errors"
 	"fmt"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -1599,7 +1599,7 @@ func TestStreamMessage_ProviderFailureDoesNotDeductCredits(t *testing.T) {
 }
 ```
 
-Add imports if missing: `fmt`, `lastsaas/internal/credits`, and `lastsaas/internal/llm`.
+Add imports if missing: `fmt`, `agentstore/internal/credits`, and `agentstore/internal/llm`.
 
 - [x] **Step 3: Run streaming tests and verify failure**
 
@@ -1792,7 +1792,7 @@ git commit -m "Add streaming chat endpoint"
 
 ---
 
-## Task 6: Migrate visible routing and storage from LastSaaS to AgentStore ~~DONE~~
+## Task 6: Migrate visible routing and storage from AgentStore to AgentStore ~~DONE~~
 
 **Files:**
 - Create: `frontend/src/utils/storageKeys.ts`
@@ -1860,12 +1860,12 @@ export const storageKeys = {
 } as const;
 
 const legacyKeys: Record<string, string> = {
-  [storageKeys.accessToken]: 'lastsaas_access_token',
-  [storageKeys.refreshToken]: 'lastsaas_refresh_token',
-  [storageKeys.activeTenant]: 'lastsaas_active_tenant',
-  [storageKeys.theme]: 'lastsaas_theme',
-  [storageKeys.impersonating]: 'lastsaas_impersonating',
-  [storageKeys.sessionId]: 'lastsaas_session_id',
+  [storageKeys.accessToken]: 'agentstore_access_token',
+  [storageKeys.refreshToken]: 'agentstore_refresh_token',
+  [storageKeys.activeTenant]: 'agentstore_active_tenant',
+  [storageKeys.theme]: 'agentstore_theme',
+  [storageKeys.impersonating]: 'agentstore_impersonating',
+  [storageKeys.sessionId]: 'agentstore_session_id',
 };
 
 export function getStoredValue(key: string) {
@@ -2632,10 +2632,10 @@ git commit -m "Add streaming chat UI"
 Run:
 
 ```bash
-grep -RIn "LastSaaS\|/last\|lastsaas_" backend frontend README.md --exclude-dir=node_modules --exclude-dir=.git
+grep -RIn "AgentStore\|/last\|agentstore_" backend frontend README.md --exclude-dir=node_modules --exclude-dir=.git
 ```
 
-Expected: output lists remaining strings to update. Module imports containing `lastsaas/internal/...` may remain in this pass.
+Expected: output lists remaining strings to update. Module imports containing `agentstore/internal/...` may remain in this pass.
 
 - [x] **Step 2: Update config env compatibility**
 
@@ -2661,7 +2661,7 @@ And:
 
 ```go
 func GetEnv() string {
-	env := firstEnv("AGENTSTORE_ENV", "LASTSAAS_ENV")
+	env := firstEnv("AGENTSTORE_ENV", "AGENTSTORE_ENV")
 	if env == "" { return "dev" }
 	return env
 }
@@ -2785,7 +2785,7 @@ Only remove these files after the grep confirms no references.
 Run:
 
 ```bash
-grep -RIn "LastSaaS\|/last\|lastsaas_" backend frontend README.md .env.example --exclude-dir=node_modules --exclude-dir=.git
+grep -RIn "AgentStore\|/last\|agentstore_" backend frontend README.md .env.example --exclude-dir=node_modules --exclude-dir=.git
 ```
 
 Expected: remaining matches are limited to Go module/import path, legacy env compatibility, legacy storage compatibility, and documented migration references.
@@ -2878,7 +2878,7 @@ Run:
 
 ```bash
 git status --short
-grep -RIn "LastSaaS\|/last\|lastsaas_" backend frontend README.md .env.example --exclude-dir=node_modules --exclude-dir=.git
+grep -RIn "AgentStore\|/last\|agentstore_" backend frontend README.md .env.example --exclude-dir=node_modules --exclude-dir=.git
 ```
 
 Expected: no visible stale branding remains; compatibility references are intentional and explainable.

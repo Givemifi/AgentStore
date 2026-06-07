@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"lastsaas/internal/models"
-	"lastsaas/internal/testutil"
+	"agentstore/internal/models"
+	"agentstore/internal/testutil"
 )
 
 func TestIntegration_LogsListDefault(t *testing.T) {

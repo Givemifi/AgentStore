@@ -12,12 +12,12 @@ import (
 	"strconv"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/events"
-	"lastsaas/internal/models"
-	stripeservice "lastsaas/internal/stripe"
-	"lastsaas/internal/syslog"
-	"lastsaas/internal/telemetry"
+	"agentstore/internal/db"
+	"agentstore/internal/events"
+	"agentstore/internal/models"
+	stripeservice "agentstore/internal/stripe"
+	"agentstore/internal/syslog"
+	"agentstore/internal/telemetry"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

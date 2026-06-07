@@ -7,6 +7,7 @@ import type { DailyMetricPoint, IntegrationCheck } from '../../types';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { Card } from '../../components/ui';
+import LaunchChecklist, { INTEGRATION_DISPLAY_NAMES } from './components/LaunchChecklist';
 
 function MetricChart({ data, color, formatter }: { data: DailyMetricPoint[]; color: string; formatter: (v: number) => string }) {
   if (data.length === 0) {
@@ -45,10 +46,12 @@ export default function AdminDashboardPage() {
         adminApi.getDashboard(),
         adminApi.getHealthIntegrations(),
       ]);
-      const unconfigured = (intData.integrations || [])
-        .filter((i: IntegrationCheck) => i.status === 'not_configured')
-        .map((i: IntegrationCheck) => i.name);
-      return { ...dashData, unconfiguredIntegrations: unconfigured };
+      // Store all integrations with their status for proper health checking
+      const allIntegrations = (intData.integrations || []).map((i: IntegrationCheck) => ({
+        name: i.name,
+        status: i.status,
+      }));
+      return { ...dashData, integrations: allIntegrations };
     },
   });
 
@@ -64,11 +67,16 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const { data: launchReadiness, isLoading: readinessLoading, error: readinessError } = useQuery({
+    queryKey: ['admin', 'launch-readiness'],
+    queryFn: adminApi.getLaunchReadiness,
+  });
+
   if (isLoading) return <LoadingSpinner size="lg" className="py-20" />;
 
   const healthy = data?.health?.healthy ?? true;
   const issues = data?.health?.issues ?? [];
-  const unconfiguredIntegrations = data?.unconfiguredIntegrations ?? [];
+  const integrations = data?.integrations ?? [];
   const revenueData = chartsData?.revenue ?? [];
   const arrData = chartsData?.arr ?? [];
   const dauData = chartsData?.dau ?? [];
@@ -80,12 +88,44 @@ export default function AdminDashboardPage() {
   const formatCents = (v: number) => `$${(v / 100).toFixed(2)}`;
   const formatNum = (v: number) => v.toLocaleString();
 
+  // Get integration status - must be exactly 'healthy' for Complete status
+  const getIntegrationStatus = (name: string): 'healthy' | 'unhealthy' | 'not_configured' | 'degraded' | 'missing' => {
+    const integration = integrations.find((i: { name: string; status: string }) => i.name === name);
+    if (!integration) return 'missing';
+    return integration.status as 'healthy' | 'unhealthy' | 'not_configured' | 'degraded';
+  };
+
+  // Derive unconfigured list for the warning banner (only not_configured shows warning there)
+  const unconfiguredIntegrations = integrations
+    .filter((i: { name: string; status: string }) => i.status === 'not_configured')
+    .map((i: { name: string }) => i.name);
+
+  // Format integration names using the constant map
+  const formattedIntegrationNames = unconfiguredIntegrations.map(
+    (name: string) => INTEGRATION_DISPLAY_NAMES[name] || name.charAt(0).toUpperCase() + name.slice(1)
+  ).join(', ');
+
   return (
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
         <p className="text-dark-400 mt-1">System overview and management</p>
       </div>
+
+      {readinessLoading ? (
+        <section className="mb-8 rounded-3xl border border-dark-800 bg-dark-900/60 p-6 text-sm text-dark-400">
+          Loading launch readiness...
+        </section>
+      ) : readinessError ? (
+        <section className="mb-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-6 text-yellow-100">
+          <h2 className="text-xl font-bold text-white">Launch readiness unavailable</h2>
+          <p className="mt-2 text-sm text-yellow-100/90">
+            Refresh the page or check admin API health before using the checklist for launch decisions.
+          </p>
+        </section>
+      ) : launchReadiness ? (
+        <LaunchChecklist items={launchReadiness.items} />
+      ) : null}
 
       {/* Unconfigured Integrations Warning */}
       {unconfiguredIntegrations.length > 0 && (
@@ -101,7 +141,7 @@ export default function AdminDashboardPage() {
               {unconfiguredIntegrations.length} integration{unconfiguredIntegrations.length > 1 ? 's' : ''} not configured
             </p>
             <p className="text-xs text-dark-400 mt-0.5">
-              {unconfiguredIntegrations.map((n: string) => ({ stripe: 'Stripe', resend: 'Resend', mongodb: 'MongoDB', google_oauth: 'Google Login', github_oauth: 'GitHub Login', microsoft_oauth: 'Microsoft Login', webauthn: 'Passkeys', saml_sso: 'SSO/SAML' }[n] || n.charAt(0).toUpperCase() + n.slice(1))).join(', ')} {unconfiguredIntegrations.length > 1 ? 'need' : 'needs'} setup. Click to view details.
+              {formattedIntegrationNames} {unconfiguredIntegrations.length > 1 ? 'need' : 'needs'} setup. Click to view details.
             </p>
           </div>
         </Link>

@@ -232,7 +232,7 @@ Run:
 cd /Users/duoxianganwenaiyisheng/Desktop/AgnetStore/backend && go test ./internal/validation/...
 ```
 
-Expected: exit 0 with `ok lastsaas/internal/validation` or equivalent package output.
+Expected: exit 0 with `ok agentstore/internal/validation` or equivalent package output.
 
 - [ ] **Step 3: Run backend unit tests that do not require external services**
 

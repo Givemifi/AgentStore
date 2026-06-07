@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/auth"
-	"lastsaas/internal/db"
-	"lastsaas/internal/email"
-	"lastsaas/internal/events"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/syslog"
-	"lastsaas/internal/telemetry"
-	"lastsaas/internal/validation"
+	"agentstore/internal/auth"
+	"agentstore/internal/db"
+	"agentstore/internal/email"
+	"agentstore/internal/events"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/syslog"
+	"agentstore/internal/telemetry"
+	"agentstore/internal/validation"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -70,7 +70,7 @@ func NewAuthHandler(
 func (h *AuthHandler) SetGitHubOAuth(svc *auth.GitHubOAuthService)       { h.githubOAuth = svc }
 func (h *AuthHandler) SetMicrosoftOAuth(svc *auth.MicrosoftOAuthService) { h.microsoftOAuth = svc }
 func (h *AuthHandler) SetGetConfig(fn func(string) string)               { h.getConfig = fn }
-func (h *AuthHandler) SetRateLimiter(rl *middleware.RateLimiter)          { h.rateLimiter = rl }
+func (h *AuthHandler) SetRateLimiter(rl *middleware.RateLimiter)         { h.rateLimiter = rl }
 func (h *AuthHandler) SetTelemetry(svc *telemetry.Service)               { h.telemetrySvc = svc }
 func (h *AuthHandler) SetTOTPEncryptionKey(key []byte) {
 	if len(key) == 32 {
@@ -852,7 +852,7 @@ func (h *AuthHandler) MFASetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	appName := "LastSaaS"
+	appName := "AgentStore"
 	if h.getConfig != nil {
 		if name := h.getConfig("app.name"); name != "" {
 			appName = name
@@ -1791,12 +1791,12 @@ func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type sessionInfo struct {
-		ID           string     `json:"id"`
-		DeviceInfo   string     `json:"deviceInfo"`
-		IPAddress    string     `json:"ipAddress"`
-		CreatedAt    time.Time  `json:"createdAt"`
-		LastActiveAt time.Time  `json:"lastActiveAt"`
-		IsCurrent    bool       `json:"isCurrent"`
+		ID           string    `json:"id"`
+		DeviceInfo   string    `json:"deviceInfo"`
+		IPAddress    string    `json:"ipAddress"`
+		CreatedAt    time.Time `json:"createdAt"`
+		LastActiveAt time.Time `json:"lastActiveAt"`
+		IsCurrent    bool      `json:"isCurrent"`
 	}
 
 	_ = currentTokenHash
@@ -1952,17 +1952,20 @@ func (h *AuthHandler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 
 // --- Internal helpers ---
 
+const defaultTrialCredits int64 = 25
+
 func (h *AuthHandler) createPersonalTenant(ctx context.Context, userID primitive.ObjectID, displayName string, now time.Time) {
 	slug := fmt.Sprintf("tenant-%s", primitive.NewObjectID().Hex()[:8])
 	tenant := models.Tenant{
-		ID:            primitive.NewObjectID(),
-		Name:          displayName + "'s Team",
-		Slug:          slug,
-		IsRoot:        false,
-		IsActive:      true,
-		BillingStatus: models.BillingStatusNone,
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:               primitive.NewObjectID(),
+		Name:             displayName + "'s Team",
+		Slug:             slug,
+		IsRoot:           false,
+		IsActive:         true,
+		BillingStatus:    models.BillingStatusNone,
+		PurchasedCredits: defaultTrialCredits,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if _, err := h.db.Tenants().InsertOne(ctx, tenant); err != nil {
 		slog.Error("Failed to create personal tenant", "userId", userID.Hex(), "error", err)

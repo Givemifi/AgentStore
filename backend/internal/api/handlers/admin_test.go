@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"lastsaas/internal/models"
-	"lastsaas/internal/testutil"
+	"agentstore/internal/models"
+	"agentstore/internal/testutil"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -562,4 +562,243 @@ func TestIntegration_AdminCancelRootInvitation(t *testing.T) {
 	if count != 0 {
 		t.Errorf("expected invitation to be deleted, found %d", count)
 	}
+}
+
+func TestIntegration_AdminLaunchReadiness_UnconfiguredState(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	admin, tenant := createAdminEnv(t, env)
+
+	req := env.adminRequest(t, "GET", "/api/admin/launch-readiness", nil, admin, tenant.ID.Hex())
+	resp, err := env.Client.Do(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, testutil.ReadResponseBody(t, resp))
+	}
+
+	var got LaunchReadinessResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Summary.Total != 7 {
+		t.Fatalf("expected 7 readiness items, got %d", got.Summary.Total)
+	}
+	assertReadinessStatus(t, got, "model", LaunchReadinessWarning)
+	assertReadinessStatus(t, got, "agent", LaunchReadinessPending)
+	assertReadinessStatus(t, got, "test-chat", LaunchReadinessPending)
+}
+
+func TestIntegration_AdminLaunchReadiness_ReadySignals(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	admin, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+	now := time.Now()
+
+	_, err := env.DB.BrandingConfig().InsertOne(ctx, models.BrandingConfig{
+		ID:            primitive.NewObjectID(),
+		AppName:       "AgentStore Launch",
+		LogoMode:      "text",
+		DashboardHTML: "<p>Launch dashboard copy</p>",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	})
+	if err != nil {
+		t.Fatalf("seed branding: %v", err)
+	}
+
+	providerID := primitive.NewObjectID()
+	modelID := primitive.NewObjectID()
+	_, err = env.DB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           providerID,
+		TenantID:     tenant.ID,
+		Name:         "OpenAI Compatible",
+		ProviderType: models.ProviderTypeOpenAICompatible,
+		BaseURL:      "https://api.example.com/v1",
+		APIKey:       "sk-test-key",
+		Enabled:      true,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	})
+	if err != nil {
+		t.Fatalf("seed provider: %v", err)
+	}
+	_, err = env.DB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          modelID,
+		TenantID:    tenant.ID,
+		ProviderID:  providerID,
+		Name:        "Launch Text Model",
+		DisplayName: "Launch Text Model",
+		Modality:    models.ModelModalityText,
+		ModelID:     "launch-model",
+		Enabled:     true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	if err != nil {
+		t.Fatalf("seed model: %v", err)
+	}
+
+	_, err = env.DB.Agents().InsertOne(ctx, models.Agent{
+		ID:           primitive.NewObjectID(),
+		TenantID:     tenant.ID,
+		Name:         "Launch Agent",
+		Slug:         "launch-agent",
+		Category:     "Support",
+		Description:  "Launch-ready support agent.",
+		Status:       models.AgentStatusPublished,
+		Visibility:   models.AgentVisibilityPublic,
+		SystemPrompt: "Help users launch.",
+		Capabilities: []models.AgentCapability{models.AgentCapabilityTextChat},
+		CreditCost:   models.AgentCreditCost{TextMessageCredits: 1},
+		CreatedBy:    admin.ID,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	})
+	if err != nil {
+		t.Fatalf("seed agent: %v", err)
+	}
+
+	_, err = env.DB.CreditBundles().InsertOne(ctx, models.CreditBundle{
+		ID:         primitive.NewObjectID(),
+		Name:       "Launch Credits",
+		Credits:    100,
+		PriceCents: 1000,
+		IsActive:   true,
+		SortOrder:  1,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	})
+	if err != nil {
+		t.Fatalf("seed bundle: %v", err)
+	}
+
+	conversationID := primitive.NewObjectID()
+	_, err = env.DB.ChatMessages().InsertOne(ctx, models.ChatMessage{
+		ID:             primitive.NewObjectID(),
+		TenantID:       tenant.ID,
+		UserID:         admin.ID,
+		ConversationID: conversationID,
+		AgentID:        "launch-agent",
+		Role:           "assistant",
+		Content:        "Launch smoke test passed.",
+		Status:         models.ChatMessageStatusCompleted,
+		CreditsCharged: 1,
+		Model:          "launch-model",
+		CreatedAt:      now,
+	})
+	if err != nil {
+		t.Fatalf("seed chat message: %v", err)
+	}
+
+	req := env.adminRequest(t, "GET", "/api/admin/launch-readiness", nil, admin, tenant.ID.Hex())
+	resp, err := env.Client.Do(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, testutil.ReadResponseBody(t, resp))
+	}
+
+	var got LaunchReadinessResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	assertReadinessStatus(t, got, "brand", LaunchReadinessComplete)
+	assertReadinessStatus(t, got, "model", LaunchReadinessComplete)
+	assertReadinessStatus(t, got, "agent", LaunchReadinessComplete)
+	assertReadinessStatus(t, got, "credits", LaunchReadinessComplete)
+	assertReadinessStatus(t, got, "test-chat", LaunchReadinessComplete)
+}
+
+func TestIntegration_AdminLaunchReadiness_CrossTenantModel(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	admin, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+	now := time.Now()
+
+	// Create a second tenant with its own model + provider.
+	otherUser := testutil.CreateTestUser(t, env.DB, "other-tenant@test.com", "StrongP@ss1!", "Other Admin")
+	otherTenant := testutil.CreateTestTenant(t, env.DB, "Other Tenant", otherUser.ID, false)
+
+	otherProviderID := primitive.NewObjectID()
+	_, err := env.DB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           otherProviderID,
+		TenantID:     otherTenant.ID,
+		Name:         "Other OpenAI",
+		ProviderType: models.ProviderTypeOpenAICompatible,
+		BaseURL:      "https://api.other.com/v1",
+		APIKey:       "sk-other-key",
+		Enabled:      true,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	})
+	if err != nil {
+		t.Fatalf("seed other tenant provider: %v", err)
+	}
+	_, err = env.DB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          primitive.NewObjectID(),
+		TenantID:    otherTenant.ID,
+		ProviderID:  otherProviderID,
+		Name:        "Other Text Model",
+		DisplayName: "Other Text Model",
+		Modality:    models.ModelModalityText,
+		ModelID:     "other-model",
+		Enabled:     true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	if err != nil {
+		t.Fatalf("seed other tenant model: %v", err)
+	}
+
+	// Current tenant has no model config — readiness should still be warning.
+	req := env.adminRequest(t, "GET", "/api/admin/launch-readiness", nil, admin, tenant.ID.Hex())
+	resp, err := env.Client.Do(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, testutil.ReadResponseBody(t, resp))
+	}
+
+	var got LaunchReadinessResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	assertReadinessStatus(t, got, "model", LaunchReadinessWarning)
+}
+
+func assertReadinessStatus(t *testing.T, response LaunchReadinessResponse, id string, want LaunchReadinessStatus) {
+	t.Helper()
+	for _, item := range response.Items {
+		if item.ID == id {
+			if item.Status != want {
+				t.Fatalf("expected readiness item %s status %s, got %s", id, want, item.Status)
+			}
+			return
+		}
+	}
+	t.Fatalf("readiness item %s not found in %#v", id, response.Items)
 }

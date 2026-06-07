@@ -1,4 +1,4 @@
-module lastsaas
+module agentstore
 
 go 1.25
 

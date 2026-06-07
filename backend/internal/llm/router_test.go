@@ -2,12 +2,13 @@ package llm
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -35,7 +36,7 @@ func connectTestDB() (*db.MongoDB, func()) {
 	// Import config loading logic inline to avoid circular dependency
 	// with the testutil package (which imports models, which is fine,
 	// but we want to keep the llm package self-contained for testing)
-	database, err := db.NewMongoDB(uri, "lastsaas_test")
+	database, err := db.NewMongoDB(uri, "agentstore_test")
 	if err != nil {
 		return nil, func() {}
 	}
@@ -286,7 +287,142 @@ func TestRouterResolveTextModel_ErrModelNotConfigured(t *testing.T) {
 	}
 }
 
-func TestRouterResolveImageModel_ErrModelNotConfigured(t *testing.T) {
+func TestRouterResolveTextModel_RejectsUnsupportedAgentProvider(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	if testDB == nil {
+		t.Skip("skipping: no test database connection")
+	}
+	cleanupCollections(t)
+
+	ctx := context.Background()
+	tenantID := primitive.NewObjectID()
+	providerID := primitive.NewObjectID()
+	agentModelID := primitive.NewObjectID()
+
+	// Seed anthropic provider (unsupported type)
+	_, err := testDB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           providerID,
+		TenantID:     tenantID,
+		Name:         "AnthropicProvider",
+		ProviderType: models.ProviderTypeAnthropic,
+		BaseURL:      "https://api.anthropic.com/v1",
+		APIKey:       "sk-ant-key",
+		Enabled:      true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed agent-bound model config pointing at the unsupported provider
+	_, err = testDB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          agentModelID,
+		TenantID:    tenantID,
+		ProviderID:  providerID,
+		Name:        "Agent Anthropic Model",
+		DisplayName: "Agent Anthropic Model",
+		Modality:    models.ModelModalityText,
+		ModelID:     "claude-3-opus",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed a legacy LLMConfig so fallback would succeed if we let it
+	_, err = testDB.LLMConfigs().InsertOne(ctx, models.LLMConfig{
+		Key:       models.DefaultLLMConfigKey,
+		APIKey:    "legacy-key",
+		BaseURL:   "https://legacy.example.com/v1",
+		Model:     "legacy-model",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agent := models.Agent{
+		ModelConfig: models.AgentModelConfig{
+			TextModelID: &agentModelID,
+		},
+	}
+	tenant := models.Tenant{ID: tenantID}
+
+	router := NewRouter(testDB)
+	_, err = router.ResolveTextModel(ctx, tenant, agent)
+	if !errors.Is(err, ErrProviderTypeUnsupported) {
+		t.Fatalf("expected ErrProviderTypeUnsupported, got %v", err)
+	}
+}
+
+func TestRouterResolveTextModel_RejectsUnsupportedTenantDefaultProvider(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	if testDB == nil {
+		t.Skip("skipping: no test database connection")
+	}
+	cleanupCollections(t)
+
+	ctx := context.Background()
+	tenantID := primitive.NewObjectID()
+	providerID := primitive.NewObjectID()
+	defaultModelID := primitive.NewObjectID()
+
+	// Seed gemini provider (unsupported type)
+	_, err := testDB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           providerID,
+		TenantID:     tenantID,
+		Name:         "GeminiProvider",
+		ProviderType: models.ProviderTypeGemini,
+		BaseURL:      "https://generativelanguage.googleapis.com/v1",
+		APIKey:       "gemini-key",
+		Enabled:      true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed tenant default model config pointing at the unsupported provider
+	_, err = testDB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          defaultModelID,
+		TenantID:    tenantID,
+		ProviderID:  providerID,
+		Name:        "Tenant Default Gemini Model",
+		DisplayName: "Tenant Default Gemini Model",
+		Modality:    models.ModelModalityText,
+		ModelID:     "gemini-pro",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agent := models.Agent{ModelConfig: models.AgentModelConfig{}} // no agent binding
+	tenant := models.Tenant{
+		ID:                      tenantID,
+		DefaultTextModelConfigID: &defaultModelID,
+	}
+
+	router := NewRouter(testDB)
+	_, err = router.ResolveTextModel(ctx, tenant, agent)
+	if !errors.Is(err, ErrProviderTypeUnsupported) {
+		t.Fatalf("expected ErrProviderTypeUnsupported, got %v", err)
+	}
+}
+
+func TestRouterResolveTextModel_UnsupportedAgentProviderDoesNotUseSupportedTenantDefault(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
@@ -298,12 +434,152 @@ func TestRouterResolveImageModel_ErrModelNotConfigured(t *testing.T) {
 	ctx := context.Background()
 	tenantID := primitive.NewObjectID()
 
-	tenant := models.Tenant{ID: tenantID}
-	agent := models.Agent{ModelConfig: models.AgentModelConfig{}}
+	// Unsupported Anthropic provider + model config bound to agent
+	unsupportedProviderID := primitive.NewObjectID()
+	agentModelID := primitive.NewObjectID()
+
+	_, err := testDB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           unsupportedProviderID,
+		TenantID:     tenantID,
+		Name:         "AnthropicProvider",
+		ProviderType: models.ProviderTypeAnthropic,
+		BaseURL:      "https://api.anthropic.com/v1",
+		APIKey:       "sk-ant-key",
+		Enabled:      true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = testDB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          agentModelID,
+		TenantID:    tenantID,
+		ProviderID:  unsupportedProviderID,
+		Name:        "Agent Anthropic Model",
+		DisplayName: "Agent Anthropic Model",
+		Modality:    models.ModelModalityText,
+		ModelID:     "claude-3-opus",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Supported OpenAI-compatible provider + model config set as tenant default
+	supportedProviderID := primitive.NewObjectID()
+	defaultModelID := primitive.NewObjectID()
+
+	_, err = testDB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           supportedProviderID,
+		TenantID:     tenantID,
+		Name:         "OpenAIProvider",
+		ProviderType: models.ProviderTypeOpenAICompatible,
+		BaseURL:      "https://api.openai.com/v1",
+		APIKey:       "sk-openai-key",
+		Enabled:      true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = testDB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          defaultModelID,
+		TenantID:    tenantID,
+		ProviderID:  supportedProviderID,
+		Name:        "Tenant Default OpenAI Model",
+		DisplayName: "Tenant Default OpenAI Model",
+		Modality:    models.ModelModalityText,
+		ModelID:     "gpt-4",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agent := models.Agent{
+		ModelConfig: models.AgentModelConfig{
+			TextModelID: &agentModelID,
+		},
+	}
+	tenant := models.Tenant{
+		ID:                      tenantID,
+		DefaultTextModelConfigID: &defaultModelID,
+	}
 
 	router := NewRouter(testDB)
-	_, err := router.ResolveImageModel(ctx, tenant, agent)
-	if err == nil || err.Error() != "image model is not configured" {
-		t.Fatalf("expected image ErrModelNotConfigured, got %v", err)
+	_, err = router.ResolveTextModel(ctx, tenant, agent)
+	// Must NOT fall through to the supported tenant default; the unsupported
+	// agent-level provider is a hard error, not a missing document.
+	if !errors.Is(err, ErrProviderTypeUnsupported) {
+		t.Fatalf("expected ErrProviderTypeUnsupported, got %v", err)
+	}
+}
+
+func TestRouterResolveImageModel_RejectsUnsupportedAgentProvider(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	if testDB == nil {
+		t.Skip("skipping: no test database connection")
+	}
+	cleanupCollections(t)
+
+	ctx := context.Background()
+	tenantID := primitive.NewObjectID()
+	providerID := primitive.NewObjectID()
+	agentModelID := primitive.NewObjectID()
+
+	// Seed Gemini provider (unsupported type)
+	_, err := testDB.ModelProviders().InsertOne(ctx, models.ModelProvider{
+		ID:           providerID,
+		TenantID:     tenantID,
+		Name:         "GeminiProvider",
+		ProviderType: models.ProviderTypeGemini,
+		BaseURL:      "https://generativelanguage.googleapis.com/v1",
+		APIKey:       "gemini-key",
+		Enabled:      true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed agent-bound image model config pointing at the unsupported provider
+	_, err = testDB.ModelConfigs().InsertOne(ctx, models.ModelConfig{
+		ID:          agentModelID,
+		TenantID:    tenantID,
+		ProviderID:  providerID,
+		Name:        "Agent Gemini Image Model",
+		DisplayName: "Agent Gemini Image Model",
+		Modality:    models.ModelModalityImage,
+		ModelID:     "gemini-image-gen",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agent := models.Agent{
+		ModelConfig: models.AgentModelConfig{
+			ImageModelID: &agentModelID,
+		},
+	}
+	tenant := models.Tenant{ID: tenantID}
+
+	router := NewRouter(testDB)
+	_, err = router.ResolveImageModel(ctx, tenant, agent)
+	if !errors.Is(err, ErrProviderTypeUnsupported) {
+		t.Fatalf("expected ErrProviderTypeUnsupported, got %v", err)
 	}
 }

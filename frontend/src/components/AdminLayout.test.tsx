@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminLayout from './AdminLayout';
 
 const tenantMock = vi.hoisted(() => ({
+  activeTenantReady: true,
   isRootTenant: true,
-  role: 'owner' as 'owner' | 'admin' | 'user',
+  role: 'owner' as 'owner' | 'admin' | 'user' | null,
 }));
 
 const apiMocks = vi.hoisted(() => ({
@@ -14,16 +15,17 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock('../contexts/TenantContext', () => ({
   useTenant: () => ({
-    activeTenant: {
+    activeTenant: tenantMock.activeTenantReady ? {
       tenantId: 'tenant-1',
       tenantName: 'Root Tenant',
       tenantSlug: 'root',
       role: tenantMock.role,
       isRoot: tenantMock.isRootTenant,
-    },
+    } : null,
     setActiveTenant: vi.fn(),
-    isRootTenant: tenantMock.isRootTenant,
-    role: tenantMock.role,
+    isRootTenant: tenantMock.activeTenantReady ? tenantMock.isRootTenant : false,
+    role: tenantMock.activeTenantReady ? tenantMock.role : null,
+    isTenantReady: tenantMock.activeTenantReady,
   }),
 }));
 
@@ -57,6 +59,7 @@ function renderAdminLayout(initialEntry = '/admin/llm-config') {
 
 describe('AdminLayout', () => {
   beforeEach(() => {
+    tenantMock.activeTenantReady = true;
     tenantMock.isRootTenant = true;
     tenantMock.role = 'owner';
     apiMocks.unreadCount.mockReset();
@@ -83,6 +86,18 @@ describe('AdminLayout', () => {
 
     expect(await screen.findByText('Admin Outlet')).toBeInTheDocument();
     expect(screen.queryByText('LLM Config')).not.toBeInTheDocument();
+  });
+
+  it('waits for tenant restoration before redirecting admin deep links', async () => {
+    tenantMock.activeTenantReady = false;
+    tenantMock.isRootTenant = true;
+    tenantMock.role = null;
+
+    renderAdminLayout('/admin/llm-config');
+
+    expect(screen.queryByTestId('location-display')).not.toBeInTheDocument();
+    expect(screen.queryByText('LLM Config Outlet')).not.toBeInTheDocument();
+    expect(apiMocks.unreadCount).not.toHaveBeenCalled();
   });
 
   it('shows the LLM Config navigation item and outlet for owner root members', async () => {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"lastsaas/internal/testutil"
+	"agentstore/internal/testutil"
 )
 
 // --- GetConfig (nil Stripe) ---

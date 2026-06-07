@@ -9,6 +9,7 @@ interface TenantContextType {
   setActiveTenant: (membership: MembershipInfo) => void;
   isRootTenant: boolean;
   role: 'owner' | 'admin' | 'user' | null;
+  isTenantReady: boolean;
 }
 
 const TenantContext = createContext<TenantContextType | null>(null);
@@ -18,6 +19,7 @@ const ACTIVE_TENANT_KEY = storageKeys.activeTenant;
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { memberships, isAuthenticated } = useAuth();
   const [activeTenant, setActiveTenantState] = useState<MembershipInfo | null>(null);
+  const [isTenantReady, setIsTenantReady] = useState(false);
 
   const setActiveTenant = useCallback((membership: MembershipInfo) => {
     setActiveTenantState(membership);
@@ -30,9 +32,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || memberships.length === 0) {
       setActiveTenantState(null);
       setTenantHeader(null);
+      setIsTenantReady(true);
       return;
     }
 
+    setIsTenantReady(false);
     const savedTenantId = getStoredValue(ACTIVE_TENANT_KEY);
     const saved = savedTenantId ? memberships.find(m => m.tenantId === savedTenantId) : null;
 
@@ -43,13 +47,15 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       const root = memberships.find(m => m.isRoot);
       setActiveTenant(root || memberships[0]);
     }
+    setIsTenantReady(true);
   }, [memberships, isAuthenticated, setActiveTenant]);
 
   const isRootTenant = activeTenant?.isRoot ?? false;
   const role = activeTenant?.role ?? null;
+  const tenantReadyForCurrentAuth = isTenantReady && (!isAuthenticated || memberships.length === 0 || activeTenant !== null);
 
   return (
-    <TenantContext.Provider value={{ activeTenant, setActiveTenant, isRootTenant, role }}>
+    <TenantContext.Provider value={{ activeTenant, setActiveTenant, isRootTenant, role, isTenantReady: tenantReadyForCurrentAuth }}>
       {children}
     </TenantContext.Provider>
   );

@@ -1,18 +1,16 @@
 import { useCallback, useRef } from 'react';
 import { telemetryApi } from '../api/client';
+import { getStoredValue, setStoredValue, storageKeys } from '../utils/storageKeys';
 
-function getSessionId(): string {
-  const SESSION_KEY = 'agentstore_session_id';
-  let id = sessionStorage.getItem(SESSION_KEY);
+export function getSessionId(): string {
+  const key = storageKeys.sessionId;
+  // getStoredValue checks the current AgentStore key in localStorage/sessionStorage.
+  // setStoredValue writes the current session key to sessionStorage.
+  let id = getStoredValue(key);
   if (!id) {
     id = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_KEY, id);
-    // Also check legacy key
-    const legacyId = sessionStorage.getItem('lastsaas_session_id');
-    if (legacyId && legacyId !== id) {
-      sessionStorage.removeItem('lastsaas_session_id');
-    }
   }
+  setStoredValue(key, id, sessionStorage);
   return id;
 }
 

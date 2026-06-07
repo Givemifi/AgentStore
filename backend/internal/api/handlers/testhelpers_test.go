@@ -8,15 +8,15 @@ import (
 	"strings"
 	"testing"
 
-	"lastsaas/internal/auth"
-	"lastsaas/internal/config"
-	"lastsaas/internal/configstore"
-	"lastsaas/internal/db"
-	"lastsaas/internal/events"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/syslog"
-	"lastsaas/internal/testutil"
+	"agentstore/internal/auth"
+	"agentstore/internal/config"
+	"agentstore/internal/configstore"
+	"agentstore/internal/db"
+	"agentstore/internal/events"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/syslog"
+	"agentstore/internal/testutil"
 
 	"github.com/gorilla/mux"
 )
@@ -180,6 +180,7 @@ func setupTestServer(t *testing.T) *testEnv {
 	adminAPI.Use(middleware.RequireRole(models.RoleAdmin))
 
 	adminAPI.HandleFunc("/dashboard", adminHandler.GetDashboard).Methods("GET")
+	adminAPI.HandleFunc("/launch-readiness", adminHandler.GetLaunchReadiness).Methods("GET")
 	adminAPI.HandleFunc("/logs", logHandler.ListLogs).Methods("GET")
 	adminAPI.HandleFunc("/logs/severity-counts", logHandler.SeverityCounts).Methods("GET")
 	adminAPI.HandleFunc("/plans", plansHandler.ListPlans).Methods("GET")

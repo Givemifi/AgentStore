@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/validation"
+	"agentstore/internal/db"
+	"agentstore/internal/llm"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/validation"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -267,7 +268,28 @@ func (h *ModelSettingsHandler) TestProvider(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	// For non-OpenAI-compatible providers, return unsupported status
+	if provider.ProviderType != models.ProviderTypeOpenAICompatible {
+		respondWithJSON(w, http.StatusOK, map[string]string{
+			"status":  "unsupported",
+			"message": "Provider type not supported yet. OpenAI-compatible providers are supported. More provider types coming soon...",
+		})
+		return
+	}
+
+	// Test OpenAI-compatible provider connectivity
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	if err := llm.TestOpenAICompatibleProvider(ctx, provider.BaseURL, provider.APIKey); err != nil {
+		respondWithError(w, http.StatusBadGateway, fmt.Sprintf("Failed to connect to provider: %v", err))
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"message": "OpenAI-compatible provider responded successfully.",
+	})
 }
 
 // --- Model config handlers ---

@@ -11,18 +11,18 @@ import (
 )
 
 type Config struct {
-	Environment string           `yaml:"-"`
-	Server      ServerConfig     `yaml:"server"`
-	Database    DatabaseConfig   `yaml:"database"`
-	Frontend    FrontendConfig   `yaml:"frontend"`
-	JWT         JWTConfig        `yaml:"jwt"`
-	OAuth       OAuthConfig      `yaml:"oauth"`
-	Email       EmailConfig      `yaml:"email"`
-	App         AppConfig        `yaml:"app"`
-	Stripe      StripeConfig     `yaml:"stripe"`
-	WebAuthn    WebAuthnConfig   `yaml:"webauthn"`
-	Webhooks    WebhooksConfig   `yaml:"webhooks"`
-	DataDog     DataDogConfig    `yaml:"datadog"`
+	Environment string         `yaml:"-"`
+	Server      ServerConfig   `yaml:"server"`
+	Database    DatabaseConfig `yaml:"database"`
+	Frontend    FrontendConfig `yaml:"frontend"`
+	JWT         JWTConfig      `yaml:"jwt"`
+	OAuth       OAuthConfig    `yaml:"oauth"`
+	Email       EmailConfig    `yaml:"email"`
+	App         AppConfig      `yaml:"app"`
+	Stripe      StripeConfig   `yaml:"stripe"`
+	WebAuthn    WebAuthnConfig `yaml:"webauthn"`
+	Webhooks    WebhooksConfig `yaml:"webhooks"`
+	DataDog     DataDogConfig  `yaml:"datadog"`
 }
 
 type WebhooksConfig struct {
@@ -124,7 +124,10 @@ func LoadEnvFile() {
 }
 
 func Load(env string) (*Config, error) {
-	configDir := os.Getenv("LASTSAAS_CONFIG_DIR")
+	configDir := os.Getenv("AGENTSTORE_CONFIG_DIR")
+	if configDir == "" {
+		configDir = os.Getenv("LASTSAAS_CONFIG_DIR")
+	}
 	if configDir == "" {
 		configDir = "config"
 	}
@@ -209,9 +212,11 @@ func expandEnvVars(s string) string {
 }
 
 func GetEnv() string {
-	env := os.Getenv("LASTSAAS_ENV")
-	if env == "" {
-		return "dev"
+	if env := os.Getenv("AGENTSTORE_ENV"); env != "" {
+		return env
 	}
-	return env
+	if env := os.Getenv("LASTSAAS_ENV"); env != "" {
+		return env
+	}
+	return "dev"
 }

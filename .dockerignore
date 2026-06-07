@@ -6,9 +6,9 @@
 .vscode
 .pids
 .DS_Store
-backend/lastsaas
-backend/lastsaas-cli
-backend/lastsaas-server
+backend/agentstore
+backend/agentstore-cli
+backend/agentstore-server
 backend/server
 backend/vendor
 backend/config/dev.yaml

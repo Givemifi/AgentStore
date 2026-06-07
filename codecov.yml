@@ -1,5 +1,5 @@
 fixes:
-  - "lastsaas/::backend/"
+  - "agentstore/::backend/"
 
 coverage:
   status:

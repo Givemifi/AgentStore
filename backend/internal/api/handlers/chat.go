@@ -11,12 +11,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"lastsaas/internal/agents"
-	"lastsaas/internal/credits"
-	"lastsaas/internal/db"
-	"lastsaas/internal/llm"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
+	"agentstore/internal/agents"
+	"agentstore/internal/credits"
+	"agentstore/internal/db"
+	"agentstore/internal/llm"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -67,6 +67,25 @@ func toPublicAgent(agent agents.Agent) publicAgent {
 	}
 }
 
+func dbAgentToPublicAgent(agent models.Agent) publicAgent {
+	pub := agent.ToPublic()
+	return publicAgent{
+		ID:               pub.ID,
+		Name:             pub.Name,
+		Slug:             pub.Slug,
+		Category:         pub.Category,
+		Description:      pub.Description,
+		Avatar:           pub.Avatar,
+		Icon:             pub.Icon,
+		Color:            pub.Color,
+		Visibility:       string(pub.Visibility),
+		WelcomeMessage:   pub.WelcomeMessage,
+		SuggestedPrompts: append([]string(nil), pub.SuggestedPrompts...),
+		Capabilities:     agentCapabilitiesToStrings(pub.Capabilities),
+		CreditCost:       pub.CreditCost,
+	}
+}
+
 // NewChatHandler creates a new chat handler.
 func NewChatHandler(database *db.MongoDB, creditsSvc *credits.Service, llmClient *llm.Client, modelRouter *llm.Router) *ChatHandler {
 	return &ChatHandler{
@@ -79,48 +98,85 @@ func NewChatHandler(database *db.MongoDB, creditsSvc *credits.Service, llmClient
 
 // ListAgents returns available AI experts (DB agents first, then fallback to static catalog).
 func (h *ChatHandler) ListAgents(w http.ResponseWriter, r *http.Request) {
-	// Try to get published agents from database
-	tenant, hasTenant := middleware.GetTenantFromContext(r.Context())
-	var publicAgents []publicAgent
-
-	if hasTenant {
-		// Query published agents from DB
-		cursor, err := h.db.Agents().Find(r.Context(), bson.M{"tenantId": tenant.ID, "status": models.AgentStatusPublished})
-		if err == nil {
-			var dbAgents []models.Agent
-			if err := cursor.All(r.Context(), &dbAgents); err == nil && len(dbAgents) > 0 {
-				publicAgents = make([]publicAgent, len(dbAgents))
-				for i, agent := range dbAgents {
-					pub := agent.ToPublic()
-					publicAgents[i] = publicAgent{
-						ID:               pub.ID,
-						Name:             pub.Name,
-						Slug:             pub.Slug,
-						Category:         pub.Category,
-						Description:      pub.Description,
-						Avatar:           pub.Avatar,
-						Icon:             pub.Icon,
-						Color:            pub.Color,
-						Visibility:       string(pub.Visibility),
-						WelcomeMessage:   pub.WelcomeMessage,
-						SuggestedPrompts: append([]string(nil), pub.SuggestedPrompts...),
-						Capabilities:     agentCapabilitiesToStrings(pub.Capabilities),
-						CreditCost:       pub.CreditCost,
-					}
-				}
-				respondWithJSON(w, http.StatusOK, publicAgents)
+	if h.db != nil {
+		if tenant, ok := middleware.GetTenantFromContext(r.Context()); ok {
+			platformAgents, err := h.listPlatformAgents(r.Context(), tenant.ID)
+			if err == nil && len(platformAgents) > 0 {
+				respondWithJSON(w, http.StatusOK, platformAgents)
 				return
+			}
+
+			cursor, err := h.db.Agents().Find(r.Context(), bson.M{"tenantId": tenant.ID, "status": models.AgentStatusPublished})
+			if err == nil {
+				defer cursor.Close(r.Context())
+				var dbAgents []models.Agent
+				if err := cursor.All(r.Context(), &dbAgents); err == nil && len(dbAgents) > 0 {
+					publicAgents := make([]publicAgent, len(dbAgents))
+					for i, agent := range dbAgents {
+						publicAgents[i] = dbAgentToPublicAgent(agent)
+					}
+					respondWithJSON(w, http.StatusOK, publicAgents)
+					return
+				}
 			}
 		}
 	}
 
-	// Fallback to static catalog
 	agentList := agents.GetAllAgents()
-	publicAgents = make([]publicAgent, len(agentList))
+	publicAgents := make([]publicAgent, len(agentList))
 	for i, agent := range agentList {
 		publicAgents[i] = toPublicAgent(agent)
 	}
 	respondWithJSON(w, http.StatusOK, publicAgents)
+}
+
+func (h *ChatHandler) listPlatformAgents(ctx context.Context, currentTenantID primitive.ObjectID) ([]publicAgent, error) {
+	cursor, err := h.db.Tenants().Find(ctx, bson.M{"isRoot": true, "isActive": true})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var rootTenants []models.Tenant
+	if err := cursor.All(ctx, &rootTenants); err != nil {
+		return nil, err
+	}
+	if len(rootTenants) == 0 {
+		return nil, nil
+	}
+
+	rootTenantIDs := make(bson.A, 0, len(rootTenants))
+	for _, tenant := range rootTenants {
+		if tenant.ID != currentTenantID {
+			rootTenantIDs = append(rootTenantIDs, tenant.ID)
+		}
+	}
+	if len(rootTenantIDs) == 0 {
+		return nil, nil
+	}
+
+	agentCursor, err := h.db.Agents().Find(ctx, bson.M{
+		"tenantId": bson.M{"$in": rootTenantIDs},
+		"status":   models.AgentStatusPublished,
+	}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer agentCursor.Close(ctx)
+
+	var dbAgents []models.Agent
+	if err := agentCursor.All(ctx, &dbAgents); err != nil {
+		return nil, err
+	}
+	if len(dbAgents) == 0 {
+		return nil, nil
+	}
+
+	publicAgents := make([]publicAgent, len(dbAgents))
+	for i, agent := range dbAgents {
+		publicAgents[i] = dbAgentToPublicAgent(agent)
+	}
+	return publicAgents, nil
 }
 
 // GetAgent returns a single agent by ID.
@@ -184,6 +240,7 @@ type SendMessageResponse struct {
 const (
 	conversationTitleMaxLength           = 48
 	streamProviderFailurePlaceholderText = "AI service is temporarily unavailable. Please try again."
+	unsupportedChatProviderMessage       = "This model provider is not supported for chat yet. Use an OpenAI-compatible provider."
 )
 
 func conversationTitleFromMessage(message string) string {
@@ -228,6 +285,40 @@ func publishedTenantAgentLookupFilter(agentID string, tenantID primitive.ObjectI
 	return filter
 }
 
+type resolvedChatAgent struct {
+	Agent       agents.Agent
+	CanonicalID string
+	Slug        string
+	DBAgent     *models.Agent
+}
+
+func resolveStaticChatAgent(agent agents.Agent) resolvedChatAgent {
+	return resolvedChatAgent{
+		Agent:       agent,
+		CanonicalID: agent.ID,
+		Slug:        agent.ID,
+	}
+}
+
+func resolveDBChatAgent(agent models.Agent) resolvedChatAgent {
+	return resolvedChatAgent{
+		Agent: agents.Agent{
+			ID:           agent.ID.Hex(),
+			Name:         agent.Name,
+			Category:     agent.Category,
+			Description:  agent.Description,
+			SystemPrompt: agent.SystemPrompt,
+			CreditCost:   agent.TextCreditCost(),
+			Examples:     agent.SuggestedPrompts,
+			Icon:         agent.Icon,
+			Color:        agent.Color,
+		},
+		CanonicalID: agent.ID.Hex(),
+		Slug:        agent.Slug,
+		DBAgent:     &agent,
+	}
+}
+
 func conversationMatchesAgent(conv *models.Conversation, agentID string) bool {
 	return conv != nil && conv.AgentID == agentID
 }
@@ -237,6 +328,35 @@ func mapCreditDeductionErrorStatus(err error) int {
 		return http.StatusPaymentRequired
 	}
 	return http.StatusInternalServerError
+}
+
+// resolveChatRequestConfig resolves the LLM request config for a chat request.
+// It first tries the model router for tenant-scoped agents, then falls back to legacy config.
+func (h *ChatHandler) resolveChatRequestConfig(ctx context.Context, tenant models.Tenant, resolvedAgent resolvedChatAgent) (llm.RequestConfig, error) {
+	if h.modelRouter != nil && resolvedAgent.DBAgent != nil && resolvedAgent.DBAgent.TenantID == tenant.ID {
+		cfg, err := h.modelRouter.ResolveTextModel(ctx, tenant, *resolvedAgent.DBAgent)
+		if err == nil {
+			return cfg, nil
+		}
+		if errors.Is(err, llm.ErrProviderTypeUnsupported) {
+			return llm.RequestConfig{}, err
+		}
+		if !errors.Is(err, llm.ErrModelNotConfigured) {
+			return llm.RequestConfig{}, err
+		}
+	}
+
+	h.llmClient.ReloadConfig()
+	requestConfig := h.llmClient.SnapshotConfig()
+	if !llmConfigUsable(&models.LLMConfig{
+		APIKey:   requestConfig.APIKey,
+		BaseURL:  requestConfig.BaseURL,
+		Model:    requestConfig.Model,
+		IsActive: true,
+	}) {
+		return llm.RequestConfig{}, llm.ErrModelNotConfigured
+	}
+	return requestConfig, nil
 }
 
 func buildSendMessageDeductionFailureUpdate(answer string) bson.M {
@@ -305,15 +425,16 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate agent exists
-	agent, err := h.getPublishedAgent(ctx, req.AgentID, tenant.ID)
+	resolvedAgent, err := h.resolvePublishedAgent(ctx, req.AgentID, tenant.ID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to get agent")
 		return
 	}
-	if agent == nil {
+	if resolvedAgent == nil {
 		respondWithError(w, http.StatusNotFound, "Agent not found")
 		return
 	}
+	agent := resolvedAgent.Agent
 
 	// Check if user has sufficient credits before making the LLM call
 	hasCredits, err := h.creditsSvc.CheckSufficientCredits(ctx, tenant.ID, agent.CreditCost)
@@ -326,21 +447,17 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config := GetLLMConfig(ctx, h.db)
-	if !llmConfigUsable(config) {
-		respondWithError(w, http.StatusInternalServerError, "AI model is not configured. Please contact an administrator.")
-		return
-	}
-
-	h.llmClient.ReloadConfig()
-	requestConfig := h.llmClient.SnapshotConfig()
-	if !llmConfigUsable(&models.LLMConfig{
-		APIKey:   requestConfig.APIKey,
-		BaseURL:  requestConfig.BaseURL,
-		Model:    requestConfig.Model,
-		IsActive: true,
-	}) {
-		respondWithError(w, http.StatusInternalServerError, "AI model is not configured. Please contact an administrator.")
+	requestConfig, err := h.resolveChatRequestConfig(ctx, *tenant, *resolvedAgent)
+	if err != nil {
+		if errors.Is(err, llm.ErrProviderTypeUnsupported) {
+			respondWithError(w, http.StatusInternalServerError, unsupportedChatProviderMessage)
+			return
+		}
+		if errors.Is(err, llm.ErrModelNotConfigured) {
+			respondWithError(w, http.StatusInternalServerError, "AI model is not configured. Please contact an administrator.")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "Failed to resolve AI model configuration")
 		return
 	}
 
@@ -364,7 +481,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusNotFound, "Conversation not found")
 			return
 		}
-		if !conversationMatchesAgent(&conv, req.AgentID) {
+		if !conversationMatchesAgent(&conv, resolvedAgent.CanonicalID) {
 			respondWithError(w, http.StatusBadRequest, "Conversation agent does not match request")
 			return
 		}
@@ -392,7 +509,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 			ID:        conversationID,
 			TenantID:  tenant.ID,
 			UserID:    user.ID,
-			AgentID:   req.AgentID,
+			AgentID:   resolvedAgent.CanonicalID,
 			Title:     conversationTitle,
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -417,7 +534,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		TenantID:       tenant.ID,
 		UserID:         user.ID,
 		ConversationID: conversationID,
-		AgentID:        req.AgentID,
+		AgentID:        resolvedAgent.CanonicalID,
 		Role:           "user",
 		Content:        req.Message,
 		CreditsCharged: 0,
@@ -430,7 +547,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		TenantID:       tenant.ID,
 		UserID:         user.ID,
 		ConversationID: conversationID,
-		AgentID:        req.AgentID,
+		AgentID:        resolvedAgent.CanonicalID,
 		Role:           "assistant",
 		Content:        answer,
 		Status:         models.ChatMessageStatusCompleted,
@@ -444,7 +561,8 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	metadata := map[string]interface{}{
-		"agentId":        req.AgentID,
+		"agentId":        resolvedAgent.CanonicalID,
+		"agentSlug":      resolvedAgent.Slug,
 		"conversationId": conversationID.Hex(),
 		"model":          usedModel,
 	}
@@ -602,34 +720,60 @@ func (h *ChatHandler) ListMessages(w http.ResponseWriter, r *http.Request) {
 // getPublishedAgent retrieves a published agent from the database.
 // It first checks the static catalog, then falls back to database lookup.
 func (h *ChatHandler) getPublishedAgent(ctx context.Context, agentID string, tenantID primitive.ObjectID) (*agents.Agent, error) {
-	// First, check the static catalog
+	resolved, err := h.resolvePublishedAgent(ctx, agentID, tenantID)
+	if err != nil || resolved == nil {
+		return nil, err
+	}
+	return &resolved.Agent, nil
+}
+
+func (h *ChatHandler) resolvePublishedAgent(ctx context.Context, agentID string, tenantID primitive.ObjectID) (*resolvedChatAgent, error) {
 	agent, err := agents.GetAgentByID(agentID)
 	if err != nil {
 		return nil, err
 	}
 	if agent != nil {
-		return agent, nil
+		resolved := resolveStaticChatAgent(*agent)
+		return &resolved, nil
 	}
 
-	// If not in catalog, try to look up in the database as a tenant-scoped agent
+	if h.db == nil {
+		return nil, nil
+	}
+
 	var dbAgent models.Agent
 	err = h.db.Agents().FindOne(ctx, publishedTenantAgentLookupFilter(agentID, tenantID)).Decode(&dbAgent)
-	if err != nil {
+	if err == nil {
+		resolved := resolveDBChatAgent(dbAgent)
+		return &resolved, nil
+	}
+
+	var rootTenants []models.Tenant
+	cursor, rootErr := h.db.Tenants().Find(ctx, bson.M{"isRoot": true, "isActive": true})
+	if rootErr != nil {
+		return nil, rootErr
+	}
+	defer cursor.Close(ctx)
+	if err := cursor.All(ctx, &rootTenants); err != nil {
 		return nil, err
 	}
 
-	// Convert database agent to catalog agent format
-	return &agents.Agent{
-		ID:           dbAgent.ID.Hex(),
-		Name:         dbAgent.Name,
-		Category:     dbAgent.Category,
-		Description:  dbAgent.Description,
-		SystemPrompt: dbAgent.SystemPrompt,
-		CreditCost:   dbAgent.TextCreditCost(),
-		Examples:     dbAgent.SuggestedPrompts,
-		Icon:         dbAgent.Icon,
-		Color:        dbAgent.Color,
-	}, nil
+	rootTenantIDs := make(bson.A, 0, len(rootTenants))
+	for _, tenant := range rootTenants {
+		rootTenantIDs = append(rootTenantIDs, tenant.ID)
+	}
+	if len(rootTenantIDs) == 0 {
+		return nil, err
+	}
+
+	filter := publishedTenantAgentLookupFilter(agentID, tenantID)
+	filter["tenantId"] = bson.M{"$in": rootTenantIDs}
+	err = h.db.Agents().FindOne(ctx, filter).Decode(&dbAgent)
+	if err != nil {
+		return nil, err
+	}
+	resolved := resolveDBChatAgent(dbAgent)
+	return &resolved, nil
 }
 
 // writeSSE writes a Server-Sent Event to the response.
@@ -691,15 +835,16 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate agent exists
-	agent, err := h.getPublishedAgent(ctx, req.AgentID, tenant.ID)
+	resolvedAgent, err := h.resolvePublishedAgent(ctx, req.AgentID, tenant.ID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to get agent")
 		return
 	}
-	if agent == nil {
+	if resolvedAgent == nil {
 		respondWithError(w, http.StatusNotFound, "Agent not found")
 		return
 	}
+	agent := resolvedAgent.Agent
 
 	// Check if user has sufficient credits before making the LLM call
 	hasCredits, err := h.creditsSvc.CheckSufficientCredits(ctx, tenant.ID, agent.CreditCost)
@@ -712,34 +857,17 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get LLM config using the model router
-	var requestConfig llm.RequestConfig
-	if h.modelRouter != nil {
-		// Try to find database agent by string ID or ObjectID/slug
-		var dbAgent models.Agent
-		err = h.db.Agents().FindOne(ctx, publishedTenantAgentLookupFilter(req.AgentID, tenant.ID)).Decode(&dbAgent)
-		if err == nil {
-			// Use the router for database agents
-			cfg, err := h.modelRouter.ResolveTextModel(ctx, *tenant, dbAgent)
-			if err == nil {
-				requestConfig = cfg
-			}
+	requestConfig, err := h.resolveChatRequestConfig(ctx, *tenant, *resolvedAgent)
+	if err != nil {
+		if errors.Is(err, llm.ErrProviderTypeUnsupported) {
+			respondWithError(w, http.StatusInternalServerError, unsupportedChatProviderMessage)
+			return
 		}
-	}
-
-	// Fallback to LLM config from database
-	if requestConfig.APIKey == "" {
-		h.llmClient.ReloadConfig()
-		requestConfig = h.llmClient.SnapshotConfig()
-	}
-
-	if !llmConfigUsable(&models.LLMConfig{
-		APIKey:   requestConfig.APIKey,
-		BaseURL:  requestConfig.BaseURL,
-		Model:    requestConfig.Model,
-		IsActive: true,
-	}) {
-		respondWithError(w, http.StatusInternalServerError, "AI model is not configured. Please contact an administrator.")
+		if errors.Is(err, llm.ErrModelNotConfigured) {
+			respondWithError(w, http.StatusInternalServerError, "AI model is not configured. Please contact an administrator.")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "Failed to resolve AI model configuration")
 		return
 	}
 
@@ -763,7 +891,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusNotFound, "Conversation not found")
 			return
 		}
-		if !conversationMatchesAgent(&conv, req.AgentID) {
+		if !conversationMatchesAgent(&conv, resolvedAgent.CanonicalID) {
 			respondWithError(w, http.StatusBadRequest, "Conversation agent does not match request")
 			return
 		}
@@ -787,7 +915,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 			ID:        conversationID,
 			TenantID:  tenant.ID,
 			UserID:    user.ID,
-			AgentID:   req.AgentID,
+			AgentID:   resolvedAgent.CanonicalID,
 			Title:     conversationTitle,
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -813,7 +941,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		TenantID:       tenant.ID,
 		UserID:         user.ID,
 		ConversationID: conversationID,
-		AgentID:        req.AgentID,
+		AgentID:        resolvedAgent.CanonicalID,
 		Role:           "user",
 		Content:        req.Message,
 		CreditsCharged: 0,
@@ -832,7 +960,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		TenantID:       tenant.ID,
 		UserID:         user.ID,
 		ConversationID: conversationID,
-		AgentID:        req.AgentID,
+		AgentID:        resolvedAgent.CanonicalID,
 		Role:           "assistant",
 		Content:        "",
 		Status:         models.ChatMessageStatusGenerating,
@@ -907,7 +1035,8 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Deduct credits before marking the assistant message as completed.
 	metadata := map[string]interface{}{
-		"agentId":        req.AgentID,
+		"agentId":        resolvedAgent.CanonicalID,
+		"agentSlug":      resolvedAgent.Slug,
 		"conversationId": conversationID.Hex(),
 		"model":          usedModel,
 	}

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"lastsaas/internal/models"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

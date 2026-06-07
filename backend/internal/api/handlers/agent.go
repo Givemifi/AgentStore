@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/middleware"
-	"lastsaas/internal/models"
-	"lastsaas/internal/validation"
+	"agentstore/internal/db"
+	"agentstore/internal/middleware"
+	"agentstore/internal/models"
+	"agentstore/internal/validation"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"

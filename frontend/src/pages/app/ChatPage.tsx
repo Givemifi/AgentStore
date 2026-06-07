@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, Globe2, Headphones, Landmark, Loader2, MessageSquare, PenLine, Plus, Scale, Send, Square, TowerControl, Zap } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Globe2, Headphones, Landmark, Loader2, Menu, MessageSquare, PenLine, Plus, Scale, Send, Square, TowerControl, X, Zap } from 'lucide-react';
 import axios from 'axios';
 import { agentsApi, chatApi, usageApi, type ChatStreamEvent } from '../../api/client';
 import { useTenant } from '../../contexts/TenantContext';
 import type { ChatMessage, Conversation } from '../../types';
+import { ErrorState, MarkdownMessage } from '../../components/app';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -181,9 +182,105 @@ function ConversationItem({
   );
 }
 
+function getAssistantStatus(message: ChatMessage): { label: string; className: string } | null {
+  if (message.role !== 'assistant') return null;
+  if (message.status === 'interrupted') {
+    return {
+      label: 'Interrupted · no charge',
+      className: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+    };
+  }
+  if (message.status === 'error') {
+    return {
+      label: 'Failed · no charge',
+      className: 'border-red-500/25 bg-red-500/10 text-red-200',
+    };
+  }
+  return null;
+}
+
+function findPreviousUserMessage(messages: ChatMessage[], index: number): ChatMessage | null {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (messages[i].role === 'user') {
+      return messages[i];
+    }
+  }
+  return null;
+}
+
+function ConversationSidebarContent({
+  agent,
+  conversations,
+  conversationsLoading,
+  conversationsError,
+  conversationId,
+  startNewChat,
+  openConversation,
+}: {
+  agent: { name: string; category: string };
+  conversations: Conversation[] | undefined;
+  conversationsLoading: boolean;
+  conversationsError: unknown;
+  conversationId: string | null;
+  startNewChat: () => void;
+  openConversation: (nextConversationId: string) => void;
+}) {
+  return (
+    <>
+      <div className="border-b border-dark-800 p-4">
+        <button
+          onClick={startNewChat}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-500 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-600"
+        >
+          <Plus className="h-4 w-4" />
+          New chat
+        </button>
+        <div className="mt-4 rounded-2xl border border-dark-800 bg-dark-950/60 p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-dark-500">Current Agent</p>
+          <p className="mt-2 text-sm font-semibold text-white">{agent.name}</p>
+          <p className="mt-1 text-sm text-dark-400">{agent.category}</p>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white">Conversations</h2>
+          {conversations && conversations.length > 0 && (
+            <span className="text-xs text-dark-500">{conversations.length}</span>
+          )}
+        </div>
+
+        {conversationsLoading ? (
+          <ConversationListSkeleton />
+        ) : conversationsError ? (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+            {getErrorMessage(conversationsError)}
+          </div>
+        ) : conversations && conversations.length > 0 ? (
+          <div className="space-y-3">
+            {conversations.map((conversation) => (
+              <ConversationItem
+                key={conversation.id}
+                conversation={conversation}
+                isActive={conversation.id === conversationId}
+                onClick={() => openConversation(conversation.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-dark-800 bg-dark-950/40 p-5 text-sm text-dark-400">
+            No conversations yet. Start a new chat to create your first thread.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function ChatPage() {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { activeTenant } = useTenant();
   const tenantReady = !!activeTenant;
@@ -196,6 +293,11 @@ export default function ChatPage() {
   const [composerNotice, setComposerNotice] = useState<ComposerNotice | null>(null);
   const [creditBalanceOverride, setCreditBalanceOverride] = useState<number | null>(null);
   const [createdConversationIds, setCreatedConversationIds] = useState<string[]>([]);
+  const [isConversationDrawerOpen, setIsConversationDrawerOpen] = useState(false);
+  const previouslyOpenRef = useRef(false);
+  const openDrawerButtonRef = useRef<HTMLButtonElement>(null);
+  const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
 
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
@@ -204,6 +306,7 @@ export default function ChatPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const conversationId = searchParams.get('conversationId')?.trim() || null;
+  const promptParam = searchParams.get('prompt')?.trim() || '';
 
   const {
     data: agent,
@@ -233,6 +336,8 @@ export default function ChatPage() {
   });
 
   const isConversationCreatedInSession = conversationId ? createdConversationIds.includes(conversationId) : false;
+  // Safely resolve agentId - prefer agent.id from query, fallback to URL param
+  const resolvedAgentId = agent?.id ?? agentId ?? '';
   const isConversationInCurrentAgent = conversationId
     ? (conversations?.some((conversation) => conversation.id === conversationId) ?? false) || isConversationCreatedInSession
     : false;
@@ -245,6 +350,8 @@ export default function ChatPage() {
     data: messages,
     isLoading: messagesLoading,
     error: messagesError,
+    refetch: refetchMessages,
+    isFetching: messagesFetching,
   } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: () => chatApi.messages(conversationId!),
@@ -277,6 +384,11 @@ export default function ChatPage() {
   const agentMissing = axios.isAxiosError(agentError) && agentError.response?.status === 404;
   const ExpertIcon = agent ? getExpertIcon(agent.id) : MessageSquare;
 
+  // Build returnTo for Buy Credits link - preserve current path and query params
+  const currentPath = location.pathname;
+  const currentSearch = searchParams.toString();
+  const returnTo = currentSearch ? `${currentPath}?${currentSearch}` : currentPath;
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayedMessages.length, conversationId, messagesLoading]);
@@ -290,10 +402,67 @@ export default function ChatPage() {
     setPendingUserMessage(null);
   }, [conversationId]);
 
+  // Focus management for drawer
+  // Use autoFocus on close button when drawer opens
+  // For focus return on close, we use useEffect with previouslyOpenRef
+  useEffect(() => {
+    if (!isConversationDrawerOpen && previouslyOpenRef.current) {
+      // Drawer just closed after being open - return focus to open button
+      // Use setImmediate/setTimeout to run after React has updated the DOM
+      const handle = setTimeout(() => {
+        openDrawerButtonRef.current?.focus();
+      }, 10);
+      return () => clearTimeout(handle);
+    }
+    // Update ref for next render
+    previouslyOpenRef.current = isConversationDrawerOpen;
+  }, [isConversationDrawerOpen]);
+
+  // Handle Escape key to close drawer
+  const handleDrawerKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Escape') {
+      setIsConversationDrawerOpen(false);
+    }
+
+    // Focus trap: cycle through focusable elements inside drawer
+    if ((event.key === 'Tab' || event.key === 'Shift+Tab') && drawerRef.current) {
+      const focusableElements = drawerRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement?.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement?.focus();
+      }
+    }
+  }, []);
+
+  const focusComposer = useCallback(() => {
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!promptParam) {
+      return;
+    }
+    setDraft(promptParam);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('prompt');
+    setSearchParams(nextParams, { replace: true });
+    focusComposer();
+  }, [promptParam, searchParams, setSearchParams, focusComposer]);
+
   const sendMessageMutation = useMutation({
     mutationFn: ({ message, currentConversationId }: { message: string; currentConversationId: string | null }) =>
       chatApi.send({
-        agentId: agentId!,
+        agentId: resolvedAgentId,
         conversationId: currentConversationId || undefined,
         message,
       }),
@@ -305,7 +474,7 @@ export default function ChatPage() {
       const nextMessages = [
         buildTemporaryMessage({
           id: `user-${Date.now()}`,
-          agentId: agentId!,
+          agentId: resolvedAgentId,
           conversationId: resolvedConversationId,
           role: 'user',
           content: variables.message,
@@ -313,7 +482,7 @@ export default function ChatPage() {
         }),
         buildTemporaryMessage({
           id: `assistant-${Date.now()}`,
-          agentId: agentId!,
+          agentId: resolvedAgentId,
           conversationId: resolvedConversationId,
           role: 'assistant',
           content: response.answer,
@@ -345,13 +514,8 @@ export default function ChatPage() {
     },
   });
 
-  const focusComposer = () => {
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
-  };
-
   const startNewChat = () => {
+    setIsConversationDrawerOpen(false);
     setSearchParams({});
     setDraft('');
     setPendingUserMessage(null);
@@ -368,6 +532,7 @@ export default function ChatPage() {
   };
 
   const openConversation = (nextConversationId: string) => {
+    setIsConversationDrawerOpen(false);
     setSearchParams({ conversationId: nextConversationId });
     setPendingUserMessage(null);
     setComposerNotice(null);
@@ -389,7 +554,12 @@ export default function ChatPage() {
     setIsStreaming(false);
   };
 
-  const sendStreamMessage = useCallback(async (message: string, currentConversationId: string | null) => {
+  const sendStreamMessage = useCallback(async (message: string, currentConversationId: string | null, agentIdToUse: string) => {
+    // Guard against missing agentId
+    if (!agentIdToUse) {
+      return;
+    }
+
     const conversationId = currentConversationId || `new-${Date.now()}`;
     const messageId = `assistant-${Date.now()}`;
 
@@ -407,7 +577,7 @@ export default function ChatPage() {
       tenantId: '',
       userId: '',
       conversationId,
-      agentId: agentId!,
+      agentId: agentIdToUse,
       role: 'user',
       content: message,
       creditsCharged: 0,
@@ -419,7 +589,7 @@ export default function ChatPage() {
     try {
       await chatApi.stream(
         {
-          agentId: agentId!,
+          agentId: agentIdToUse,
           conversationId: currentConversationId || undefined,
           message,
         },
@@ -438,7 +608,7 @@ export default function ChatPage() {
               tenantId: '',
               userId: '',
               conversationId: event.data.conversationId,
-              agentId: agentId!,
+              agentId: agentIdToUse,
               role: 'assistant',
               content: streamingContentRef.current,
               creditsCharged: event.data.creditsCharged,
@@ -469,6 +639,7 @@ export default function ChatPage() {
           } else if (event.event === 'error') {
             setIsStreaming(false);
             setComposerNotice({ tone: 'error', message: event.data.message });
+            setDraft(message);
             setPendingUserMessage(null);
             setStreamingContent('');
             streamingContentRef.current = '';
@@ -487,9 +658,10 @@ export default function ChatPage() {
             tenantId: '',
             userId: '',
             conversationId,
-            agentId: agentId!,
+            agentId: agentIdToUse,
             role: 'assistant',
-            content: `${streamingContentRef.current} [interrupted]`,
+            content: streamingContentRef.current,
+            status: 'interrupted',
             creditsCharged: 0,
             createdAt: new Date().toISOString(),
           };
@@ -508,7 +680,7 @@ export default function ChatPage() {
       setStreamingContent('');
       streamingContentRef.current = '';
     }
-  }, [agentId, activeTenant?.tenantId, queryClient]);
+  }, [agentId, activeTenant?.tenantId, queryClient, setSearchParams]);
 
   const handleExampleClick = (example: string) => {
     setDraft(example);
@@ -516,16 +688,31 @@ export default function ChatPage() {
     focusComposer();
   };
 
+  const handleRetryAssistantMessage = (messageIndex: number) => {
+    const previousUserMessage = findPreviousUserMessage(displayedMessages, messageIndex);
+    if (!previousUserMessage || isStreaming || sendMessageMutation.isPending || hasInsufficientCredits) {
+      if (previousUserMessage) {
+        setDraft(previousUserMessage.content);
+        focusComposer();
+      }
+      return;
+    }
+
+    setComposerNotice(null);
+    void sendStreamMessage(previousUserMessage.content, conversationId, resolvedAgentId);
+  };
+
   const handleSendMessage = async () => {
     const message = draft.trim();
-    if (!message || sendMessageMutation.isPending || isStreaming || !agentId || hasInsufficientCredits) {
+    // Guard: require a valid agentId
+    if (!message || sendMessageMutation.isPending || isStreaming || !resolvedAgentId || hasInsufficientCredits) {
       return;
     }
 
     setComposerNotice(null);
 
-    // Use streaming API
-    await sendStreamMessage(message, conversationId);
+    // Use streaming API with explicitly resolved agentId
+    await sendStreamMessage(message, conversationId, resolvedAgentId);
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -545,16 +732,16 @@ export default function ChatPage() {
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-800 text-dark-300">
           <AlertCircle className="h-7 w-7" />
         </div>
-        <h1 className="mt-5 text-2xl font-semibold text-white">Expert not found</h1>
+        <h1 className="mt-5 text-2xl font-semibold text-white">Agent not found</h1>
         <p className="mt-2 max-w-lg text-sm text-dark-400">
-          The expert you tried to open is unavailable or may have been removed.
+          The Agent you tried to open is unavailable or may have been removed.
         </p>
         <button
           onClick={() => navigate('/dashboard')}
           className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-600"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Experts
+          Back to Agents
         </button>
       </div>
     );
@@ -566,78 +753,88 @@ export default function ChatPage() {
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-800 text-dark-300">
           <AlertCircle className="h-7 w-7" />
         </div>
-        <h1 className="mt-5 text-2xl font-semibold text-white">Unable to load this expert</h1>
+        <h1 className="mt-5 text-2xl font-semibold text-white">Unable to load this Agent</h1>
         <p className="mt-2 max-w-lg text-sm text-dark-400">{getErrorMessage(agentError)}</p>
         <button
           onClick={() => navigate('/dashboard')}
           className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-600"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Experts
+          Back to Agents
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] min-h-[40rem] flex-col gap-4 lg:flex-row">
-      <aside className="flex w-full flex-col rounded-3xl border border-dark-800 bg-dark-900/60 lg:w-80 lg:min-w-80">
-        <div className="border-b border-dark-800 p-4">
-          <button
-            onClick={startNewChat}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-500 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-600"
-          >
-            <Plus className="h-4 w-4" />
-            New chat
-          </button>
-          <div className="mt-4 rounded-2xl border border-dark-800 bg-dark-950/60 p-4">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-dark-500">Current Expert</p>
-            <p className="mt-2 text-sm font-semibold text-white">{agent.name}</p>
-            <p className="mt-1 text-sm text-dark-400">{agent.category}</p>
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">Conversations</h2>
-            {conversations && conversations.length > 0 && (
-              <span className="text-xs text-dark-500">{conversations.length}</span>
-            )}
-          </div>
-
-          {conversationsLoading ? (
-            <ConversationListSkeleton />
-          ) : conversationsError ? (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
-              {getErrorMessage(conversationsError)}
-            </div>
-          ) : conversations && conversations.length > 0 ? (
-            <div className="space-y-3">
-              {conversations.map((conversation) => (
-                <ConversationItem
-                  key={conversation.id}
-                  conversation={conversation}
-                  isActive={conversation.id === conversationId}
-                  onClick={() => openConversation(conversation.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-dark-800 bg-dark-950/40 p-5 text-sm text-dark-400">
-              No conversations yet. Start a new chat to create your first thread.
-            </div>
-          )}
-        </div>
+    <div className="flex h-[calc(100vh-10rem)] min-h-[34rem] flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:min-h-[40rem] lg:flex-row">
+      <aside className="hidden w-full flex-col rounded-3xl border border-dark-800 bg-dark-900/60 lg:flex lg:w-80 lg:min-w-80">
+        <ConversationSidebarContent
+          agent={agent}
+          conversations={conversations}
+          conversationsLoading={conversationsLoading}
+          conversationsError={conversationsError}
+          conversationId={conversationId}
+          startNewChat={startNewChat}
+          openConversation={openConversation}
+        />
       </aside>
+
+      {isConversationDrawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Conversations">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-pointer bg-black/60"
+            aria-label="Close conversations overlay"
+            onClick={() => setIsConversationDrawerOpen(false)}
+          />
+          <aside
+            ref={drawerRef}
+            onKeyDown={handleDrawerKeyDown}
+            className="relative z-10 flex h-full w-[min(22rem,86vw)] flex-col border-r border-dark-800 bg-dark-950 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-dark-800 px-4 py-3">
+              <h2 className="text-sm font-semibold text-white">Conversations</h2>
+              <button
+                type="button"
+                ref={closeDrawerButtonRef}
+                autoFocus
+                onClick={() => setIsConversationDrawerOpen(false)}
+                className="rounded-xl bg-dark-800 p-2 text-dark-300 transition-colors hover:bg-dark-700 hover:text-white"
+                aria-label="Close conversations"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ConversationSidebarContent
+              agent={agent}
+              conversations={conversations}
+              conversationsLoading={conversationsLoading}
+              conversationsError={conversationsError}
+              conversationId={conversationId}
+              startNewChat={startNewChat}
+              openConversation={openConversation}
+            />
+          </aside>
+        </div>
+      )}
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-3xl border border-dark-800 bg-dark-900/60">
         <div className="border-b border-dark-800 p-4 sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 gap-3">
               <button
+                ref={openDrawerButtonRef}
+                onClick={() => setIsConversationDrawerOpen(true)}
+                className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-dark-800 text-dark-300 transition-colors hover:bg-dark-700 hover:text-white lg:hidden"
+                aria-label="Open conversations"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <button
                 onClick={() => navigate('/dashboard')}
                 className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-dark-800 text-dark-300 transition-colors hover:bg-dark-700 hover:text-white"
-                aria-label="Back to Experts"
+                aria-label="Back to Agents"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
@@ -690,6 +887,7 @@ export default function ChatPage() {
                       <button
                         key={example}
                         onClick={() => handleExampleClick(example)}
+                        aria-label={`Use suggested prompt: ${example}`}
                         className="rounded-2xl border border-dark-800 bg-dark-950/60 px-4 py-4 text-left text-sm text-dark-200 transition-colors hover:border-dark-700 hover:bg-dark-900 hover:text-white"
                       >
                         {example}
@@ -719,12 +917,18 @@ export default function ChatPage() {
               </button>
             </div>
           ) : messagesError ? (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
-              {getErrorMessage(messagesError)}
-            </div>
+            <ErrorState
+              title="Unable to load messages."
+              message={getErrorMessage(messagesError)}
+              retryLabel="Retry"
+              onRetry={() => void refetchMessages()}
+              isRetrying={messagesFetching}
+            />
           ) : (
             <div className="space-y-4">
-              {displayedMessages.map((message) => (
+              {displayedMessages.map((message, index) => {
+                const assistantStatus = getAssistantStatus(message);
+                return (
                 <div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -736,15 +940,34 @@ export default function ChatPage() {
                         : 'rounded-bl-md bg-dark-800 text-dark-100'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
+                    {message.role === 'assistant' ? (
+                      <MarkdownMessage content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
+                    )}
                     {((message.creditsCharged ?? 0) > 0) && (
                       <p className={`mt-2 text-xs ${message.role === 'user' ? 'text-primary-100' : 'text-dark-500'}`}>
                         {message.creditsCharged ?? 0} credits
                       </p>
                     )}
+                    {assistantStatus && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3">
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${assistantStatus.className}`}>
+                          {assistantStatus.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRetryAssistantMessage(index)}
+                          className="rounded-lg border border-dark-700 px-2.5 py-1 text-xs font-medium text-dark-200 transition-colors hover:border-primary-400/40 hover:text-white"
+                          aria-label="Retry message"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              );})}
 
               {/* Loading/streaming indicator */}
               {(sendMessageMutation.isPending || isStreaming) && (
@@ -757,7 +980,10 @@ export default function ChatPage() {
                           <span>Generating... <button onClick={handleStopStreaming} className="text-primary-400 hover:underline">Stop</button></span>
                         </div>
                         {streamingContent && (
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6">{streamingContent}<span className="animate-pulse">|</span></p>
+                          <div className="text-sm leading-6">
+                            <MarkdownMessage content={streamingContent} />
+                            <span className="animate-pulse">|</span>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -788,7 +1014,7 @@ export default function ChatPage() {
                 <p>{activeComposerNotice.message}</p>
                 {activeComposerNotice.tone === 'warning' && (
                   <Link
-                    to="/buy-credits"
+                    to={`/buy-credits?returnTo=${encodeURIComponent(returnTo)}`}
                     className="inline-flex items-center gap-2 self-start rounded-xl bg-amber-400/15 px-3 py-1.5 text-xs font-medium text-amber-100 transition-colors hover:bg-amber-400/25"
                   >
                     Buy Credits
@@ -797,6 +1023,10 @@ export default function ChatPage() {
               </div>
             </div>
           )}
+
+          <p className="mb-3 text-xs text-dark-400">
+            This message costs {requiredCredits} credits. Failed responses are not charged.
+          </p>
 
           <div className="flex items-end gap-3">
             {isStreaming ? (
@@ -818,6 +1048,7 @@ export default function ChatPage() {
                   rows={1}
                   disabled={sendMessageMutation.isPending || isStreaming}
                   aria-invalid={hasInsufficientCredits}
+                  aria-label={`Message ${agent.name}`}
                   className="min-h-[52px] w-full resize-none rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 pr-12 text-sm text-white placeholder-dark-500 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
                   style={{ maxHeight: '160px' }}
                 />

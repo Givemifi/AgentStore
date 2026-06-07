@@ -1,8 +1,12 @@
 package models
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // --- User methods ---
@@ -130,7 +134,31 @@ func TestBillingStatusConstants(t *testing.T) {
 	}
 }
 
-// --- AuthMethod constants ---
+// --- LLMConfig JSON safety ---
+
+func TestLLMConfigAPIKeyExcludedFromJSON(t *testing.T) {
+	cfg := LLMConfig{
+		ID:        primitive.NilObjectID,
+		Key:       DefaultLLMConfigKey,
+		APIKey:    "sk-secret-key-12345",
+		BaseURL:   "https://api.example.com/v1",
+		Model:     "gpt-4",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal LLMConfig: %v", err)
+	}
+	s := string(data)
+	if strings.Contains(s, "sk-secret-key-12345") {
+		t.Errorf("JSON output must not contain the secret API key, got: %s", s)
+	}
+	if strings.Contains(s, `"apiKey"`) {
+		t.Errorf("JSON output must not contain apiKey field, got: %s", s)
+	}
+}
 
 func TestAuthMethodConstants(t *testing.T) {
 	methods := []AuthMethod{

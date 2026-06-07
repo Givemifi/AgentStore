@@ -1,4 +1,4 @@
-app = 'lastsaas'
+app = 'agentstore'
 primary_region = 'iad'
 
 [build]

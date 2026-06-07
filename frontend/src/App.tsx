@@ -34,7 +34,6 @@ import PlanPage from './pages/app/PlanPage';
 import BuyCreditsPage from './pages/app/BuyCreditsPage';
 import BillingSuccessPage from './pages/app/BillingSuccessPage';
 import BillingCancelPage from './pages/app/BillingCancelPage';
-import TestEntitlementsPage from './pages/app/TestEntitlementsPage';
 import ActivityPage from './pages/app/ActivityPage';
 import OnboardingPage from './pages/app/OnboardingPage';
 
@@ -172,7 +171,7 @@ export default function App() {
                         <Route path="/settings/agents" element={<SettingsPage />} />
                         <Route path="/settings/models" element={<SettingsPage />} />
                         <Route path="/activity" element={<ActivityPage />} />
-                        <Route path="/test-entitlements" element={<TestEntitlementsPage />} />
+                        <Route path="/test-entitlements" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/messages" element={<Suspense fallback={<LazyFallback />}><AdminMessagesPage /></Suspense>} />
                       </Route>
 

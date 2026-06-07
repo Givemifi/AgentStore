@@ -7,8 +7,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { getStoredValue, storageKeys } from '../utils/storageKeys';
 import { messagesApi, plansApi, bundlesApi, announcementsApi } from '../api/client';
 import ImpersonationBanner from './ImpersonationBanner';
+import { MobileBottomNav } from './app';
 import { useState, useRef, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -84,18 +86,30 @@ export default function Layout() {
   };
 
   // Build nav items from branding config or fallback to defaults
+  const isPlatformAdmin = memberships.some(m => m.isRoot);
+  const hiddenNonRootItems = new Set(['test-entitlements']);
+
   const defaultNavItems = [
     { path: '/dashboard', icon: MessageCircle, label: 'Agents' },
-    ...(showTeam ? [{ path: '/team', icon: Users, label: 'Team' }] : []),
-    { path: '/plan', icon: CreditCard, label: 'Plan' },
+    { path: '/buy-credits', icon: Zap, label: 'Credits' },
+    { path: '/activity', icon: FileText, label: 'History' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  const navItems = branding.navItems.length > 0
-    ? branding.navItems
+  const isLegacyDefaultBrandingNav = branding.navItems.length === 4
+    && branding.navItems.every(item => item.isBuiltIn && item.visible)
+    && branding.navItems.some(item => item.id === 'dashboard' && item.label === 'Dashboard' && item.target === '/dashboard')
+    && branding.navItems.some(item => item.id === 'team' && item.label === 'Team' && item.target === '/team')
+    && branding.navItems.some(item => item.id === 'plan' && item.label === 'Plan' && item.target === '/plan')
+    && branding.navItems.some(item => item.id === 'settings' && item.label === 'Settings' && item.target === '/settings');
+
+  const navSourceItems = branding.navItems.length > 0 && !isLegacyDefaultBrandingNav ? branding.navItems : [];
+
+  const navItems = navSourceItems.length > 0
+    ? navSourceItems
         .filter(item => item.visible)
+        .filter(item => isPlatformAdmin || !hiddenNonRootItems.has(item.id))
         .filter(item => {
-          // Hide team item if showTeam is false
           if (item.id === 'team' && !showTeam) return false;
           return true;
         })
@@ -112,7 +126,7 @@ export default function Layout() {
   const logoMode = branding.logoMode || 'text';
   const logoUrl = branding.logoUrl;
 
-  const isImpersonating = localStorage.getItem('agentstore_impersonating') === 'true' || localStorage.getItem('lastsaas_impersonating') === 'true';
+  const isImpersonating = getStoredValue(storageKeys.impersonating) === 'true';
 
   return (
     <div className="min-h-screen bg-dark-950">
@@ -281,9 +295,13 @@ export default function Layout() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 pb-28 pt-8 sm:px-6 lg:px-8 md:pb-8">
         <Outlet context={{ setUnreadCount, showTeam }} />
       </main>
+
+      {isAuthenticated && (
+        <MobileBottomNav items={navItems} hasAdminAccess={isPlatformAdmin} />
+      )}
     </div>
   );
 }

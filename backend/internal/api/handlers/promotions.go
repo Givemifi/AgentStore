@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"lastsaas/internal/apicounter"
-	"lastsaas/internal/configstore"
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
-	stripeservice "lastsaas/internal/stripe"
+	"agentstore/internal/apicounter"
+	"agentstore/internal/configstore"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
+	stripeservice "agentstore/internal/stripe"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

@@ -23,12 +23,13 @@ import {
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import { messagesApi } from '../api/client';
+import LoadingSpinner from './LoadingSpinner';
 
 import { Navigate } from 'react-router-dom';
 
 export default function AdminLayout() {
   const location = useLocation();
-  const { isRootTenant, role } = useTenant();
+  const { isRootTenant, role, isTenantReady } = useTenant();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -40,6 +41,14 @@ export default function AdminLayout() {
       .then((data) => setUnreadCount(data.count))
       .catch(() => { /* non-critical: badge just won't show */ });
   }, [isRootTenant]);
+
+  if (!isTenantReady) {
+    return (
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   if (!isRootTenant) {
     return <Navigate to="/dashboard" replace />;

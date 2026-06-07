@@ -1,4 +1,4 @@
-# LastSaaS Version Notes
+# AgentStore Version Notes
 
 ## v1.2 — March 1, 2026
 

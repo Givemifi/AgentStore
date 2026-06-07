@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"lastsaas/internal/models"
+	"agentstore/internal/models"
 
 	"github.com/go-playground/validator/v10"
 )

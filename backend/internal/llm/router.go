@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"lastsaas/internal/db"
-	"lastsaas/internal/models"
+	"agentstore/internal/db"
+	"agentstore/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,6 +16,10 @@ import (
 // ErrModelNotConfigured is returned when no model configuration can be resolved
 // through the fallback chain (agent binding -> tenant default -> legacy LLMConfig).
 var ErrModelNotConfigured = errors.New("model is not configured")
+
+// ErrProviderTypeUnsupported is returned when a model provider's type is not
+// supported by the router (currently only openai_compatible is supported).
+var ErrProviderTypeUnsupported = errors.New("model provider type is not supported")
 
 // Router resolves the correct LLM configuration for a request using a
 // fallback chain: agent-level binding -> tenant default -> legacy LLMConfig.
@@ -126,6 +130,10 @@ func (r *Router) resolveModelConfig(ctx context.Context, tenantID, modelID primi
 		"enabled":  true,
 	}).Decode(&provider); err != nil {
 		return RequestConfig{}, err
+	}
+
+	if provider.ProviderType != models.ProviderTypeOpenAICompatible {
+		return RequestConfig{}, fmt.Errorf("%w: %s", ErrProviderTypeUnsupported, provider.ProviderType)
 	}
 
 	return RequestConfig{

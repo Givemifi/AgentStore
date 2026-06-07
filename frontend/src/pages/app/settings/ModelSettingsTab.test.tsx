@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ModelSettingsTab from './ModelSettingsTab';
 
@@ -28,12 +29,75 @@ describe('ModelSettingsTab', () => {
     tenantState.activeTenant = { tenantId: 'tenant-1', tenantName: 'Tenant One', tenantSlug: 'tenant-one', role: 'owner', isRoot: false };
     apiMocks.listProviders.mockResolvedValue([{ id: 'provider-1', tenantId: 'tenant-1', name: 'OpenAI', providerType: 'openai_compatible', baseUrl: 'https://api.example.com/v1', apiKeyPreview: 'sk-***1234', enabled: true, createdAt: '', updatedAt: '' }]);
     apiMocks.listModels.mockResolvedValue([]);
+    apiMocks.testProvider.mockReset();
   });
 
   it('shows masked provider keys without raw secrets', async () => {
     renderModelSettingsTab();
     expect(await screen.findByText(/sk-\*\*\*1234/)).toBeInTheDocument();
     expect(screen.queryByText('sk-secret-1234')).not.toBeInTheDocument();
+  });
+
+  it('displays (coming soon) label for existing Anthropic provider', async () => {
+    apiMocks.listProviders.mockResolvedValue([
+      { id: 'provider-1', tenantId: 'tenant-1', name: 'Anthropic', providerType: 'anthropic', baseUrl: 'https://api.anthropic.com', apiKeyPreview: 'sk-ant-***', enabled: true, createdAt: '', updatedAt: '' },
+    ]);
+    renderModelSettingsTab();
+    expect(await screen.findByText('Anthropic (coming soon)')).toBeInTheDocument();
+  });
+
+  it('displays (coming soon) label for existing Google Gemini provider', async () => {
+    apiMocks.listProviders.mockResolvedValue([
+      { id: 'provider-1', tenantId: 'tenant-1', name: 'Google Gemini', providerType: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com', apiKeyPreview: 'AIza***', enabled: true, createdAt: '', updatedAt: '' },
+    ]);
+    renderModelSettingsTab();
+    expect(await screen.findByText('Google Gemini (coming soon)')).toBeInTheDocument();
+  });
+
+  it('new provider form shows only OpenAI-compatible option', async () => {
+    const user = userEvent.setup();
+    renderModelSettingsTab();
+    await user.click(screen.getByRole('button', { name: /new provider/i }));
+
+    // Find the select element by its label text
+    const typeSelect = document.querySelector('select');
+    expect(typeSelect).toBeInTheDocument();
+
+    // Should only have OpenAI Compatible option for P0
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveTextContent('OpenAI Compatible');
+  });
+
+  it('new model form shows text-only modality with coming soon message for image/video', async () => {
+    const user = userEvent.setup();
+    renderModelSettingsTab();
+    await user.click(screen.getByRole('button', { name: /new model/i }));
+
+    // Should show the coming soon message
+    expect(screen.getByText(/Image and video models are coming soon/)).toBeInTheDocument();
+
+    // Find the select element in the form
+    const selects = document.querySelectorAll('select');
+    const modalitySelect = selects[1]; // Second select is for modality
+    expect(modalitySelect).toBeInTheDocument();
+    expect(modalitySelect).toHaveValue('text');
+  });
+
+  it('displays provider test result message when provided by backend', async () => {
+    const user = userEvent.setup();
+    apiMocks.testProvider.mockResolvedValue({
+      status: 'unsupported',
+      message: 'Provider type not supported yet. OpenAI-compatible providers are supported. More provider types coming soon...'
+    });
+    renderModelSettingsTab();
+
+    // Click test button on the provider
+    const testButtons = await screen.findAllByTitle('Test Connection');
+    await user.click(testButtons[0]);
+
+    // Should show the message from backend
+    expect(await screen.findByText(/Provider type not supported yet/)).toBeInTheDocument();
   });
 
   it('refetches provider and model settings after switching tenants instead of reusing previous tenant cache', async () => {
@@ -64,7 +128,7 @@ describe('ModelSettingsTab', () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText('Tenant Two Provider')).toBeInTheDocument();
+    expect(await screen.findByText('Tenant Two Provider (coming soon)')).toBeInTheDocument();
     expect(await screen.findByText('Tenant Two Model')).toBeInTheDocument();
     expect(screen.queryByText('Tenant One Provider')).not.toBeInTheDocument();
     expect(screen.queryByText('Tenant One Model')).not.toBeInTheDocument();
