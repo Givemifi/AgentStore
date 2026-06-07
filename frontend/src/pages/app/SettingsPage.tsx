@@ -43,14 +43,12 @@ export default function SettingsPage() {
     return 'profile';
   });
 
-  // Sync tab changes to URL
+  // Sync URL tab after tenant/role-gated tabs become available.
   useEffect(() => {
-    if (tab === 'profile') return;
-    const path = `/settings/${tab}`;
-    if (location.pathname !== path) {
-      // Could use navigate here but don't want to cause extra navigation
+    if (pathTab && tabs.some(t => t.key === pathTab) && tab !== pathTab) {
+      setTab(pathTab as SettingsTab);
     }
-  }, [tab, location.pathname]);
+  }, [pathTab, tabs, tab]);
 
   return (
     <div>
