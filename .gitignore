@@ -45,3 +45,4 @@ dist/
 
 # Local AI tool state
 .claude/worktrees/
+.superpowers/
