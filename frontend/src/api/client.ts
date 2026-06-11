@@ -116,6 +116,8 @@ api.interceptors.response.use(
 // --- Bootstrap ---
 export const bootstrapApi = {
   status: () => api.get<{ initialized: boolean }>('/bootstrap/status').then(r => r.data),
+  setup: (data: { org: string; name: string; email: string; password: string }) =>
+    api.post<{ initialized: boolean }>('/bootstrap/setup', data).then(r => r.data),
 };
 
 // --- Auth ---

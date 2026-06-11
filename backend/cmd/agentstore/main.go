@@ -11,12 +11,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"agentstore/internal/bootstrap"
 	"agentstore/internal/auth"
 	"agentstore/internal/config"
 	"agentstore/internal/configstore"
 	"agentstore/internal/db"
 	"agentstore/internal/models"
-	"agentstore/internal/validation"
 	"agentstore/internal/version"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -221,9 +221,12 @@ func cmdSetup() {
 	defer cancel()
 
 	// Check if already initialized
-	var sys models.SystemConfig
-	err := database.SystemConfig().FindOne(ctx, bson.M{}).Decode(&sys)
-	if err == nil && sys.Initialized {
+	initialized, err := bootstrap.IsInitialized(ctx, database)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to check initialization state: %v\n", err)
+		os.Exit(1)
+	}
+	if initialized {
 		fmt.Println("System is already initialized.")
 		fmt.Println()
 		fmt.Printf("  Database: %s\n", cfg.Database.Name)
@@ -245,141 +248,54 @@ func cmdSetup() {
 		os.Exit(0)
 	}
 
-	fmt.Println("=== AgentStore Initial Setup ===")
-	fmt.Println()
-
-	reader := bufio.NewReader(os.Stdin)
-
-	orgName := prompt(reader, "Organization name")
-	displayName := prompt(reader, "Your name")
-	email := prompt(reader, "Email address")
-	email = strings.TrimSpace(strings.ToLower(email))
-
-	if orgName == "" || displayName == "" || email == "" {
-		fmt.Fprintln(os.Stderr, "All fields are required.")
-		os.Exit(1)
+	// Non-interactive mode: all four AGENTSTORE_SETUP_* env vars set
+	in := bootstrap.SetupInput{
+		OrgName:     os.Getenv("AGENTSTORE_SETUP_ORG"),
+		DisplayName: os.Getenv("AGENTSTORE_SETUP_NAME"),
+		Email:       os.Getenv("AGENTSTORE_SETUP_EMAIL"),
+		Password:    os.Getenv("AGENTSTORE_SETUP_PASSWORD"),
 	}
 
-	passwordService := auth.NewPasswordService()
+	if in.OrgName != "" && in.DisplayName != "" && in.Email != "" && in.Password != "" {
+		fmt.Println("=== AgentStore Initial Setup (non-interactive) ===")
+		fmt.Println()
+	} else {
+		// Interactive mode
+		fmt.Println("=== AgentStore Initial Setup ===")
+		fmt.Println()
 
-	password := promptPassword("Password")
-	confirm := promptPassword("Confirm password")
+		reader := bufio.NewReader(os.Stdin)
+		in.OrgName = prompt(reader, "Organization name")
+		in.DisplayName = prompt(reader, "Your name")
+		in.Email = strings.TrimSpace(strings.ToLower(prompt(reader, "Email address")))
 
-	if password != confirm {
-		fmt.Fprintln(os.Stderr, "Passwords do not match.")
-		os.Exit(1)
+		if in.OrgName == "" || in.DisplayName == "" || in.Email == "" {
+			fmt.Fprintln(os.Stderr, "All fields are required.")
+			os.Exit(1)
+		}
+
+		password := promptPassword("Password")
+		confirm := promptPassword("Confirm password")
+		if password != confirm {
+			fmt.Fprintln(os.Stderr, "Passwords do not match.")
+			os.Exit(1)
+		}
+		in.Password = password
 	}
 
-	if err := passwordService.ValidatePasswordStrength(password); err != nil {
-		fmt.Fprintf(os.Stderr, "Password too weak: %v\n", err)
-		fmt.Fprintln(os.Stderr, "Requirements: 10+ characters, uppercase, lowercase, number, special character")
-		os.Exit(1)
-	}
-
-	passwordHash, err := passwordService.HashPassword(password)
+	user, err := bootstrap.InitializeSystem(ctx, database, in)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to hash password: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Setup failed: %v\n", err)
+		if strings.Contains(err.Error(), "password too weak") {
+			fmt.Fprintln(os.Stderr, "Requirements: 10+ characters, uppercase, lowercase, number, special character")
+		}
 		os.Exit(1)
 	}
-
-	now := time.Now()
-
-	// Create root tenant
-	tenant := models.Tenant{
-		ID:        primitive.NewObjectID(),
-		Name:      strings.TrimSpace(orgName),
-		Slug:      "root",
-		IsRoot:    true,
-		IsActive:  true,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	if err := validation.Validate(&tenant); err != nil {
-		fmt.Fprintf(os.Stderr, "Tenant validation failed: %v\n", err)
-		os.Exit(1)
-	}
-	if _, err := database.Tenants().InsertOne(ctx, tenant); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create root tenant: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create owner user
-	user := models.User{
-		ID:            primitive.NewObjectID(),
-		Email:         email,
-		DisplayName:   strings.TrimSpace(displayName),
-		PasswordHash:  passwordHash,
-		AuthMethods:   []models.AuthMethod{models.AuthMethodPassword},
-		EmailVerified: true,
-		IsActive:      true,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := validation.Validate(&user); err != nil {
-		database.Tenants().DeleteOne(ctx, bson.M{"_id": tenant.ID})
-		fmt.Fprintf(os.Stderr, "User validation failed: %v\n", err)
-		os.Exit(1)
-	}
-	if _, err := database.Users().InsertOne(ctx, user); err != nil {
-		database.Tenants().DeleteOne(ctx, bson.M{"_id": tenant.ID})
-		fmt.Fprintf(os.Stderr, "Failed to create user: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create owner membership
-	membership := models.TenantMembership{
-		ID:        primitive.NewObjectID(),
-		UserID:    user.ID,
-		TenantID:  tenant.ID,
-		Role:      models.RoleOwner,
-		JoinedAt:  now,
-		UpdatedAt: now,
-	}
-	if err := validation.Validate(&membership); err != nil {
-		database.Users().DeleteOne(ctx, bson.M{"_id": user.ID})
-		database.Tenants().DeleteOne(ctx, bson.M{"_id": tenant.ID})
-		fmt.Fprintf(os.Stderr, "Membership validation failed: %v\n", err)
-		os.Exit(1)
-	}
-	if _, err := database.TenantMemberships().InsertOne(ctx, membership); err != nil {
-		database.Users().DeleteOne(ctx, bson.M{"_id": user.ID})
-		database.Tenants().DeleteOne(ctx, bson.M{"_id": tenant.ID})
-		fmt.Fprintf(os.Stderr, "Failed to create membership: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Mark system as initialized
-	sysConfig := models.SystemConfig{
-		ID:            primitive.NewObjectID(),
-		Initialized:   true,
-		InitializedAt: &now,
-		InitializedBy: &user.ID,
-		Version:       version.Current,
-	}
-	if _, err := database.SystemConfig().InsertOne(ctx, sysConfig); err != nil {
-		database.TenantMemberships().DeleteOne(ctx, bson.M{"_id": membership.ID})
-		database.Users().DeleteOne(ctx, bson.M{"_id": user.ID})
-		database.Tenants().DeleteOne(ctx, bson.M{"_id": tenant.ID})
-		fmt.Fprintf(os.Stderr, "Failed to mark system as initialized: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Send welcome message to the new owner
-	welcomeMsg := models.Message{
-		ID:        primitive.NewObjectID(),
-		UserID:    user.ID,
-		Subject:   "Welcome to AgentStore v" + version.Current,
-		Body:      "Your system has been initialized. Welcome to AgentStore!",
-		IsSystem:  true,
-		Read:      false,
-		CreatedAt: now,
-	}
-	database.Messages().InsertOne(ctx, welcomeMsg)
 
 	fmt.Println()
 	fmt.Println("System initialized successfully!")
 	fmt.Println()
-	fmt.Printf("  Organization: %s\n", tenant.Name)
+	fmt.Printf("  Organization: %s\n", in.OrgName)
 	fmt.Printf("  Owner:        %s (%s)\n", user.DisplayName, user.Email)
 	fmt.Printf("  Database:     %s\n", cfg.Database.Name)
 	fmt.Println()

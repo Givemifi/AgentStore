@@ -2,7 +2,59 @@
 
 > 每次 AI 改动追加一条:日期、做了什么、是否改业务代码、风险、下一步。最新在上。
 
-## 2026-06-11 — 打磨已有功能 + 开源就绪清理
+## 2026-06-11 — 一键部署 + 开箱即用 + 中/英/日三语文档
+
+**本次做了什么**
+
+补齐开源项目「clone 即可部署」所缺的基础设施，不改任何业务逻辑。
+
+**1. 抽取 `bootstrap.InitializeSystem` 共享函数**
+- 新文件：`backend/internal/bootstrap/bootstrap.go`
+- 把 CLI `cmdSetup` 里的建租户/用户/成员/SystemConfig 逻辑抽为可被 HTTP 和 CLI 共用的纯函数，附 `IsInitialized` 辅助函数。
+- 改 `cmd/agentstore/main.go`：`cmdSetup` 改用新函数，同时新增 `AGENTSTORE_SETUP_*` 环境变量非交互模式（容器友好）。
+
+**2. 网页安装向导 `POST /api/bootstrap/setup`**
+- `backend/internal/api/handlers/bootstrap.go`：新增 `Setup` handler。已初始化返回 409，弱密码返回 400，成功返回 200 + `{"initialized":true}`；只在未初始化时可调用。
+- `backend/cmd/server/main.go`：在 bootstrap guard 之前注册 `/api/bootstrap/setup`。
+- `frontend/src/api/client.ts`：`bootstrapApi` 新增 `setup()` 方法。
+- 重写 `frontend/src/pages/BootstrapPage.tsx`：由「显示 CLI 命令」改为真实表单（组织名/姓名/邮箱/密码/确认密码），提交后 `navigate('/login')`。
+- 两个 i18n 文件新增 `setup` namespace：`frontend/src/i18n/locales/en/auth.json`、`zh/auth.json`。
+
+**3. LLM 环境变量回退 seed**
+- 新文件：`backend/internal/llm/seed.go`。`OPENAI_API_KEY + OPENAI_BASE_URL + OPENAI_MODEL` 三者均设置时，首次启动自动 seed `llm_configs`（幂等，不覆盖已有配置）。
+- `backend/cmd/server/main.go`：planstore.Seed 之后调用 `llm.Seed`，失败仅 `slog.Warn`，不阻断启动。
+- `.env.example`：新增 `OPENAI_*` 注释说明可选项。
+
+**4. Docker Compose 一键编排**
+- 新文件：`docker-compose.yml`（mongo:7 + app，健康检查，named volume，service_healthy 依赖）。
+- 新文件：`.env.docker.example`（compose 最小变量集模板）。
+
+**5. GHCR 镜像 CD workflow**
+- 新文件：`.github/workflows/release.yml`（push v* tag 时 docker build + push 到 GHCR，打 latest + 版本号 tag，用内置 `GITHUB_TOKEN`）。
+
+**6. 三语文档**
+- `README.md`：顶部加语言切换行（English | 简体中文 | 日本語）；Quick Start 新增「🚀 一键部署（Docker Compose）」小节；现有 dev 步骤降为「开发模式」。
+- 新文件：`README.zh-CN.md`、`README.ja.md`（完整中/日语版 README）。
+- `docs/DEPLOYMENT.md`：新增 Docker Compose 章节、预构建 GHCR 镜像说明、首次初始化网页向导说明、LLM env 配置说明；增加多语言链接。
+- 新文件：`docs/DEPLOYMENT.zh-CN.md`、`docs/DEPLOYMENT.ja.md`（完整中/日语版部署文档）。
+
+**是否改业务代码**
+
+否。所有改动均为新增基础设施层（bootstrap 包、LLM seed、HTTP 端点、compose、workflow、文档），不涉及 credits/stripe/llm 核心路径、计费算法、积分扣减逻辑。
+
+**风险**
+
+- `POST /api/bootstrap/setup`：仅在未初始化时可调用，已初始化返回 409；不影响任何已有路由或数据。
+- `llm.Seed`：幂等，仅在 `llm_configs` 为空时插入，不覆盖已有配置；失败仅 warn。
+- BootstrapPage 重写：只改了 `/setup` 页面，不影响登录/注册/其他路由。
+
+**下一步**
+
+1. 真实 compose 环境演练：`docker compose up -d --build` → 浏览器走安装向导 → 验证 agent 目录可见 + chat 可用。
+2. 推 tag `v1.4.0` 验证 release.yml 触发 GHCR 构建。
+3. 补充日语 i18n namespace（frontend 当前 zh + en，日语 UI 回退英文）。
+
+
 
 **本次做了什么**
 

@@ -152,6 +152,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Seed LLM config from env (optional; non-fatal if env vars not set)
+	if err := llm.Seed(context.Background(), database); err != nil {
+		slog.Warn("Failed to seed LLM config from env", "error", err)
+	}
+
 	// Initialize system logger
 	sysLogger := syslog.New(database, cfgStore.Get)
 
@@ -454,8 +459,9 @@ func main() {
 		w.Write([]byte(fmt.Sprintf(`{"version":%q}`, version.Current)))
 	}).Methods("GET")
 
-	// --- Bootstrap status (always accessible, init is CLI-only) ---
+	// --- Bootstrap (always accessible, before guard) ---
 	api.HandleFunc("/bootstrap/status", bootstrapHandler.Status).Methods("GET")
+	api.HandleFunc("/bootstrap/setup", bootstrapHandler.Setup).Methods("POST")
 
 	// API documentation (public, no auth)
 	api.HandleFunc("/docs", handlers.DocsHTML).Methods("GET")

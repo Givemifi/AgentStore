@@ -26,6 +26,14 @@
 - **M4c — 推荐码系统**：User 模型加 `ReferralCode/ReferredBy`；注册时生成唯一推荐码；邮箱验证后异步发放双向奖励；`growth.referral_reward_referee/referrer` configstore 配置(默认 0)；Settings → Profile 「邀请好友」区块含推荐链接复制
 - **M5 — 信任合规**：GDPR 数据导出(`/auth/export-data`)和删号(`/auth/delete-account`)已实现；隐私/条款通过 branding pages(`/p/privacy-policy`, `/p/terms-of-service`)承载；`PublicFooter` 组件加到市场页；User 类型加 `referralCode/referredBy`
 - **打磨与开源就绪（2026-06-11）**：修 `/api/admin/promotions` 500（补 nil 守卫）；修前端 lint CI 阻断（PublicFooter 未使用 t）；清 dev.yaml 硬编码 LLM key；删死代码（AdminRoute、ui/Alert）和编译产物。
+- **一键部署 + 开箱即用（2026-06-11）**：
+  - 新增 `backend/internal/bootstrap/bootstrap.go`（`InitializeSystem` 共享函数）
+  - CLI `cmdSetup` 支持 `AGENTSTORE_SETUP_*` 环境变量非交互模式
+  - 网页安装向导：`POST /api/bootstrap/setup` + 重写 `BootstrapPage.tsx` 为真实表单
+  - LLM env seed：`backend/internal/llm/seed.go`，三个 `OPENAI_*` env 首次启动自动配置
+  - `docker-compose.yml` + `.env.docker.example`（mongo:7 + app 一键编排）
+  - `.github/workflows/release.yml`（push v* tag 自动发布 GHCR 镜像）
+  - 三语文档：`README.zh-CN.md`、`README.ja.md`；`docs/DEPLOYMENT.zh-CN.md`、`docs/DEPLOYMENT.ja.md`
 
 ## 遗留问题
 

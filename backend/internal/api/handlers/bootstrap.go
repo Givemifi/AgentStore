@@ -3,10 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"agentstore/internal/bootstrap"
 	"agentstore/internal/db"
 	"agentstore/internal/models"
 
@@ -91,4 +94,68 @@ func (h *BootstrapHandler) BootstrapGuard(next http.Handler) http.Handler {
 			"redirect": "/setup",
 		})
 	})
+}
+
+type bootstrapSetupRequest struct {
+	OrgName     string `json:"org"`
+	DisplayName string `json:"name"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+}
+
+// Setup handles POST /api/bootstrap/setup. It creates the root tenant and owner
+// account on the first run. Returns 409 if the system is already initialized,
+// 400 if input is invalid, and 200 on success.
+func (h *BootstrapHandler) Setup(w http.ResponseWriter, r *http.Request) {
+	// Re-check so a concurrent CLI setup is respected
+	h.refreshInitializedFromContext(r)
+	if h.IsInitialized() {
+		respondWithError(w, http.StatusConflict, "System is already initialized")
+		return
+	}
+
+	var req bootstrapSetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Basic presence check before delegating to bootstrap (which also validates)
+	req.OrgName = strings.TrimSpace(req.OrgName)
+	req.DisplayName = strings.TrimSpace(req.DisplayName)
+	req.Email = strings.TrimSpace(req.Email)
+	if req.OrgName == "" || req.DisplayName == "" || req.Email == "" || req.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "All fields are required")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	_, err := bootstrap.InitializeSystem(ctx, h.db, bootstrap.SetupInput{
+		OrgName:     req.OrgName,
+		DisplayName: req.DisplayName,
+		Email:       req.Email,
+		Password:    req.Password,
+	})
+	if errors.Is(err, bootstrap.ErrAlreadyInitialized) {
+		respondWithError(w, http.StatusConflict, "System is already initialized")
+		return
+	}
+	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "password too weak") {
+			respondWithError(w, http.StatusBadRequest, msg)
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "Setup failed: "+msg)
+		return
+	}
+
+	// Mark in-memory so subsequent requests are served immediately
+	h.mu.Lock()
+	h.initialized = true
+	h.mu.Unlock()
+
+	respondWithJSON(w, http.StatusOK, map[string]interface{}{"initialized": true})
 }

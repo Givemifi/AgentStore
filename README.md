@@ -4,6 +4,8 @@
 [![codecov](https://codecov.io/gh/Givemifi/AgentStore/branch/master/graph/badge.svg)](https://codecov.io/gh/Givemifi/AgentStore)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Givemifi/AgentStore)](https://goreportcard.com/report/github.com/Givemifi/AgentStore)
 
+**Language / 语言 / 言語:** English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
+
 **A marketplace for practical AI agents, built on an open-source SaaS foundation.**
 
 AgentStore helps operators launch a curated AI Agent marketplace where users can discover useful Agents, chat with them, understand credit usage, buy credits, and continue their work without needing to understand the underlying platform. The product experience is backed by a production-ready SaaS foundation: multi-tenant account management, authentication, role-based access control, white-label branding, Stripe billing, API keys, outgoing webhooks, admin tooling, system health monitoring, credit-based usage tracking, and product analytics with telemetry.
@@ -332,7 +334,41 @@ A built-in [Model Context Protocol](https://modelcontextprotocol.io) server give
 
 ## Quick Start
 
-### 1. Clone the repository
+### 🚀 One-Command Deployment (Docker Compose — recommended)
+
+The fastest way to run AgentStore. No Go or Node.js required.
+
+**Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (includes Compose)
+
+```bash
+git clone https://github.com/Givemifi/AgentStore.git
+cd AgentStore
+
+# 1. Copy the Docker env template
+cp .env.docker.example .env
+
+# 2. Generate required secrets (run each command, paste the output into .env)
+openssl rand -hex 32   # → JWT_ACCESS_SECRET
+openssl rand -hex 32   # → JWT_REFRESH_SECRET
+openssl rand -hex 32   # → WEBHOOK_ENCRYPTION_KEY
+
+# 3. Optional — fill OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL in .env
+#    to enable chat on first boot (any OpenAI-compatible endpoint works).
+#    Leave blank to configure the LLM provider in the admin dashboard later.
+
+# 4. Start (builds image + launches MongoDB automatically)
+docker compose up -d
+
+# 5. Open http://localhost:8080 — a setup wizard will create your admin account
+```
+
+MongoDB data is persisted in a named Docker volume (`mongo_data`). The application and database start together; `docker compose down -v` removes everything.
+
+> **Want to skip the wizard?** Set `AGENTSTORE_SETUP_ORG`, `AGENTSTORE_SETUP_NAME`, `AGENTSTORE_SETUP_EMAIL`, and `AGENTSTORE_SETUP_PASSWORD` in `.env` to initialize the first admin account non-interactively on first boot.
+
+---
+
+### Development Mode (from source)
 
 ```bash
 git clone https://github.com/Givemifi/AgentStore.git

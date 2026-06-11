@@ -2,7 +2,9 @@
 
 This guide covers production deployment for AgentStore. It assumes you are deploying the upstream AgentStore app as a single Docker container: Go backend + built React frontend served by the Go process.
 
-For local development, see `docs/DEVELOPMENT.md`. For the launch smoke test, see `LAUNCH_SMOKE_TEST.md`.
+For local development, see `docs/DEVELOPMENT.md`.
+
+**Other languages:** [简体中文](DEPLOYMENT.zh-CN.md) | [日本語](DEPLOYMENT.ja.md)
 
 ## Runtime model
 
@@ -16,6 +18,18 @@ The production container:
 6. Listens on `SERVER_PORT` (set this to `8080` on Fly.io).
 
 There is no nginx, Caddy, or separate frontend server in the default AgentStore deployment.
+
+## Pre-built image
+
+Every release publishes a multi-platform Docker image to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/givemifi/agentstore:latest
+# or a specific version:
+docker pull ghcr.io/givemifi/agentstore:1.3.0
+```
+
+Using the pre-built image avoids needing Go or Node.js toolchains locally.
 
 ## Required external services
 
@@ -31,24 +45,82 @@ Optional integrations:
 - Stripe for subscriptions, credit bundle purchases, invoices, refunds, and disputes.
 - Google/GitHub/Microsoft OAuth providers.
 - DataDog for log and metrics forwarding.
-- OpenAI-compatible LLM provider configured in the admin UI after deploy.
+- OpenAI-compatible LLM provider (configurable via env vars or the admin UI).
 
 ## Required environment variables
 
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `SERVER_PORT` | Yes | `8080` on Fly.io; otherwise match the port exposed by your container host. |
-| `DATABASE_NAME` | Yes | Logical project identity. Two apps sharing the same name share the same user base. |
+| `DATABASE_NAME` | Yes | Logical project identity. |
 | `MONGODB_URI` | Yes | MongoDB connection string. |
 | `JWT_ACCESS_SECRET` | Yes | Generate with `openssl rand -hex 32`. |
 | `JWT_REFRESH_SECRET` | Yes | Generate with `openssl rand -hex 32`. |
-| `WEBHOOK_ENCRYPTION_KEY` | Yes | Generate with `openssl rand -hex 32`. Used for outgoing webhook secret material. |
+| `WEBHOOK_ENCRYPTION_KEY` | Yes | Generate with `openssl rand -hex 32`. |
 | `FRONTEND_URL` | Yes | Public HTTPS URL for CORS, OAuth redirects, and emails. |
 | `APP_NAME` | Yes | Product/app name shown in UI and email. |
 | `FROM_EMAIL` | Yes for email | Sender email address. |
 | `FROM_NAME` | Yes for email | Sender display name. |
+| `OPENAI_API_KEY` | Optional | Seeds an LLM config on first boot so chat works immediately. |
+| `OPENAI_BASE_URL` | Optional | Base URL of any OpenAI-compatible endpoint. |
+| `OPENAI_MODEL` | Optional | Model name, e.g. `gpt-4o`. |
 
-Optional variables are listed in `.env.example` and `README.md`.
+All three `OPENAI_*` vars must be set for the auto-seed to trigger. Leave them blank and configure the LLM provider in Admin → LLM Configuration after deploy instead.
+
+Optional OAuth / billing / observability variables are listed in `.env.docker.example`.
+
+## Docker Compose (recommended for self-hosted)
+
+The fastest way to run AgentStore on any machine with Docker installed. MongoDB is managed automatically — no Atlas account needed.
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/Givemifi/AgentStore.git
+cd AgentStore
+
+cp .env.docker.example .env
+```
+
+Edit `.env` and set the required secrets plus optional LLM provider:
+
+```bash
+JWT_ACCESS_SECRET=$(openssl rand -hex 32)
+JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+WEBHOOK_ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# Optional: seed LLM config on first boot (any OpenAI-compatible endpoint)
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com
+OPENAI_MODEL=gpt-4o
+```
+
+### 2. Start
+
+```bash
+docker compose up -d
+```
+
+To use the pre-built GHCR image instead of building from source, comment out `build: .` and uncomment the `image:` line in `docker-compose.yml`.
+
+### 3. First-run setup
+
+Open `http://localhost:8080` — a setup wizard creates your admin account.
+
+**Non-interactive (automated deploy):** set these in `.env` before startup:
+
+```bash
+AGENTSTORE_SETUP_ORG=My Company
+AGENTSTORE_SETUP_NAME=Jane Doe
+AGENTSTORE_SETUP_EMAIL=admin@example.com
+AGENTSTORE_SETUP_PASSWORD=YourSecurePass123!
+```
+
+### 4. Configure LLM (if not using env vars)
+
+Admin → LLM Configuration → fill in your provider URL, API key, and model.
+
+---
 
 ## Fly.io deployment
 
@@ -126,27 +198,24 @@ Expected: HTTP 200.
 
 ## First-time initialization
 
-After the first deploy, create the root tenant and root owner account.
+After the first deploy, open your app URL in a browser. A setup wizard will appear if the system is not yet initialized — fill in organization name, admin name, email, and password, then click **Create Account**.
 
-Run the CLI from your workstation using production environment variables and a network path to the same MongoDB database:
+**Alternative — CLI (if you can reach MongoDB from your workstation):**
 
 ```bash
-cp .env.example .env.production
-# Edit .env.production so it matches the production secrets above.
-
 set -a && source .env.production && set +a
 export AGENTSTORE_ENV=prod
 cd backend
 go run ./cmd/agentstore setup
 ```
 
-Then open:
+**Alternative — non-interactive (automated pipelines):** set `AGENTSTORE_SETUP_ORG`, `AGENTSTORE_SETUP_NAME`, `AGENTSTORE_SETUP_EMAIL`, `AGENTSTORE_SETUP_PASSWORD` as environment variables. The CLI will skip the TTY prompts and initialize automatically.
 
-```text
-https://your-app-name.fly.dev
-```
+Log in with the admin account credentials you just created.
 
-Log in with the root owner account created by the setup command.
+### Configure LLM provider
+
+If you did not set `OPENAI_*` env vars before deploy, go to Admin → LLM Configuration and enter your provider URL, API key, and model name. Chat will not work until this step is complete.
 
 ## Stripe webhook setup
 
