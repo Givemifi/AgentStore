@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	"agentstore/internal/models"
@@ -267,6 +266,3 @@ func NewDataDogChecker(validator interface{ Validate(ctx context.Context) error 
 		return validator.Validate(ctx)
 	}
 }
-
-// Ensure mutex fields are initialized (called from init or New doesn't need explicit init for sync.RWMutex)
-var _ sync.RWMutex

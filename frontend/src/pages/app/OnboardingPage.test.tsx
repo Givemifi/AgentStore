@@ -359,8 +359,8 @@ describe('OnboardingPage', () => {
 
   it('resets loading to false when completeOnboarding fails', async () => {
     const user = userEvent.setup();
-    const setLoadingSpy = vi.fn();
-    // Override the component to inject setLoading spy
+    const _setLoadingSpy = vi.fn();
+    // Override the component to inject setLoading spy (placeholder for future use)
     apiMocks.completeOnboarding.mockRejectedValue(new Error('failed'));
     renderOnboarding();
 

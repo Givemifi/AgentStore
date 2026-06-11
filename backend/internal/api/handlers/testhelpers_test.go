@@ -80,7 +80,7 @@ func setupTestServer(t *testing.T) *testEnv {
 	logHandler := NewLogHandler(sharedDB)
 	tenantHandler := NewTenantHandler(sharedDB, nil, emitter, sysLogger)
 	plansHandler := NewPlansHandler(sharedDB, sysLogger, cfgStore, nil)
-	billingHandler := NewBillingHandler(nil, sharedDB, emitter, sysLogger, cfgStore)
+	billingHandler := NewBillingHandler(nil, nil, sharedDB, emitter, sysLogger, cfgStore)
 	apiKeysHandler := NewAPIKeysHandler(sharedDB, emitter, sysLogger)
 	webhooksHandler := NewWebhooksHandler(sharedDB, sysLogger, nil)
 	agentHandler := NewAgentHandler(sharedDB)

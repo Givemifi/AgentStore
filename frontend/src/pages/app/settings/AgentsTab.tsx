@@ -116,7 +116,7 @@ export default function AgentsTab() {
       ...form,
       slug,
       suggestedPrompts: form.welcomeMessage ? [form.welcomeMessage] : [],
-      capabilities: ['text_chat'], // P0: only text chat
+      capabilities: ['text_chat'] as AgentCapability[], // P0: only text chat
       creditCost: {
         ...form.creditCost,
         imageGenerationCredits: 0,
@@ -137,7 +137,6 @@ export default function AgentsTab() {
     }
   };
 
-  const capabilityOptions: AgentCapability[] = ['text_chat'];
   const visibilityOptions: { value: AgentVisibility; label: string }[] = [
     { value: 'private', label: 'Private' },
     { value: 'public', label: 'Public' },

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Settings, Search, Plus, Trash2, X, Shield, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { adminApi } from '../../api/client';
 import { getErrorMessage } from '../../utils/errors';
 import type { ConfigVar, ConfigVarType, EnumOption } from '../../types';
@@ -51,8 +52,8 @@ export default function ConfigPage() {
     try {
       const data = await adminApi.listConfig();
       setConfigs(data.configs);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

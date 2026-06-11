@@ -116,7 +116,7 @@ export default function PlanPage() {
         window.location.href = result.checkoutUrl;
       }
     } catch {
-      // Error handled by interceptor
+      // interceptor handles user-facing error toast
     } finally {
       setCheckoutLoading(null);
     }
@@ -135,7 +135,7 @@ export default function PlanPage() {
       await billingApi.cancel();
       window.location.reload();
     } catch {
-      // Error handled by interceptor
+      // interceptor handles user-facing error toast
     } finally {
       setCancelLoading(false);
       setShowCancelModal(false);

@@ -223,9 +223,9 @@ describe('AdminDashboardPage', () => {
 
   it('shows loading state while fetching launch readiness', async () => {
     // Make the readiness query hang by not resolving
-    let resolveReadiness: (value: unknown) => void;
+    let _resolveReadiness: (value: unknown) => void;
     apiMocks.getLaunchReadiness.mockImplementation(() => new Promise((resolve) => {
-      resolveReadiness = resolve;
+      _resolveReadiness = resolve;
     }));
 
     renderDashboard();

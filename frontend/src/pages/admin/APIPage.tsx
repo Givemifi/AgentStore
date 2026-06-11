@@ -232,7 +232,9 @@ function APIKeysSection({ canWrite }: { canWrite: boolean }) {
     try {
       const data = await adminApi.listAPIKeys();
       setKeys(data.apiKeys);
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -245,8 +247,10 @@ function APIKeysSection({ canWrite }: { canWrite: boolean }) {
         if (!controller.signal.aborted) {
           setKeys(data.apiKeys);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          toast.error(getErrorMessage(err));
+        }
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -479,15 +483,16 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
   useEffect(() => {
     adminApi.listWebhookEventTypes().then(d => {
       setEventTypes(d.eventTypes);
-      // Auto-expand categories that have selected events
+      // Auto-expand categories that have selected events (initialised once on mount from webhook prop)
       const cats = new Set<string>();
       for (const et of d.eventTypes) {
-        if ((webhook?.events || ['tenant.created']).includes(et.type as any)) {
+        if ((webhook?.events || ['tenant.created'] as string[]).includes(et.type)) {
           cats.add(et.category);
         }
       }
       setExpandedCategories(cats);
     }).catch(err => toast.error(getErrorMessage(err)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: initialises from webhook prop on mount only
   }, []);
 
   const toggleEvent = (type: string) => {
@@ -497,7 +502,11 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
       const next = new Set(prev);
-      next.has(category) ? next.delete(category) : next.add(category);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
       return next;
     });
   };
@@ -682,7 +691,9 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
       const data = await adminApi.getWebhook(webhookId);
       setHook(data.webhook);
       setDeliveries(data.deliveries);
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
       setLoading(false);
     }
   }, [webhookId]);
@@ -696,8 +707,10 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
           setHook(data.webhook);
           setDeliveries(data.deliveries);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          toast.error(getErrorMessage(err));
+        }
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -716,7 +729,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
       const data = await adminApi.testWebhook(hook.id);
       setTestResult(data.delivery);
       fetchDetail();
-    } catch { /* ignore */ } finally {
+    } catch (err) { toast.error(getErrorMessage(err)); } finally {
       setTesting(false);
     }
   };
@@ -729,7 +742,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
       setSecret(data.secret);
       setHook({ ...hook, secretPreview: data.secretPreview });
       setSecretRevealed(true);
-    } catch { /* ignore */ } finally {
+    } catch (err) { toast.error(getErrorMessage(err)); } finally {
       setRegenerating(false);
     }
   };
@@ -755,7 +768,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
       <WebhookFormModal
         webhook={hook}
         onClose={() => setEditing(false)}
-        onSaved={(_data) => {
+        onSaved={(_) => {
           setEditing(false);
           fetchDetail();
           onRefresh();
@@ -948,7 +961,9 @@ function WebhooksSection({ canWrite }: { canWrite: boolean }) {
     try {
       const data = await adminApi.listWebhooks();
       setHooks(data.webhooks);
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -961,8 +976,10 @@ function WebhooksSection({ canWrite }: { canWrite: boolean }) {
         if (!controller.signal.aborted) {
           setHooks(data.webhooks);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          toast.error(getErrorMessage(err));
+        }
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);

@@ -92,8 +92,8 @@ export default function TenantsPage() {
       a.download = 'tenants.csv';
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 

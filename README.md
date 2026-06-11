@@ -467,21 +467,32 @@ Secrets are referenced as `${ENV_VAR}` in YAML and expanded from environment var
 
 | Variable | Required | Description |
 |----------|----------|------------|
-| `DATABASE_NAME` | Yes | Project identity — shared name = shared user base |
+| `DATABASE_NAME` | Yes | Project identity — two projects sharing a name share the same user base |
 | `MONGODB_URI` | Yes | MongoDB connection string |
-| `JWT_ACCESS_SECRET` | Yes | Secret for signing access tokens |
-| `JWT_REFRESH_SECRET` | Yes | Secret for signing refresh tokens |
-| `FRONTEND_URL` | Yes | Frontend URL for CORS and email links |
-| `APP_NAME` | Yes | Your application name (used in emails, UI) |
-| `STRIPE_SECRET_KEY` | No | Stripe secret API key |
-| `STRIPE_PUBLISHABLE_KEY` | No | Stripe publishable key (sent to frontend) |
-| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | No | Google OAuth secret |
-| `GOOGLE_REDIRECT_URL` | No | Google OAuth redirect URL |
+| `JWT_ACCESS_SECRET` | Yes | Secret for signing access tokens (generate with `openssl rand -hex 32`) |
+| `JWT_REFRESH_SECRET` | Yes | Secret for signing refresh tokens (generate with `openssl rand -hex 32`) |
+| `FRONTEND_URL` | Yes | Frontend URL used for CORS and email links |
+| `APP_NAME` | Yes | Your application name (used in emails and UI) |
+| `SERVER_PORT` | No | Port the backend listens on (default: `4290`; set to `8080` for Fly.io) |
+| `WEBHOOK_ENCRYPTION_KEY` | No | 64-char hex key for AES-256-GCM outgoing webhook payload encryption (generate with `openssl rand -hex 32`) |
+| `STRIPE_SECRET_KEY` | No | Stripe secret API key (`sk_test_...` or `sk_live_...`) |
+| `STRIPE_PUBLISHABLE_KEY` | No | Stripe publishable key sent to the frontend |
+| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret (`whsec_...`) |
 | `RESEND_API_KEY` | No | Resend email service API key |
-| `FROM_EMAIL` | No | Sender email address (default: noreply@yourdomain.com) |
-| `FROM_NAME` | No | Sender name (default: AgentStore) |
+| `FROM_EMAIL` | No | Sender email address (default: `noreply@yourdomain.com`) |
+| `FROM_NAME` | No | Sender name (default: `AgentStore`) |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URL` | No | Google OAuth redirect URL |
+| `GITHUB_CLIENT_ID` | No | GitHub OAuth app client ID |
+| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth app client secret |
+| `GITHUB_REDIRECT_URL` | No | GitHub OAuth redirect URL |
+| `MICROSOFT_CLIENT_ID` | No | Microsoft Azure app client ID |
+| `MICROSOFT_CLIENT_SECRET` | No | Microsoft Azure app client secret |
+| `MICROSOFT_REDIRECT_URL` | No | Microsoft OAuth redirect URL |
+| `DATADOG_API_KEY` | No | DataDog API key for metrics and log forwarding |
+| `DATADOG_SITE` | No | DataDog site (default: `us5.datadoghq.com`) |
+| `DATADOG_HOSTNAME` | No | Override hostname reported to DataDog |
 
 ---
 
@@ -526,6 +537,10 @@ agentstore/
       types/index.ts              TypeScript type definitions
   scripts/
     setup.sh                      Interactive setup script
+  docs/
+    ARCHITECTURE.md               System structure and high-risk paths
+    DEPLOYMENT.md                 Production deployment guide
+    DEVELOPMENT.md                Local development and verification workflow
   Dockerfile                      Multi-stage production build
   fly.toml                        Fly.io deployment config
   VERSION                         Current version number
@@ -844,7 +859,9 @@ These examples show how the MCP tools work in practice. Each example lists the u
 
 ### Fly.io
 
-AgentStore includes a Dockerfile and Fly.io configuration for production deployment.
+AgentStore includes a Dockerfile and Fly.io configuration for production deployment. The Docker image builds both the Go backend and React frontend into one container; the Go binary serves the SPA directly.
+
+For the complete production deployment guide, including first-time initialization, Stripe webhook setup, launch checklist, Docker-on-any-platform notes, and troubleshooting, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ```bash
 # Install flyctl if needed
@@ -853,23 +870,49 @@ curl -L https://fly.io/install.sh | sh
 # Create the app (first time only)
 flyctl apps create your-app-name --org your-org
 
-# Set production secrets
+# Set required production secrets
 flyctl secrets set \
+  SERVER_PORT="8080" \
   DATABASE_NAME="your-db-name" \
   MONGODB_URI="mongodb+srv://..." \
   JWT_ACCESS_SECRET="$(openssl rand -hex 32)" \
   JWT_REFRESH_SECRET="$(openssl rand -hex 32)" \
+  WEBHOOK_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   FRONTEND_URL="https://your-app-name.fly.dev" \
   APP_NAME="YourApp" \
+  FROM_EMAIL="noreply@yourdomain.com" \
+  FROM_NAME="YourApp"
+
+# Optional integrations: add these when you enable billing, email, OAuth, or DataDog
+flyctl secrets set \
   STRIPE_SECRET_KEY="sk_live_..." \
   STRIPE_PUBLISHABLE_KEY="pk_live_..." \
-  STRIPE_WEBHOOK_SECRET="whsec_..."
+  STRIPE_WEBHOOK_SECRET="whsec_..." \
+  RESEND_API_KEY="re_..." \
+  GOOGLE_CLIENT_ID="..." \
+  GOOGLE_CLIENT_SECRET="..." \
+  GOOGLE_REDIRECT_URL="https://your-app-name.fly.dev/api/auth/google/callback" \
+  GITHUB_CLIENT_ID="..." \
+  GITHUB_CLIENT_SECRET="..." \
+  GITHUB_REDIRECT_URL="https://your-app-name.fly.dev/api/auth/github/callback" \
+  MICROSOFT_CLIENT_ID="..." \
+  MICROSOFT_CLIENT_SECRET="..." \
+  MICROSOFT_REDIRECT_URL="https://your-app-name.fly.dev/api/auth/microsoft/callback"
 
 # Deploy
 flyctl deploy
 ```
 
-The Dockerfile builds both the Go backend and React frontend into a single ~14MB Alpine container. The Go binary serves the frontend SPA directly — no nginx or separate web server required.
+After the first deploy, initialize the root tenant and owner account from a machine that has network access to the production MongoDB database:
+
+```bash
+set -a && source .env.production && set +a
+export AGENTSTORE_ENV=prod
+cd backend
+go run ./cmd/agentstore setup
+```
+
+Then log in as the root owner, open **Admin → Launch Readiness**, and complete the launch checklist before inviting users.
 
 ### Other Platforms
 

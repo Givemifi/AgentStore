@@ -86,20 +86,13 @@ func buildQuery(params map[string]string) string {
 	return "?" + v.Encode()
 }
 
-func getEnvWithFallback(primary, legacy string) string {
-	if value := os.Getenv(primary); value != "" {
-		return value
-	}
-	return os.Getenv(legacy)
-}
-
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
 func cmdMCP() {
-	baseURL := getEnvWithFallback("AGENTSTORE_URL", "LASTSAAS_URL")
-	apiKey := getEnvWithFallback("AGENTSTORE_API_KEY", "LASTSAAS_API_KEY")
+	baseURL := os.Getenv("AGENTSTORE_URL")
+	apiKey := os.Getenv("AGENTSTORE_API_KEY")
 
 	if baseURL == "" {
 		fmt.Fprintln(os.Stderr, "AGENTSTORE_URL environment variable is required (e.g. http://localhost:3000)")

@@ -141,9 +141,6 @@ func findAndSetConfigDir() {
 	if os.Getenv("AGENTSTORE_CONFIG_DIR") != "" {
 		return
 	}
-	if os.Getenv("LASTSAAS_CONFIG_DIR") != "" {
-		return
-	}
 	dir, _ := os.Getwd()
 	for i := 0; i < 6; i++ {
 		for _, candidate := range []string{
@@ -168,7 +165,7 @@ func findAndSetConfigDir() {
 func SetConfigDir(t *testing.T) {
 	t.Helper()
 	findAndSetConfigDir()
-	if os.Getenv("AGENTSTORE_CONFIG_DIR") == "" && os.Getenv("LASTSAAS_CONFIG_DIR") == "" {
+	if os.Getenv("AGENTSTORE_CONFIG_DIR") == "" {
 		t.Fatalf("testutil: could not find config directory")
 	}
 }

@@ -1,44 +1,76 @@
-# AgentStore Development Rules
+# AgentStore — Claude Code 启动须知
 
-## Validation
+> 每次启动只需读本文件。继续开发前先读 `docs/START_HERE.md`。
 
-AgentStore uses hybrid validation: Go-side (`validate` struct tags via go-playground/validator) and MongoDB JSON Schema (`internal/db/schema.go`).
+## 项目是什么
 
-**When modifying model structs in `internal/models/`:**
-1. Update `validate` struct tags on the model
-2. Update the corresponding MongoDB JSON Schema in `internal/db/schema.go`
-3. Keep both in sync — the Go tags and MongoDB schema must enforce the same constraints
-4. Run `cd backend && go test ./internal/validation/...` to verify
+平台自营的 AI Agent 市场,基于多租户 SaaS 底座。用户发现 Agent、对话、消耗积分、购买积分包;运营方在 admin 后台管理 Agent、套餐、积分、计费、品牌、健康、日志、上线就绪。
 
-**When adding a new collection that accepts user/API writes:**
-1. Add `validate` tags to the model struct
-2. Add a schema function to `internal/db/schema.go` and include it in `AllSchemas()`
-3. Add tests in `internal/validation/validate_test.go`
+- 后端:Go 1.25 + gorilla/mux + MongoDB,入口 `backend/cmd/server`
+- CLI/MCP:`backend/cmd/agentstore`(初始化、只读 MCP)
+- 前端:React 19 + TypeScript + Vite 7 + Tailwind 4,目录 `frontend/src`
+- 计费:Stripe;LLM:OpenAI 兼容 provider
 
-## System Logging
+## V1 已完成
 
-Use `syslog.Logger` for all significant system events. Severity levels: critical, high, medium, low, debug.
+- 多租户 + RBAC(owner/admin/user)、JWT(access+refresh)+ `X-Tenant-ID`
+- 认证全套(密码、OAuth、magic link、MFA/TOTP)
+- Agent 市场(预置 6 个 demo agent)+ 对话(SSE 流式)
+- 积分系统(订阅积分 + 购买积分包,对话按 Agent 成本扣费,余额不足拦截)
+- Stripe 计费(checkout、订阅、portal、税、退款、争议、优惠码)
+- admin 后台(用户/租户/套餐/计费/品牌/健康/日志/API key/webhook/遥测/配置/上线就绪)
+- **多模态 + 语音(本轮新增)**:Agent 对话支持按住说话(Web Speech API)、图片(base64 vision)、文档(PDF/Word/TXT 前端提取文字)上传,手机浏览器适配
 
-## Build Verification
+## 启动 / 测试 / 构建命令
 
-Always verify after changes:
 ```bash
-cd backend && go build ./...
-cd frontend && npx tsc --noEmit
+# 本地起服务(详见 docs/DEVELOPMENT.md)
+set -a && source .env && set +a
+cd backend && go run ./cmd/server          # 后端 :4290
+cd frontend && npm install && npm run dev   # 前端 :4280
+cd backend && go run ./cmd/agentstore setup # 初始化新库
+
+# 改完代码必须验证
+cd backend && go build ./... && go vet ./... && go test ./...
+cd frontend && npx tsc --noEmit && npm run lint && npm test -- --run
 ```
 
-## Dependent Project Deployment (CRITICAL)
+本地凭据、测试清单见 `LOCAL_TESTING.md`。
 
-Any project built on the AgentStore boilerplate — whether using it as a Git submodule, fork, or copy — **MUST** deploy using the SaaS Dockerfile (`Dockerfile.saas`) and the corresponding Fly config (`fly.saas.toml`). Never use bare `fly deploy` on a project that depends on AgentStore.
+## 核心目录
 
-**Why this matters:** The SaaS Dockerfile runs both the product backend AND the AgentStore backend behind Caddy (via supervisord). The AgentStore backend serves all auth endpoints (`/api/auth/*`), bootstrap status (`/api/bootstrap/status`), OAuth providers (Google, etc.), billing, and admin APIs. Without it, login breaks silently — the product backend has no auth routes, so API calls return HTML from the SPA catch-all, causing mysterious redirects to `/setup` or broken login forms with missing OAuth buttons.
+- `backend/internal/api/handlers/` — HTTP handler(auth/admin/tenant/billing/chat/agent…)
+- `backend/internal/models/` — MongoDB 模型结构体
+- `backend/internal/db/` — 连接、索引、JSON Schema(`schema.go`)
+- `backend/internal/credits/` `…/stripe/` `…/llm/` — 积分、计费、LLM(高风险)
+- `backend/internal/middleware/` — 认证、租户解析、RBAC、计费拦截
+- `frontend/src/pages/{app,admin,auth,public}/` — 各角色页面
+- `frontend/src/api/client.ts` — API 客户端 + token 刷新
+- `frontend/src/utils/attachments.ts`、`frontend/src/hooks/useSpeechRecognition.ts` — 多模态/语音
 
-**Correct deploy command:**
-```bash
-fly deploy -c fly.saas.toml
-```
+## 必读文档
 
-**Propagation rule:** When setting up or working on any dependent project, ensure:
-1. The project has a `deploy.md` at its root with full deployment instructions and the "why" behind the multi-process architecture
-2. The project's Claude Code memory (MEMORY.md or CLAUDE.md) contains a cross-reference: "See `deploy.md` — never bare `fly deploy`"
-3. If the project doesn't have these yet, create them before the first deployment
+- `docs/START_HERE.md` — /clear 后第一篇
+- `docs/ARCHITECTURE.md` — 技术栈、结构、数据流
+- `docs/BUSINESS_RULES.md` — 业务规则与不可误改逻辑
+- `docs/TASKS.md` — 已完成 / 遗留 / 下一步
+- `docs/DECISIONS.md` — 已定型的技术/产品决策
+- `docs/DEVELOPMENT.md` — 完整开发/验证流程
+- `docs/DEPLOYMENT.md` — 部署
+
+## 开发禁区
+
+1. **不改业务代码做归档/清理**;清理先审计、只删证明无用的。
+2. **高风险路径**改动需谨慎并跑测试:`backend/internal/credits/`、`…/stripe/`、`…/llm/`、`api/handlers/chat.go`、`api/handlers/billing.go`、`api/handlers/admin_launch_readiness.go`、`middleware/tenant.go`、`frontend/src/pages/app/ChatPage.tsx`、`frontend/src/api/client.ts`、`.env.example`、`Dockerfile`、`.github/workflows/`。
+3. **模型结构体改动必须同步两处校验**:`internal/models/` 的 `validate` tag 与 `internal/db/schema.go` 的 MongoDB JSON Schema 保持等价,然后 `cd backend && go test ./internal/validation/...`。新增接受用户/API 写入的集合:加 tag、加 schema 函数并入 `AllSchemas()`、加 `validate_test.go` 测试。
+4. **系统事件用 `syslog.Logger`**(severity:critical/high/medium/low/debug),勿在 handler/前端塞临时调试输出。
+5. **不要 `git add` / `git commit`,除非明确要求。**
+6. **依赖项目部署必须用 `Dockerfile.saas` + `fly.saas.toml`**,绝不裸跑 `fly deploy`(否则 auth 路由缺失、登录静默失败)。本仓库本体用根目录 `Dockerfile`。
+
+## 每次开发完成后要更新的文档
+
+- 改了架构/模块/数据流 → `docs/ARCHITECTURE.md`
+- 改了业务规则/权限/计费/订单 → `docs/BUSINESS_RULES.md`
+- 完成任务/产生新遗留 → `docs/TASKS.md`
+- 做了不该反复推翻的决策 → `docs/DECISIONS.md`
+- 任何一次 AI 改动 → 追加 `docs/CHANGELOG_AI.md`(日期、做了什么、是否改业务代码、风险、下一步)

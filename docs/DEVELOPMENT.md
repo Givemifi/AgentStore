@@ -54,15 +54,10 @@ Default local URLs:
 Run these before considering code changes ready:
 
 ```bash
-cd backend && go test ./... && go build ./...
+cd backend && go build ./... && go vet ./... && go test ./...
 cd frontend && npx tsc --noEmit
-cd frontend && npm test -- --run
-```
-
-If frontend linting is available, also run:
-
-```bash
 cd frontend && npm run lint
+cd frontend && npm test -- --run
 ```
 
 For launch-critical changes involving MongoDB, billing, LLM providers, credits, tenant isolation, or chat, also run the manual smoke test in `LAUNCH_SMOKE_TEST.md` against disposable credentials and test-mode billing.
@@ -105,8 +100,6 @@ When cleaning the repository:
 
 - Audit first, then delete.
 - Delete only what is proven unused.
-- Move historical but potentially useful docs to `docs/archive/` instead of deleting them.
-- Put uncertain items in Needs review.
 - Do not remove deployment, Docker, env example, or CI files unless they are proven obsolete.
 - Do not remove test fixtures or helpers unless they are proven unreferenced.
 - Do not change business logic during cleanup.

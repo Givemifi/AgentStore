@@ -32,18 +32,6 @@ export default function BrandingPage() {
   const [editingPage, setEditingPage] = useState<Partial<CustomPage> | null>(null);
   const [pageSaving, setPageSaving] = useState(false);
 
-  useEffect(() => {
-    brandingApi.get()
-      .then((data) => setConfig(data))
-      .catch(err => toast.error(getErrorMessage(err)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (tab === 'media') loadMedia();
-    if (tab === 'pages') loadPages();
-  }, [tab]);
-
   const loadMedia = () => {
     setMediaLoading(true);
     brandingAdminApi.listMedia()
@@ -60,6 +48,18 @@ export default function BrandingPage() {
       .finally(() => setPagesLoading(false));
   };
 
+  useEffect(() => {
+    brandingApi.get()
+      .then((data) => setConfig(data))
+      .catch(err => toast.error(getErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'media') loadMedia();
+    if (tab === 'pages') loadPages();
+  }, [tab]);
+
   const handleSave = async () => {
     if (!config) return;
     setSaving(true);
@@ -68,8 +68,8 @@ export default function BrandingPage() {
       await reload();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -78,12 +78,11 @@ export default function BrandingPage() {
   const handleAssetUpload = async (key: 'logo' | 'favicon', file: File) => {
     try {
       await brandingAdminApi.uploadAsset(key, file);
-      // Refresh branding to get new URLs
       const data = await brandingApi.get();
       setConfig(data);
       await reload();
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -93,8 +92,8 @@ export default function BrandingPage() {
       const data = await brandingApi.get();
       setConfig(data);
       await reload();
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -103,8 +102,8 @@ export default function BrandingPage() {
     try {
       await brandingAdminApi.uploadMedia(file);
       loadMedia();
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setUploading(false);
     }
@@ -114,8 +113,8 @@ export default function BrandingPage() {
     try {
       await brandingAdminApi.deleteMedia(key);
       setMedia(prev => prev.filter(m => m.key !== key));
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -131,8 +130,8 @@ export default function BrandingPage() {
       setEditingPage(null);
       loadPages();
       await reload();
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setPageSaving(false);
     }
@@ -142,8 +141,8 @@ export default function BrandingPage() {
     try {
       await brandingAdminApi.deletePage(id);
       setPages(prev => prev.filter(p => p.id !== id));
-    } catch {
-      // error
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 

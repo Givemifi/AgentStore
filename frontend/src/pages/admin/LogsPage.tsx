@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { FileText, Search, ChevronLeft, ChevronRight, X, RefreshCw, Download, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { adminApi } from '../../api/client';
+import { getErrorMessage } from '../../utils/errors';
 import type { SystemLog, LogSeverity, LogCategory } from '../../types';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -75,9 +77,9 @@ export default function LogsPage() {
         setTotal(data.total);
       }
     } catch {
-      // ignore
+      // silent: auto-refresh would spam toasts on transient failures
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (!abortRef.current?.signal.aborted) setLoading(false);
     }
   }, [page, perPage, activeSeverities, category, search, userId, fromDate, toDate]);
 
@@ -90,7 +92,7 @@ export default function LogsPage() {
       const data = await adminApi.logSeverityCounts(params);
       setSeverityCounts(data.counts);
     } catch {
-      // ignore
+      // silent: auto-refresh would spam toasts on transient failures
     }
   }, [category, fromDate, toDate]);
 
@@ -178,8 +180,8 @@ export default function LogsPage() {
       a.download = 'system_logs.csv';
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 

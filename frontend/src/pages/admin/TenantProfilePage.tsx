@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Building2, Zap, Users, CreditCard, XCircle, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { adminApi } from '../../api/client';
 import { useTenant } from '../../contexts/TenantContext';
 import type { TenantDetail, TenantMember, Plan } from '../../types';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { getErrorMessage } from '../../utils/errors';
 
 function formatPrice(cents: number): string {
   if (cents === 0) return 'Free';
@@ -154,8 +156,8 @@ export default function TenantProfilePage() {
     try {
       await adminApi.updateTenantStatus(tenant.id, !tenant.isActive);
       await fetchTenant();
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -166,8 +168,8 @@ export default function TenantProfilePage() {
       await adminApi.adminCancelSubscription(tenant.id, immediate);
       setShowCancelModal(false);
       await fetchTenant();
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setCancellingSubscription(false);
     }

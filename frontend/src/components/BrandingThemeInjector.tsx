@@ -92,14 +92,12 @@ export default function BrandingThemeInjector() {
     };
   }, [loaded, branding.primaryColor, branding.fontFamily, branding.headingFont]);
 
-  // Update page title
   useEffect(() => {
     if (loaded && branding.appName) {
       document.title = branding.appName;
     }
   }, [loaded, branding.appName]);
 
-  // Update favicon
   useEffect(() => {
     if (!loaded) return;
     const link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;

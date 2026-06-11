@@ -54,8 +54,30 @@ read -rp "Google Client ID: " GOOGLE_CLIENT_ID
 read -rp "Google Client Secret: " GOOGLE_CLIENT_SECRET
 
 echo ""
+echo "--- GitHub OAuth (optional, press Enter to skip) ---"
+read -rp "GitHub Client ID: " GITHUB_CLIENT_ID
+read -rp "GitHub Client Secret: " GITHUB_CLIENT_SECRET
+
+echo ""
+echo "--- Microsoft OAuth (optional, press Enter to skip) ---"
+read -rp "Microsoft Client ID: " MICROSOFT_CLIENT_ID
+read -rp "Microsoft Client Secret: " MICROSOFT_CLIENT_SECRET
+
+echo ""
 echo "--- Resend Email (optional, press Enter to skip) ---"
 read -rp "Resend API Key: " RESEND_API_KEY
+
+echo ""
+echo "--- Stripe (optional, press Enter to skip) ---"
+read -rp "Stripe Secret Key (sk_test_... or sk_live_...): " STRIPE_SECRET_KEY
+read -rp "Stripe Publishable Key (pk_test_... or pk_live_...): " STRIPE_PUBLISHABLE_KEY
+read -rp "Stripe Webhook Secret (whsec_...): " STRIPE_WEBHOOK_SECRET
+
+echo ""
+echo "--- Webhook Encryption ---"
+echo "Generating AES-256-GCM encryption key for outgoing webhook payloads..."
+WEBHOOK_ENCRYPTION_KEY=$(openssl rand -hex 32)
+echo "  Key: ${WEBHOOK_ENCRYPTION_KEY:0:12}..."
 
 echo ""
 echo "--- App Settings ---"
@@ -73,7 +95,18 @@ JWT_ACCESS_SECRET=$JWT_ACCESS_SECRET
 JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
 GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URL=http://localhost:4290/api/auth/google/callback
+GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID
+GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET
+GITHUB_REDIRECT_URL=http://localhost:4290/api/auth/github/callback
+MICROSOFT_CLIENT_ID=$MICROSOFT_CLIENT_ID
+MICROSOFT_CLIENT_SECRET=$MICROSOFT_CLIENT_SECRET
+MICROSOFT_REDIRECT_URL=http://localhost:4290/api/auth/microsoft/callback
 RESEND_API_KEY=$RESEND_API_KEY
+STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
+STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY
+STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
+WEBHOOK_ENCRYPTION_KEY=$WEBHOOK_ENCRYPTION_KEY
 APP_NAME=$APP_NAME
 FROM_EMAIL=$FROM_EMAIL
 FROM_NAME=$APP_NAME
@@ -82,7 +115,6 @@ SERVER_PORT=4290
 FRONTEND_URL=http://localhost:4280
 VITE_PORT=4280
 VITE_API_URL=http://localhost:4290
-GOOGLE_REDIRECT_URL=http://localhost:4290/api/auth/google/callback
 EOF
 
 echo ""

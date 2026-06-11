@@ -88,13 +88,6 @@ export default function AdminDashboardPage() {
   const formatCents = (v: number) => `$${(v / 100).toFixed(2)}`;
   const formatNum = (v: number) => v.toLocaleString();
 
-  // Get integration status - must be exactly 'healthy' for Complete status
-  const getIntegrationStatus = (name: string): 'healthy' | 'unhealthy' | 'not_configured' | 'degraded' | 'missing' => {
-    const integration = integrations.find((i: { name: string; status: string }) => i.name === name);
-    if (!integration) return 'missing';
-    return integration.status as 'healthy' | 'unhealthy' | 'not_configured' | 'degraded';
-  };
-
   // Derive unconfigured list for the warning banner (only not_configured shows warning there)
   const unconfiguredIntegrations = integrations
     .filter((i: { name: string; status: string }) => i.status === 'not_configured')

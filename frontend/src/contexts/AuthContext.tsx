@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await authApi.logout(refreshToken);
       }
     } catch {
-      // ignore logout errors
+      // logout is best-effort; clearAuth runs regardless
     }
     clearAuth();
   }, [clearAuth]);

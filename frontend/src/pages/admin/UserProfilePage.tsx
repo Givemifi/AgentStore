@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Shield, Trash2, FileText, AlertTriangle, X, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 import { adminApi } from '../../api/client';
 import { getErrorMessage } from '../../utils/errors';
 import type { UserDetail, UserMembershipDetail, DeletePreflightResponse } from '../../types';
@@ -51,7 +52,7 @@ export default function UserProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [userId, navigate]);
+  }, [userId]);
 
   useEffect(() => { fetchUser(); }, [fetchUser]);
 
@@ -85,8 +86,8 @@ export default function UserProfilePage() {
     try {
       await adminApi.updateUserStatus(user.id, !user.isActive);
       await fetchUser();
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 

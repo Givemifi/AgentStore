@@ -28,7 +28,7 @@ export default function MessagesPage() {
       ));
       setUnreadCount?.((prev) => Math.max(0, prev - 1));
     } catch {
-      // ignore
+      // mark-as-read is best-effort; UI stays consistent on failure
     }
   };
 

@@ -106,8 +106,8 @@ export default function UsersPage() {
       a.download = 'users.csv';
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 

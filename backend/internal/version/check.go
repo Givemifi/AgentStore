@@ -39,7 +39,6 @@ func CheckAndMigrate(database *db.MongoDB) {
 	oldVersion := sys.Version
 	slog.Info("Version changed", "from", oldVersion, "to", Current)
 
-	// Run migrations (placeholder for future use)
 	runMigrations(database, oldVersion, Current)
 
 	// Send welcome message to root tenant owner
@@ -54,8 +53,6 @@ func CheckAndMigrate(database *db.MongoDB) {
 }
 
 func runMigrations(database *db.MongoDB, from, to string) {
-	// Placeholder: future migrations will be dispatched here
-	// based on version comparison.
 	slog.Info("Migrations: none registered", "from", from, "to", to)
 }
 

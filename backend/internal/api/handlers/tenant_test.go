@@ -57,7 +57,10 @@ func TestIntegration_ListMembers_DifferentTenantsDifferentMembers(t *testing.T) 
 
 	// Tenant1 should have 1 member (owner)
 	req1 := env.tenantRequest(t, "GET", "/api/tenant/members", nil, owner1, tenant1.ID.Hex())
-	resp1, _ := env.Client.Do(req1)
+	resp1, err := env.Client.Do(req1)
+	if err != nil {
+		t.Fatalf("tenant1 members request failed: %v", err)
+	}
 	defer resp1.Body.Close()
 	var result1 map[string][]MemberResponse
 	json.NewDecoder(resp1.Body).Decode(&result1)
@@ -67,7 +70,10 @@ func TestIntegration_ListMembers_DifferentTenantsDifferentMembers(t *testing.T) 
 
 	// Tenant2 should have 3 members (owner + 2)
 	req2 := env.tenantRequest(t, "GET", "/api/tenant/members", nil, owner2, tenant2.ID.Hex())
-	resp2, _ := env.Client.Do(req2)
+	resp2, err := env.Client.Do(req2)
+	if err != nil {
+		t.Fatalf("tenant2 members request failed: %v", err)
+	}
 	defer resp2.Body.Close()
 	var result2 map[string][]MemberResponse
 	json.NewDecoder(resp2.Body).Decode(&result2)

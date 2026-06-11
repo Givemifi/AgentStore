@@ -24,7 +24,7 @@ export default function InvoiceModal({ tx, tenantName, onClose }: InvoiceModalPr
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // Error handled by interceptor
+      // interceptor handles user-facing error toast
     } finally {
       setDownloading(false);
     }
