@@ -18,17 +18,23 @@ func NewPublicAgentsHandler() *PublicAgentsHandler {
 	return &PublicAgentsHandler{}
 }
 
+type catalogCreditCost struct {
+	TextMessageCredits     int `json:"textMessageCredits"`
+	ImageGenerationCredits int `json:"imageGenerationCredits"`
+	VideoGenerationCredits int `json:"videoGenerationCredits"`
+}
+
 type publicCatalogAgent struct {
-	ID               string   `json:"id"`
-	Name             string   `json:"name"`
-	Slug             string   `json:"slug"`
-	Category         string   `json:"category"`
-	Description      string   `json:"description"`
-	Icon             string   `json:"icon,omitempty"`
-	Color            string   `json:"color,omitempty"`
-	WelcomeMessage   string   `json:"welcomeMessage,omitempty"`
-	SuggestedPrompts []string `json:"suggestedPrompts,omitempty"`
-	CreditCost       int      `json:"creditCost"`
+	ID               string             `json:"id"`
+	Name             string             `json:"name"`
+	Slug             string             `json:"slug"`
+	Category         string             `json:"category"`
+	Description      string             `json:"description"`
+	Icon             string             `json:"icon,omitempty"`
+	Color            string             `json:"color,omitempty"`
+	WelcomeMessage   string             `json:"welcomeMessage,omitempty"`
+	SuggestedPrompts []string           `json:"suggestedPrompts,omitempty"`
+	CreditCost       catalogCreditCost  `json:"creditCost"`
 }
 
 func toPublicCatalogAgent(a agents.Agent) publicCatalogAgent {
@@ -42,7 +48,9 @@ func toPublicCatalogAgent(a agents.Agent) publicCatalogAgent {
 		Color:            a.Color,
 		WelcomeMessage:   a.WelcomeMessage,
 		SuggestedPrompts: append([]string(nil), a.SuggestedPrompts...),
-		CreditCost:       a.CreditCost,
+		CreditCost: catalogCreditCost{
+			TextMessageCredits: a.CreditCost,
+		},
 	}
 }
 

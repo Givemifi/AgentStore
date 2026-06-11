@@ -53,7 +53,11 @@ export default function MobileBottomNav({ items, hasAdminAccess }: MobileBottomN
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-dark-800 bg-dark-900/95 px-2 py-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl md:hidden" aria-label="Primary mobile navigation">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-dark-800 bg-dark-900/95 px-2 pt-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl md:hidden"
+      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      aria-label="Primary mobile navigation"
+    >
       <div
         className="mx-auto grid max-w-md gap-1"
         style={{ gridTemplateColumns: `repeat(${Math.max(renderedItems.length, 1)}, minmax(0, 1fr))` }}

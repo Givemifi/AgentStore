@@ -527,15 +527,31 @@ export default function ChatPage() {
     setAttachments((current) => current.filter((a) => a.id !== id));
   }, []);
 
-  // Keep the message scrolled to bottom when the mobile keyboard opens/closes.
+  // On mobile, shrink the chat container to the visual viewport so the
+  // soft keyboard doesn't push the header off-screen.
+  // We write a CSS custom property --chat-h that the container reads via inline style.
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
-    const handleResize = () => {
+
+    const update = () => {
+      // Available height = visual viewport height minus the Layout header (64px)
+      // and the mobile bottom nav area (padding-bottom: 7rem = 112px).
+      const available = viewport.height - 64 - 112;
+      if (chatContainerRef.current) {
+        chatContainerRef.current.style.height = `${Math.max(available, 240)}px`;
+      }
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
-    viewport.addEventListener('resize', handleResize);
-    return () => viewport.removeEventListener('resize', handleResize);
+
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+    };
   }, []);
 
   useEffect(() => {
@@ -916,7 +932,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-10rem)] min-h-[34rem] flex-col gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[40rem] lg:flex-row">
+    <div ref={chatContainerRef} className="flex h-[calc(100dvh-13rem)] min-h-0 flex-col gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[40rem] lg:flex-row">
       <aside className="hidden w-full flex-col rounded-3xl border border-dark-800 bg-dark-900/60 lg:flex lg:w-80 lg:min-w-80">
         <ConversationSidebarContent
           agent={agent}

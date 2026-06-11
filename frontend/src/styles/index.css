@@ -53,6 +53,21 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent iOS overscroll bounce on the body; individual scroll containers
+     still bounce naturally with overflow-y: auto / -webkit-overflow-scrolling. */
+  overscroll-behavior: none;
+}
+
+/* iOS momentum scrolling for scroll containers */
+.overflow-y-auto,
+.overflow-y-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent text size adjustment on orientation change (iOS Safari) */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 ::selection {
   background-color: oklch(from var(--color-primary-500) l c h / 0.3);
