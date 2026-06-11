@@ -8,13 +8,14 @@ const apiMocks = vi.hoisted(() => ({
   listBundles: vi.fn(),
   listPlans: vi.fn(),
   checkout: vi.fn(),
+  getConfig: vi.fn(),
   toastError: vi.fn(),
 }));
 
 vi.mock('../../api/client', () => ({
   bundlesApi: { list: apiMocks.listBundles },
   plansApi: { list: apiMocks.listPlans },
-  billingApi: { checkout: apiMocks.checkout },
+  billingApi: { checkout: apiMocks.checkout, getConfig: apiMocks.getConfig },
 }));
 
 vi.mock('sonner', () => ({ toast: { error: apiMocks.toastError } }));
@@ -48,6 +49,7 @@ describe('BuyCreditsPage', () => {
       ],
     });
     apiMocks.listPlans.mockResolvedValue({ tenantSubscriptionCredits: 24, tenantPurchasedCredits: 12, plans: [] });
+    apiMocks.getConfig.mockResolvedValue({ publishableKey: '', paymentMethods: ['stripe'] });
   });
 
   afterEach(() => {
@@ -88,7 +90,7 @@ describe('BuyCreditsPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Buy Starter' }));
 
-    expect(apiMocks.checkout).toHaveBeenCalledWith({ bundleId: 'bundle-1' });
+    expect(apiMocks.checkout).toHaveBeenCalledWith({ bundleId: 'bundle-1', paymentMethod: 'stripe' });
     expect(sessionStorage.getItem('agentstore.checkoutReturnTo')).toBe('/chat/agent-1?conversationId=conv-1');
     expect(window.location.assign).toHaveBeenCalledWith('https://checkout.example/session');
   });

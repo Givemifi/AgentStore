@@ -34,15 +34,19 @@ func (m ChatMessage) HasContent() bool {
 
 // ChatMessage represents a single message in a chat conversation.
 type ChatMessage struct {
-	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	TenantID       primitive.ObjectID `json:"tenantId" bson:"tenantId" validate:"required"`
-	UserID         primitive.ObjectID `json:"userId" bson:"userId" validate:"required"`
-	ConversationID primitive.ObjectID `json:"conversationId" bson:"conversationId" validate:"required"`
-	AgentID        string             `json:"agentId" bson:"agentId" validate:"required,min=1,max=100"`
-	Role           string             `json:"role" bson:"role" validate:"required,oneof=user assistant"`
-	Content        string             `json:"content" bson:"content" validate:"max=2000000"`
-	Status         ChatMessageStatus  `json:"status" bson:"status" validate:"omitempty,valid_chat_message_status"`
-	CreditsCharged int                `json:"creditsCharged" bson:"creditsCharged" validate:"gte=0"`
-	Model          string             `json:"model" bson:"model" validate:"max=100"`
-	CreatedAt      time.Time          `json:"createdAt" bson:"createdAt" validate:"required"`
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	TenantID        primitive.ObjectID `json:"tenantId" bson:"tenantId" validate:"required"`
+	UserID          primitive.ObjectID `json:"userId" bson:"userId" validate:"required"`
+	ConversationID  primitive.ObjectID `json:"conversationId" bson:"conversationId" validate:"required"`
+	AgentID         string             `json:"agentId" bson:"agentId" validate:"required,min=1,max=100"`
+	Role            string             `json:"role" bson:"role" validate:"required,oneof=user assistant"`
+	Content         string             `json:"content" bson:"content" validate:"max=2000000"`
+	Status          ChatMessageStatus  `json:"status" bson:"status" validate:"omitempty,valid_chat_message_status"`
+	CreditsCharged  int                `json:"creditsCharged" bson:"creditsCharged" validate:"gte=0"`
+	Model           string             `json:"model" bson:"model" validate:"max=100"`
+	// AttachmentCount records how many image attachments the user sent with this
+	// message. The actual image data is not persisted (too large); this field
+	// lets the UI show a "📷 N images" placeholder in chat history.
+	AttachmentCount int                `json:"attachmentCount,omitempty" bson:"attachmentCount,omitempty" validate:"gte=0"`
+	CreatedAt       time.Time          `json:"createdAt" bson:"createdAt" validate:"required"`
 }

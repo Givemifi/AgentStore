@@ -95,6 +95,13 @@ func (rw *metricsResponseWriter) Flush() {
 	}
 }
 
+// Unwrap allows http.ResponseController (and other tools) to reach the
+// underlying ResponseWriter, enabling SetWriteDeadline / SetReadDeadline to
+// work correctly for SSE streaming handlers.
+func (rw *metricsResponseWriter) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}
+
 // Middleware returns an http.Handler that records request metrics.
 func (mc *MetricsCollector) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

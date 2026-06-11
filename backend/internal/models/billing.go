@@ -40,12 +40,34 @@ type FinancialTransaction struct {
 	StripeSessionID      string              `json:"stripeSessionId,omitempty" bson:"stripeSessionId,omitempty"`
 	StripeInvoiceID      string              `json:"stripeInvoiceId,omitempty" bson:"stripeInvoiceId,omitempty"`
 	StripeSubscriptionID string              `json:"stripeSubscriptionId,omitempty" bson:"stripeSubscriptionId,omitempty"`
+	PaymentProvider      string              `json:"paymentProvider,omitempty" bson:"paymentProvider,omitempty"` // "stripe"|"wechat_h5"|"alipay"
+	OutTradeNo           string              `json:"outTradeNo,omitempty" bson:"outTradeNo,omitempty"`           // WeChat/Alipay order ID
 	PlanID               *primitive.ObjectID `json:"planId,omitempty" bson:"planId,omitempty"`
 	PlanName             string              `json:"planName,omitempty" bson:"planName,omitempty"`
 	BundleID             *primitive.ObjectID `json:"bundleId,omitempty" bson:"bundleId,omitempty"`
 	BundleName           string              `json:"bundleName,omitempty" bson:"bundleName,omitempty"`
 	BillingInterval      string              `json:"billingInterval,omitempty" bson:"billingInterval,omitempty"`
 	CreatedAt            time.Time           `json:"createdAt" bson:"createdAt" validate:"required"`
+}
+
+// PaymentOrder tracks a pending domestic-payment order (WeChat Pay / Alipay)
+// before the async notify confirms payment. One record per order attempt.
+type PaymentOrder struct {
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	OutTradeNo  string             `json:"outTradeNo" bson:"outTradeNo"`     // unique, merchant-side order ID
+	TenantID    primitive.ObjectID `json:"tenantId" bson:"tenantId"`
+	UserID      primitive.ObjectID `json:"userId" bson:"userId"`
+	BundleID    primitive.ObjectID `json:"bundleId" bson:"bundleId"`
+	BundleName  string             `json:"bundleName" bson:"bundleName"`
+	Credits     int64              `json:"credits" bson:"credits"`
+	AmountCents int64              `json:"amountCents" bson:"amountCents"` // CNY fen
+	AmountUSD   int64              `json:"amountUSD" bson:"amountUSD"`     // original USD cents
+	Currency    string             `json:"currency" bson:"currency"`       // "cny"
+	Provider    string             `json:"provider" bson:"provider"`       // "wechat_h5" | "alipay"
+	// Status: "pending" → "completed" | "failed"
+	Status      string             `json:"status" bson:"status"`
+	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
+	CompletedAt *time.Time         `json:"completedAt,omitempty" bson:"completedAt,omitempty"`
 }
 
 // StripeMapping maps internal entities (plans, bundles) to Stripe Products/Prices.
@@ -62,6 +84,28 @@ type StripeMapping struct {
 type InvoiceCounter struct {
 	ID    string `bson:"_id"`
 	Value int64  `bson:"value"`
+}
+
+// PaymentProviderConfig stores WeChat Pay or Alipay credentials in MongoDB.
+// Key distinguishes providers: "wechat_pay" or "alipay".
+type PaymentProviderConfig struct {
+	ID           primitive.ObjectID `bson:"_id,omitempty"   json:"id,omitempty"`
+	Key          string             `bson:"key"             json:"key"          validate:"required,oneof=wechat_pay alipay"`
+	AppID        string             `bson:"appId"           json:"appId"`
+	// WeChat-specific
+	MchID        string             `bson:"mchId"           json:"mchId"`
+	APIv3Key     string             `bson:"apiV3Key"        json:"apiV3Key"`
+	CertSerialNo string             `bson:"certSerialNo"    json:"certSerialNo"`
+	// Alipay-specific
+	PublicKey    string             `bson:"publicKey"       json:"publicKey"`
+	ReturnURL    string             `bson:"returnUrl"       json:"returnUrl"`
+	IsSandbox    bool               `bson:"isSandbox"       json:"isSandbox"`
+	// Shared
+	PrivateKey   string             `bson:"privateKey"      json:"privateKey"`
+	NotifyURL    string             `bson:"notifyUrl"       json:"notifyUrl"`
+	Enabled      bool               `bson:"enabled"         json:"enabled"`
+	CreatedAt    time.Time          `bson:"createdAt"       json:"createdAt"`
+	UpdatedAt    time.Time          `bson:"updatedAt"       json:"updatedAt"`
 }
 
 // DailyMetric stores daily business metrics for dashboard charts.

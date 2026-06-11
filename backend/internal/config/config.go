@@ -20,6 +20,8 @@ type Config struct {
 	Email       EmailConfig    `yaml:"email"`
 	App         AppConfig      `yaml:"app"`
 	Stripe      StripeConfig   `yaml:"stripe"`
+	WeChatPay   WeChatPayConfig `yaml:"wechat_pay"`
+	Alipay      AlipayConfig   `yaml:"alipay"`
 	WebAuthn    WebAuthnConfig `yaml:"webauthn"`
 	Webhooks    WebhooksConfig `yaml:"webhooks"`
 	DataDog     DataDogConfig  `yaml:"datadog"`
@@ -85,6 +87,26 @@ type StripeConfig struct {
 	WebhookSecret  string `yaml:"webhook_secret"`
 }
 
+// WeChatPayConfig holds credentials for WeChat Pay V3.
+type WeChatPayConfig struct {
+	AppID        string `yaml:"app_id"`         // 公众号/小程序/APP的 AppID
+	MchID        string `yaml:"mch_id"`         // 微信支付商户号
+	APIv3Key     string `yaml:"api_v3_key"`     // APIv3 密钥（32位）
+	PrivateKey   string `yaml:"private_key"`    // 商户 API 私钥（PKCS8 PEM 内容）
+	CertSerialNo string `yaml:"cert_serial_no"` // 商户 API 证书序列号
+	NotifyURL    string `yaml:"notify_url"`     // 异步通知地址，需公网可达
+}
+
+// AlipayConfig holds credentials for Alipay web/WAP payment.
+type AlipayConfig struct {
+	AppID      string `yaml:"app_id"`     // 支付宝应用 AppID
+	PrivateKey string `yaml:"private_key"` // 应用私钥（RSA2 PKCS8）
+	PublicKey  string `yaml:"public_key"`  // 支付宝公钥
+	NotifyURL  string `yaml:"notify_url"` // 异步通知地址，需公网可达
+	ReturnURL  string `yaml:"return_url"` // 支付完成同步跳转地址（前端 /billing/success）
+	IsSandbox  bool   `yaml:"is_sandbox"` // 沙箱模式（开发测试用）
+}
+
 type DataDogConfig struct {
 	APIKey   string `yaml:"api_key"`
 	Site     string `yaml:"site"`     // e.g. "us5.datadoghq.com"
@@ -125,9 +147,6 @@ func LoadEnvFile() {
 
 func Load(env string) (*Config, error) {
 	configDir := os.Getenv("AGENTSTORE_CONFIG_DIR")
-	if configDir == "" {
-		configDir = os.Getenv("LASTSAAS_CONFIG_DIR")
-	}
 	if configDir == "" {
 		configDir = "config"
 	}
@@ -213,9 +232,6 @@ func expandEnvVars(s string) string {
 
 func GetEnv() string {
 	if env := os.Getenv("AGENTSTORE_ENV"); env != "" {
-		return env
-	}
-	if env := os.Getenv("LASTSAAS_ENV"); env != "" {
 		return env
 	}
 	return "dev"

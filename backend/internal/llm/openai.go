@@ -69,10 +69,44 @@ func TestOpenAICompatibleProvider(ctx context.Context, baseURL, apiKey string) e
 	return nil
 }
 
-// Message represents a chat message.
+// ContentPart represents a single part of a multimodal message content.
+type ContentPart struct {
+	Type     string           `json:"type"`               // "text" or "image_url"
+	Text     string           `json:"text,omitempty"`
+	ImageURL *ImageURLContent `json:"image_url,omitempty"`
+}
+
+// ImageURLContent holds the URL (or base64 data URL) for an image part.
+type ImageURLContent struct {
+	URL string `json:"url"` // e.g. "data:image/jpeg;base64,..."
+}
+
+// Message represents a chat message. Content may be a plain string
+// or a []ContentPart slice for multimodal (vision) requests.
 type Message struct {
 	Role    string `json:"role"`
-	Content string `json:"content"`
+	Content any    `json:"content"` // string | []ContentPart
+}
+
+// NewTextMessage creates a plain text message.
+func NewTextMessage(role, text string) Message {
+	return Message{Role: role, Content: text}
+}
+
+// NewVisionMessage creates a multimodal message with text and images.
+// imageDataURLs are base64 data URLs ("data:image/jpeg;base64,...").
+func NewVisionMessage(role, text string, imageDataURLs []string) Message {
+	parts := make([]ContentPart, 0, 1+len(imageDataURLs))
+	if text != "" {
+		parts = append(parts, ContentPart{Type: "text", Text: text})
+	}
+	for _, url := range imageDataURLs {
+		parts = append(parts, ContentPart{
+			Type:     "image_url",
+			ImageURL: &ImageURLContent{URL: url},
+		})
+	}
+	return Message{Role: role, Content: parts}
 }
 
 // StreamChatRequest represents a streaming request to the chat completions API.
@@ -262,7 +296,26 @@ func (c *Client) CompleteWithConfig(ctx context.Context, config RequestConfig, s
 		return "", "", fmt.Errorf("no response choices returned")
 	}
 
-	return chatResp.Choices[0].Message.Content, model, nil
+	return contentToString(chatResp.Choices[0].Message.Content), model, nil
+}
+
+// contentToString extracts the text from a message Content value, which the
+// API always returns as a plain string for assistant responses.
+func contentToString(content any) string {
+	switch v := content.(type) {
+	case string:
+		return v
+	case []ContentPart:
+		var b strings.Builder
+		for _, p := range v {
+			if p.Type == "text" {
+				b.WriteString(p.Text)
+			}
+		}
+		return b.String()
+	default:
+		return ""
+	}
 }
 
 // CompleteStreamWithConfig sends a streaming chat completion request and calls onDelta for each chunk.

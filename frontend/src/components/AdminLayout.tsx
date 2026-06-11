@@ -72,7 +72,10 @@ export default function AdminLayout() {
     { path: '/admin/config', icon: Settings, label: 'Configuration' },
     { path: '/admin/branding', icon: Paintbrush, label: 'Branding' },
     { path: '/admin/api', icon: Code2, label: 'API' },
-    ...(role === 'owner' ? [{ path: '/admin/llm-config', icon: Cpu, label: 'LLM Config' }] : []),
+    ...(role === 'owner' ? [
+      { path: '/admin/llm-config', icon: Cpu, label: 'LLM Config' },
+      { path: '/admin/payment-config', icon: CreditCard, label: 'Payment Config' },
+    ] : []),
     { path: '/admin/about', icon: Info, label: 'About' },
   ];
 

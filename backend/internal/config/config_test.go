@@ -46,7 +46,7 @@ func hasYAMLFiles(dir string) bool {
 func setupTestEnv(t *testing.T) {
 	t.Helper()
 	configDir := findConfigDir(t)
-	os.Setenv("LASTSAAS_CONFIG_DIR", configDir)
+	os.Setenv("AGENTSTORE_CONFIG_DIR", configDir)
 	os.Setenv("MONGODB_URI", "mongodb://localhost:27017")
 	os.Setenv("DATABASE_NAME", "agentstore-test")
 	os.Setenv("JWT_ACCESS_SECRET", "test-access-secret-minimum16chars")
@@ -74,7 +74,7 @@ func TestLoadDevConfig(t *testing.T) {
 	setupTestEnv(t)
 
 	// dev.yaml is gitignored — skip in CI where it doesn't exist
-	configDir := os.Getenv("LASTSAAS_CONFIG_DIR")
+	configDir := os.Getenv("AGENTSTORE_CONFIG_DIR")
 	if configDir == "" {
 		configDir = filepath.Join("..", "..", "config")
 	}
@@ -356,8 +356,8 @@ frontend:
 `
 	os.WriteFile(filepath.Join(dir, "custom.yaml"), []byte(configContent), 0644)
 
-	os.Setenv("LASTSAAS_CONFIG_DIR", dir)
-	defer os.Unsetenv("LASTSAAS_CONFIG_DIR")
+	os.Setenv("AGENTSTORE_CONFIG_DIR", dir)
+	defer os.Unsetenv("AGENTSTORE_CONFIG_DIR")
 
 	cfg, err := Load("custom")
 	if err != nil {
