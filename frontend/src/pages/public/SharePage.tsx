@@ -51,7 +51,7 @@ export default function SharePage() {
   return (
     <div className="min-h-screen bg-dark-950">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800">
+      <header className="sticky top-0 z-40 bg-dark-900/80 border-b border-white/8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="font-semibold text-white">AgentStore</Link>
           <div className="flex items-center gap-4">
@@ -67,7 +67,7 @@ export default function SharePage() {
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {/* Agent banner */}
-        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/8 bg-dark-900/60 px-4 py-3">
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/8 bg-dark-900/60 px-4 py-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-500/20">
             <MessageCircle className="h-5 w-5 text-primary-300" />
           </div>
@@ -85,7 +85,7 @@ export default function SharePage() {
           {share.messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[75%] ${
+                className={`max-w-[85%] rounded-xl px-4 py-3 sm:max-w-[75%] ${
                   msg.role === 'user'
                     ? 'rounded-br-md bg-primary-500 text-white'
                     : 'rounded-bl-md bg-dark-800 text-dark-100'
@@ -102,7 +102,7 @@ export default function SharePage() {
         </div>
 
         {/* CTA */}
-        <div className="rounded-2xl border border-primary-500/20 bg-primary-500/5 p-6 text-center">
+        <div className="rounded-xl border border-primary-500/20 bg-primary-500/5 p-6 text-center">
           <p className="text-white font-semibold mb-2">
             {isAuthenticated ? `Chat with ${share.agentName}` : `Try ${share.agentName} yourself`}
           </p>

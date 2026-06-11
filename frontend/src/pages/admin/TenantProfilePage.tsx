@@ -222,7 +222,7 @@ export default function TenantProfilePage() {
       </div>
 
       {/* Tenant Information */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">Tenant Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
@@ -232,12 +232,12 @@ export default function TenantProfilePage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={!canWrite}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
             <label className="block text-sm text-dark-400 mb-1">Slug</label>
-            <div className="px-3 py-2 bg-dark-800/50 border border-dark-700 rounded-lg text-dark-400 text-sm font-mono">
+            <div className="px-3 py-2 bg-dark-800/50 border border-white/8 rounded-lg text-dark-400 text-sm font-mono">
               {tenant.slug}
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function TenantProfilePage() {
       </div>
 
       {/* Plan & Billing */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <CreditCard className="w-5 h-5 text-dark-400" />
           Plan &amp; Billing
@@ -271,7 +271,7 @@ export default function TenantProfilePage() {
               value={selectedPlanId}
               onChange={(e) => setSelectedPlanId(e.target.value)}
               disabled={!isOwner}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">{systemPlan ? `${systemPlan.name} (Default)` : 'System Default'}</option>
               {plans.filter(p => !p.isSystem).map(p => (
@@ -290,7 +290,7 @@ export default function TenantProfilePage() {
               className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 billingWaived
                   ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                  : 'bg-dark-800 text-dark-400 border-dark-700'
+                  : 'bg-dark-800 text-dark-400 border-white/8'
               }`}
             >
               {billingWaived ? 'Yes' : 'No'}
@@ -344,7 +344,7 @@ export default function TenantProfilePage() {
       </div>
 
       {/* Usage Credits */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary-400" />
           Usage Credits
@@ -362,7 +362,7 @@ export default function TenantProfilePage() {
               value={subscriptionCredits}
               onChange={(e) => setSubscriptionCredits(parseInt(e.target.value) || 0)}
               disabled={!canWrite}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -374,7 +374,7 @@ export default function TenantProfilePage() {
               value={purchasedCredits}
               onChange={(e) => setPurchasedCredits(parseInt(e.target.value) || 0)}
               disabled={!canWrite}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -395,7 +395,7 @@ export default function TenantProfilePage() {
       </div>
 
       {/* Account Status */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">Account Status</h2>
         <div className="flex items-center gap-4">
           <span className={`px-2 py-1 text-xs font-medium rounded ${
@@ -420,7 +420,7 @@ export default function TenantProfilePage() {
 
       {/* Billing Info */}
       {tenant.billingStatus && tenant.billingStatus !== 'none' && (
-        <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+        <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-dark-400" />
             Stripe Subscription
@@ -441,25 +441,25 @@ export default function TenantProfilePage() {
               </span>
             </div>
             {tenant.stripeSubscriptionId && (
-              <div className="flex items-center justify-between py-2 border-t border-dark-800">
+              <div className="flex items-center justify-between py-2 border-t border-white/8">
                 <span className="text-sm text-dark-400">Subscription ID</span>
                 <span className="text-sm text-dark-300 font-mono">{tenant.stripeSubscriptionId}</span>
               </div>
             )}
             {tenant.billingInterval && (
-              <div className="flex items-center justify-between py-2 border-t border-dark-800">
+              <div className="flex items-center justify-between py-2 border-t border-white/8">
                 <span className="text-sm text-dark-400">Billing Interval</span>
                 <span className="text-sm text-white capitalize">{tenant.billingInterval}ly</span>
               </div>
             )}
             {tenant.currentPeriodEnd && (
-              <div className="flex items-center justify-between py-2 border-t border-dark-800">
+              <div className="flex items-center justify-between py-2 border-t border-white/8">
                 <span className="text-sm text-dark-400">Period End</span>
                 <span className="text-sm text-white">{new Date(tenant.currentPeriodEnd).toLocaleDateString()}</span>
               </div>
             )}
             {tenant.canceledAt && (
-              <div className="flex items-center justify-between py-2 border-t border-dark-800">
+              <div className="flex items-center justify-between py-2 border-t border-white/8">
                 <span className="text-sm text-dark-400">Canceled At</span>
                 <span className="text-sm text-yellow-400">{new Date(tenant.canceledAt).toLocaleDateString()}</span>
               </div>
@@ -480,7 +480,7 @@ export default function TenantProfilePage() {
       {/* Cancel Subscription Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-md mx-4 w-full">
+          <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-md mx-4 w-full">
             <h3 className="text-lg font-semibold text-white mb-4">Cancel Subscription</h3>
             <p className="text-dark-300 mb-6">Choose how to cancel this tenant's subscription:</p>
             <div className="space-y-3">
@@ -510,7 +510,7 @@ export default function TenantProfilePage() {
       )}
 
       {/* Members */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <Users className="w-5 h-5 text-dark-400" />
           Members
@@ -522,7 +522,7 @@ export default function TenantProfilePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-dark-800 text-dark-400 text-left">
+                <tr className="border-b border-white/8 text-dark-400 text-left">
                   <th className="pb-2 font-medium">Name</th>
                   <th className="pb-2 font-medium">Email</th>
                   <th className="pb-2 font-medium">Role</th>
@@ -534,7 +534,7 @@ export default function TenantProfilePage() {
                   <tr
                     key={m.userId}
                     onClick={() => navigate(`/admin/users/${m.userId}`)}
-                    className="border-b border-dark-800/50 hover:bg-dark-800/30 cursor-pointer transition-colors"
+                    className="border-b border-white/8/50 hover:bg-dark-800/30 cursor-pointer transition-colors"
                   >
                     <td className="py-3 text-white">{m.displayName}</td>
                     <td className="py-3 text-dark-300">{m.email}</td>

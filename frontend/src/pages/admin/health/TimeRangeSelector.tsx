@@ -32,7 +32,7 @@ export default function TimeRangeSelector({
 }: TimeRangeSelectorProps) {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <div className="flex rounded-lg overflow-hidden border border-dark-700">
+      <div className="flex rounded-lg overflow-hidden border border-white/8">
         {timeRanges.map((r) => (
           <button
             key={r.value}
@@ -48,7 +48,7 @@ export default function TimeRangeSelector({
         ))}
       </div>
 
-      <div className="flex rounded-lg overflow-hidden border border-dark-700">
+      <div className="flex rounded-lg overflow-hidden border border-white/8">
         {filterModes.map((m) => (
           <button
             key={m.value}
@@ -68,7 +68,7 @@ export default function TimeRangeSelector({
         <select
           value={selectedNode}
           onChange={(e) => onSelectedNodeChange(e.target.value)}
-          className="bg-dark-800 border border-dark-700 rounded-lg px-3 py-1.5 text-sm text-white"
+          className="bg-dark-800 border border-white/8 rounded-lg px-3 py-1.5 text-sm text-white"
         >
           {nodes.map((n) => (
             <option key={n.machineId} value={n.machineId}>

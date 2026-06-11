@@ -19,7 +19,7 @@ export const INTEGRATION_DISPLAY_NAMES: Record<string, string> = {
 const statusConfig: Record<LaunchReadinessStatus, { label: string; className: string; icon: typeof CheckCircle }> = {
   complete: { label: 'Complete', className: 'border-accent-emerald/20 bg-accent-emerald/10 text-accent-emerald', icon: CheckCircle },
   warning: { label: 'Needs attention', className: 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400', icon: AlertTriangle },
-  pending: { label: 'Review', className: 'border-dark-700 bg-dark-800 text-dark-300', icon: CircleDot },
+  pending: { label: 'Review', className: 'border-white/8 bg-dark-800 text-dark-300', icon: CircleDot },
 };
 
 interface LaunchChecklistProps {
@@ -30,7 +30,7 @@ export default function LaunchChecklist({ items }: LaunchChecklistProps) {
   const completedCount = items.filter((item) => item.status === 'complete').length;
 
   return (
-    <section className="mb-8 rounded-3xl border border-dark-800 bg-dark-900/60 p-6">
+    <section className="mb-8 rounded-xl border border-white/8 bg-dark-900/60 p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">Launch Checklist</h2>
@@ -44,7 +44,7 @@ export default function LaunchChecklist({ items }: LaunchChecklistProps) {
           const config = statusConfig[item.status];
           const Icon = config.icon;
           return (
-            <Link key={item.id} to={item.actionPath} className="group rounded-2xl border border-dark-800 bg-dark-950/50 p-4 transition-colors hover:border-primary-500/30 hover:bg-dark-900">
+            <Link key={item.id} to={item.actionPath} className="group rounded-xl border border-white/8 bg-dark-950/50 p-4 transition-colors hover:border-primary-500/30 hover:bg-dark-900">
               <div className="flex items-start gap-3">
                 <div className={`rounded-xl border p-2 ${config.className}`}>
                   <Icon className="h-4 w-4" />

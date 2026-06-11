@@ -153,7 +153,7 @@ export default function RootMembersPage() {
 
       {/* Invite Form */}
       {showInvite && (
-        <form onSubmit={handleInvite} className="mb-6 bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+        <form onSubmit={handleInvite} className="mb-6 bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-6">
           <div className="flex items-end gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-dark-300 mb-1.5">Email Address</label>
@@ -162,7 +162,7 @@ export default function RootMembersPage() {
                 required
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                 placeholder="teammate@example.com"
               />
             </div>
@@ -171,7 +171,7 @@ export default function RootMembersPage() {
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
               >
                 <option value="user">User</option>
                 {isOwner && <option value="admin">Admin</option>}
@@ -189,10 +189,10 @@ export default function RootMembersPage() {
       )}
 
       {/* Members Table */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
+      <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-dark-800">
+            <tr className="border-b border-white/8">
               <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Member</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Role</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Joined</th>
@@ -204,7 +204,7 @@ export default function RootMembersPage() {
               const RoleIcon = roleIcons[member.role];
               const isMe = member.userId === user?.id;
               return (
-                <tr key={member.userId} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
+                <tr key={member.userId} className="border-b border-white/8/50 hover:bg-dark-800/30 transition-colors">
                   <td className="px-6 py-4">
                     <div>
                       <p className="text-sm font-medium text-white">
@@ -221,7 +221,7 @@ export default function RootMembersPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleChangeRole(member, e.target.value)}
-                          className="bg-dark-800 border border-dark-700 rounded text-sm text-dark-300 px-2 py-1 focus:outline-none focus:border-primary-500"
+                          className="bg-dark-800 border border-white/8 rounded text-sm text-dark-300 px-2 py-1 focus:outline-none focus:border-primary-500"
                         >
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
@@ -261,10 +261,10 @@ export default function RootMembersPage() {
             <Clock className="w-5 h-5 text-dark-400" />
             Pending Invitations
           </h2>
-          <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
+          <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-dark-800">
+                <tr className="border-b border-white/8">
                   <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Email</th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Role</th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Invited</th>
@@ -274,7 +274,7 @@ export default function RootMembersPage() {
               </thead>
               <tbody>
                 {invitations.map((inv) => (
-                  <tr key={inv.id} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
+                  <tr key={inv.id} className="border-b border-white/8/50 hover:bg-dark-800/30 transition-colors">
                     <td className="px-6 py-4 text-sm text-white">{inv.email}</td>
                     <td className="px-6 py-4 text-sm text-dark-300 capitalize">{inv.role}</td>
                     <td className="px-6 py-4 text-sm text-dark-400">

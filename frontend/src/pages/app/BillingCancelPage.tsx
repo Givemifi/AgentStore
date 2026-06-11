@@ -16,7 +16,7 @@ export default function BillingCancelPage() {
         </Link>
         <Link
           to="/buy-credits"
-          className="px-4 py-2 text-sm bg-dark-800 text-dark-300 border border-dark-700 rounded-lg hover:border-dark-600 transition-colors"
+          className="px-4 py-2 text-sm bg-dark-800 text-dark-300 border border-white/8 rounded-lg hover:border-dark-600 transition-colors"
         >
           Buy Credits
         </Link>

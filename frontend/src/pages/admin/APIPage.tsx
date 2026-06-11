@@ -42,7 +42,7 @@ function DocsSection() {
         <BookOpen className="w-4 h-4 text-dark-400" />
         <h2 className="text-sm font-medium text-dark-400 uppercase tracking-wide">Documentation</h2>
       </div>
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-6">
         <p className="text-dark-300 text-sm mb-4">
           Complete API documentation is available in human-readable and markdown formats.
         </p>
@@ -61,7 +61,7 @@ function DocsSection() {
             href={`${origin}/api/docs/markdown`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-dark-800 hover:bg-dark-700 border border-dark-700 rounded-xl text-sm text-dark-300 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-dark-800 hover:bg-dark-700 border border-white/8 rounded-xl text-sm text-dark-300 transition-colors"
           >
             <Code2 className="w-4 h-4" />
             Markdown Format
@@ -99,8 +99,8 @@ function CreateKeyModal({ onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-lg">
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <h3 className="text-lg font-semibold text-white">Create API Key</h3>
           <button onClick={onClose} className="text-dark-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -113,7 +113,7 @@ function CreateKeyModal({ onClose, onCreated }: {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g., CI/CD Pipeline"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
             />
           </div>
           <div>
@@ -121,7 +121,7 @@ function CreateKeyModal({ onClose, onCreated }: {
             <select
               value={authority}
               onChange={e => setAuthority(e.target.value as 'admin' | 'user')}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -166,8 +166,8 @@ function RevealKeyModal({ rawKey, apiKey, onClose }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-lg">
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <Check className="w-5 h-5 text-emerald-400" />
@@ -183,7 +183,7 @@ function RevealKeyModal({ rawKey, apiKey, onClose }: {
             Your API key <span className="font-medium text-white">{apiKey.name}</span> has been created.
           </p>
           <div className="relative">
-            <code className="block w-full p-3 bg-dark-800 border border-dark-700 rounded-lg text-sm text-emerald-400 font-mono break-all pr-12">
+            <code className="block w-full p-3 bg-dark-800 border border-white/8 rounded-lg text-sm text-emerald-400 font-mono break-all pr-12">
               {rawKey}
             </code>
             <button
@@ -298,15 +298,15 @@ function APIKeysSection({ canWrite }: { canWrite: boolean }) {
       {loading ? (
         <LoadingSpinner size="lg" className="py-12" />
       ) : keys.length === 0 ? (
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8 text-center">
+        <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-8 text-center">
           <Key className="w-8 h-8 text-dark-600 mx-auto mb-3" />
           <p className="text-dark-400 text-sm">{canWrite ? 'No API keys yet. Create one to get started.' : 'No API keys yet.'}</p>
         </div>
       ) : (
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
+        <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-dark-800">
+              <tr className="border-b border-white/8">
                 <th className="text-left px-5 py-3 text-xs font-medium text-dark-400 uppercase tracking-wide">Name</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-dark-400 uppercase tracking-wide">Authority</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-dark-400 uppercase tracking-wide">Key</th>
@@ -317,7 +317,7 @@ function APIKeysSection({ canWrite }: { canWrite: boolean }) {
             </thead>
             <tbody>
               {keys.map(k => (
-                <tr key={k.id} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
+                <tr key={k.id} className="border-b border-white/8/50 hover:bg-dark-800/30 transition-colors">
                   <td className="px-5 py-3 text-sm text-white font-medium">{k.name}</td>
                   <td className="px-5 py-3">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
@@ -371,7 +371,7 @@ function APIKeysSection({ canWrite }: { canWrite: boolean }) {
       )}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-md p-6">
+          <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -421,8 +421,8 @@ function RevealSecretModal({ secret, webhookName, onClose }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-lg">
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <Check className="w-5 h-5 text-emerald-400" />
@@ -438,7 +438,7 @@ function RevealSecretModal({ secret, webhookName, onClose }: {
             Signing secret for <span className="font-medium text-white">{webhookName}</span>:
           </p>
           <div className="relative">
-            <code className="block w-full p-3 bg-dark-800 border border-dark-700 rounded-lg text-sm text-emerald-400 font-mono break-all pr-12">
+            <code className="block w-full p-3 bg-dark-800 border border-white/8 rounded-lg text-sm text-emerald-400 font-mono break-all pr-12">
               {secret}
             </code>
             <button
@@ -550,8 +550,8 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <h3 className="text-lg font-semibold text-white">{webhook ? 'Edit Webhook' : 'Create Webhook'}</h3>
           <button onClick={onClose} className="text-dark-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -564,7 +564,7 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g., Provisioning Service"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
             />
           </div>
           <div>
@@ -573,7 +573,7 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="What this webhook does"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
             />
           </div>
           <div>
@@ -582,11 +582,11 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder="https://your-service.com/webhook"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 text-sm focus:outline-none focus:border-primary-500"
             />
           </div>
           {!webhook && (
-            <div className="p-3 bg-dark-800/50 border border-dark-800 rounded-lg">
+            <div className="p-3 bg-dark-800/50 border border-white/8 rounded-lg">
               <p className="text-xs text-dark-400">A signing secret will be automatically generated for HMAC-SHA256 signature verification.</p>
             </div>
           )}
@@ -604,7 +604,7 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
                 const expanded = expandedCategories.has(category);
 
                 return (
-                  <div key={category} className="border border-dark-700 rounded-lg overflow-hidden">
+                  <div key={category} className="border border-white/8 rounded-lg overflow-hidden">
                     <div
                       className="flex items-center gap-3 p-3 bg-dark-800 cursor-pointer hover:bg-dark-750 transition-colors"
                       onClick={() => toggleCategory(category)}
@@ -624,7 +624,7 @@ function WebhookFormModal({ webhook, onClose, onSaved }: {
                       {expanded ? <ChevronUp className="w-4 h-4 text-dark-400" /> : <ChevronDown className="w-4 h-4 text-dark-400" />}
                     </div>
                     {expanded && (
-                      <div className="border-t border-dark-700">
+                      <div className="border-t border-white/8">
                         {catTypes.map(et => (
                           <label
                             key={et.type}
@@ -755,7 +755,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
 
   if (loading) return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-2xl p-12">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-2xl p-12">
         <LoadingSpinner size="lg" className="py-4" />
       </div>
     </div>
@@ -779,8 +779,8 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <div>
             <h3 className="text-lg font-semibold text-white">{hook.name}</h3>
             {hook.description && <p className="text-sm text-dark-400 mt-0.5">{hook.description}</p>}
@@ -819,7 +819,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
               </div>
               {secretRevealed ? (
                 <div className="relative">
-                  <code className="block w-full p-2.5 bg-dark-800 border border-dark-700 rounded-lg text-xs text-emerald-400 font-mono break-all pr-10">
+                  <code className="block w-full p-2.5 bg-dark-800 border border-white/8 rounded-lg text-xs text-emerald-400 font-mono break-all pr-10">
                     {secret}
                   </code>
                   <button
@@ -831,7 +831,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
                   </button>
                 </div>
               ) : (
-                <code className="block w-full p-2.5 bg-dark-800 border border-dark-700 rounded-lg text-xs text-dark-500 font-mono">
+                <code className="block w-full p-2.5 bg-dark-800 border border-white/8 rounded-lg text-xs text-dark-500 font-mono">
                   whsec_••••••••••••••••••••••••••••{hook.secretPreview}
                 </code>
               )}
@@ -857,7 +857,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
             <div className="flex gap-2">
               <button
                 onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-700 border border-dark-700 rounded-lg text-xs text-dark-300 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-700 border border-white/8 rounded-lg text-xs text-dark-300 transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Edit
@@ -886,7 +886,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
           )}
 
           {/* Testing guide */}
-          <div className="p-4 bg-dark-800/50 border border-dark-800 rounded-xl">
+          <div className="p-4 bg-dark-800/50 border border-white/8 rounded-xl">
             <h4 className="text-xs font-medium text-dark-400 uppercase tracking-wide mb-2">Testing Your Webhook</h4>
             <ul className="text-xs text-dark-500 space-y-1.5">
               <li>1. Use the "Send Test" button to deliver a sample <code className="text-dark-400">tenant.created</code> event with test data.</li>
@@ -905,7 +905,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
             ) : (
               <div className="space-y-2">
                 {deliveries.map(d => (
-                  <div key={d.id} className="border border-dark-800 rounded-lg overflow-hidden">
+                  <div key={d.id} className="border border-white/8 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setExpandedDelivery(expandedDelivery === d.id ? null : d.id)}
                       className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-dark-800/50 transition-colors text-left"
@@ -921,7 +921,7 @@ function WebhookDetailModal({ webhookId, onClose, onRefresh, canWrite }: {
                       </div>
                     </button>
                     {expandedDelivery === d.id && (
-                      <div className="px-4 pb-3 space-y-2 border-t border-dark-800">
+                      <div className="px-4 pb-3 space-y-2 border-t border-white/8">
                         <div className="mt-2">
                           <span className="text-xs text-dark-500">Payload</span>
                           <pre className="mt-1 text-xs text-dark-400 font-mono whitespace-pre-wrap bg-dark-800 rounded p-2 max-h-32 overflow-y-auto">{
@@ -1027,15 +1027,15 @@ function WebhooksSection({ canWrite }: { canWrite: boolean }) {
       {loading ? (
         <LoadingSpinner size="lg" className="py-12" />
       ) : hooks.length === 0 ? (
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8 text-center">
+        <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-8 text-center">
           <Webhook className="w-8 h-8 text-dark-600 mx-auto mb-3" />
           <p className="text-dark-400 text-sm">{canWrite ? 'No webhooks configured. Create one to receive event notifications.' : 'No webhooks configured.'}</p>
         </div>
       ) : (
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
+        <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-dark-800">
+              <tr className="border-b border-white/8">
                 <th className="text-left px-5 py-3 text-xs font-medium text-dark-400 uppercase tracking-wide">Name</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-dark-400 uppercase tracking-wide">URL</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-dark-400 uppercase tracking-wide">Events</th>
@@ -1047,7 +1047,7 @@ function WebhooksSection({ canWrite }: { canWrite: boolean }) {
               {hooks.map(h => (
                 <tr
                   key={h.id}
-                  className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors cursor-pointer"
+                  className="border-b border-white/8/50 hover:bg-dark-800/30 transition-colors cursor-pointer"
                   onClick={() => setDetailId(h.id)}
                 >
                   <td className="px-5 py-3">
@@ -1117,7 +1117,7 @@ function WebhooksSection({ canWrite }: { canWrite: boolean }) {
       )}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-md p-6">
+          <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-400" />

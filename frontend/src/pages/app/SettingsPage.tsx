@@ -63,7 +63,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 mb-6 bg-dark-900/50 border border-dark-800 rounded-xl p-1 max-w-md" role="tablist">
+      <div className="flex gap-1 mb-6 bg-dark-900/50 border border-white/8 rounded-xl p-1 max-w-md" role="tablist">
         {tabs.map(t => (
           <button
             key={t.key}

@@ -101,7 +101,7 @@ function MarkdownMessage({ content }: MarkdownMessageProps) {
       const codeText = codeLines.join('\n');
       blocks.push(
         <div key={`code-${index}`} className="group relative my-3">
-          <pre className="overflow-x-auto rounded-2xl border border-dark-700 bg-dark-950 px-4 pb-4 pt-3 text-sm text-dark-100">
+          <pre className="overflow-x-auto rounded-xl border border-white/8 bg-dark-950 px-4 pb-4 pt-3 text-sm text-dark-100">
             {language ? (
               <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-dark-500">{language}</div>
             ) : null}
@@ -116,7 +116,7 @@ function MarkdownMessage({ content }: MarkdownMessageProps) {
 
     // Horizontal rule
     if (/^---+$/.test(line.trim())) {
-      blocks.push(<hr key={index} className="my-4 border-dark-700" />);
+      blocks.push(<hr key={index} className="my-4 border-white/8" />);
       index += 1;
       continue;
     }

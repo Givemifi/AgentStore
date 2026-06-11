@@ -36,7 +36,7 @@ function Field({
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+        className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
       />
     </div>
   );
@@ -96,7 +96,7 @@ function WechatSection() {
   if (isLoading) return <LoadingSpinner size="sm" className="py-8" />;
 
   return (
-    <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6">
+    <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <CreditCard className="w-5 h-5 text-primary-400" />
@@ -124,7 +124,7 @@ function WechatSection() {
             value={form.privateKey}
             onChange={e => setForm(f => ({ ...f, privateKey: e.target.value }))}
             placeholder={data?.privateKey === MASKED ? '已保存 (不修改请留空)' : '-----BEGIN RSA PRIVATE KEY-----\n...'}
-            className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 font-mono text-xs resize-none"
+            className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 font-mono text-xs resize-none"
           />
         </div>
         <Field label="证书序列号" value={form.certSerialNo} onChange={v => setForm(f => ({ ...f, certSerialNo: v }))} placeholder="ABCDEF123456..." />
@@ -135,7 +135,7 @@ function WechatSection() {
             type="checkbox"
             checked={form.enabled}
             onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}
-            className="w-5 h-5 rounded border-dark-700 bg-dark-800 text-primary-500 focus:ring-primary-500"
+            className="w-5 h-5 rounded border-white/8 bg-dark-800 text-primary-500 focus:ring-primary-500"
           />
           <span className="text-dark-300 text-sm">启用微信支付</span>
         </label>
@@ -207,7 +207,7 @@ function AlipaySection() {
   if (isLoading) return <LoadingSpinner size="sm" className="py-8" />;
 
   return (
-    <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6">
+    <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <CreditCard className="w-5 h-5 text-blue-400" />
@@ -225,7 +225,7 @@ function AlipaySection() {
             value={form.privateKey}
             onChange={e => setForm(f => ({ ...f, privateKey: e.target.value }))}
             placeholder={data?.privateKey === MASKED ? '已保存 (不修改请留空)' : '-----BEGIN RSA PRIVATE KEY-----\n...'}
-            className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 font-mono text-xs resize-none"
+            className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 font-mono text-xs resize-none"
           />
         </div>
         <div>
@@ -235,7 +235,7 @@ function AlipaySection() {
             value={form.publicKey}
             onChange={e => setForm(f => ({ ...f, publicKey: e.target.value }))}
             placeholder={data?.publicKey === MASKED ? '已保存 (不修改请留空)' : '-----BEGIN PUBLIC KEY-----\n...'}
-            className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 font-mono text-xs resize-none"
+            className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 font-mono text-xs resize-none"
           />
         </div>
         <Field label="异步通知 URL" value={form.notifyUrl} onChange={v => setForm(f => ({ ...f, notifyUrl: v }))} placeholder="https://yourdomain.com/api/billing/alipay/notify" />
@@ -246,7 +246,7 @@ function AlipaySection() {
             type="checkbox"
             checked={form.isSandbox}
             onChange={e => setForm(f => ({ ...f, isSandbox: e.target.checked }))}
-            className="w-5 h-5 rounded border-dark-700 bg-dark-800 text-primary-500 focus:ring-primary-500"
+            className="w-5 h-5 rounded border-white/8 bg-dark-800 text-primary-500 focus:ring-primary-500"
           />
           <span className="text-dark-300 text-sm">沙箱模式 (开发测试用)</span>
         </label>
@@ -256,7 +256,7 @@ function AlipaySection() {
             type="checkbox"
             checked={form.enabled}
             onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}
-            className="w-5 h-5 rounded border-dark-700 bg-dark-800 text-primary-500 focus:ring-primary-500"
+            className="w-5 h-5 rounded border-white/8 bg-dark-800 text-primary-500 focus:ring-primary-500"
           />
           <span className="text-dark-300 text-sm">启用支付宝</span>
         </label>
@@ -294,7 +294,7 @@ export default function PaymentConfigPage() {
         <AlipaySection />
       </div>
 
-      <div className="mt-6 p-4 rounded-xl bg-dark-900/30 border border-dark-800 text-xs text-dark-500 flex items-start gap-2">
+      <div className="mt-6 p-4 rounded-xl bg-dark-900/30 border border-white/8 text-xs text-dark-500 flex items-start gap-2">
         <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0" />
         <span>
           私钥等敏感字段在显示时已脱敏。留空字段保存时不会覆盖原值。订阅套餐计费仍走 Stripe，此处仅管理积分包的国内支付渠道。

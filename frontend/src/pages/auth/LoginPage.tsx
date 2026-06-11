@@ -120,14 +120,14 @@ export default function LoginPage() {
       <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
               <KeyRound className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">{t('mfa.heading')}</h1>
             <p className="text-dark-400 mt-2">{t('mfa.subtext')}</p>
           </div>
 
-          <form onSubmit={handleMfaSubmit} className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6 space-y-4">
+          <form onSubmit={handleMfaSubmit} className="bg-dark-900 border border-white/8 rounded-lg p-6 space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400">
                 {error}
@@ -144,7 +144,7 @@ export default function LoginPage() {
                 inputMode="numeric"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-center text-lg tracking-widest"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-center text-lg tracking-widest"
                 placeholder={t('mfa.codePlaceholder')}
                 maxLength={32}
               />
@@ -153,7 +153,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full py-2.5 px-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? t('mfa.verifying') : t('mfa.verify')}
             </button>
@@ -177,8 +177,8 @@ export default function LoginPage() {
       return (
         <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
           <div className="w-full max-w-md">
-            <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mx-auto mb-4">
+            <div className="bg-dark-900 border border-white/8 rounded-lg p-8 text-center">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-white" />
               </div>
               <h1 className="text-xl font-bold text-white mb-2">{t('magicLink.sentHeading')}</h1>
@@ -203,14 +203,14 @@ export default function LoginPage() {
       <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
               <Mail className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">{t('magicLink.heading')}</h1>
             <p className="text-dark-400 mt-2">{t('magicLink.subtext')}</p>
           </div>
 
-          <form onSubmit={handleMagicLink} className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6 space-y-4">
+          <form onSubmit={handleMagicLink} className="bg-dark-900 border border-white/8 rounded-lg p-6 space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400">
                 {error}
@@ -225,7 +225,7 @@ export default function LoginPage() {
                 autoFocus
                 value={magicLinkEmail}
                 onChange={(e) => setMagicLinkEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                 placeholder={t('login.emailPlaceholder')}
               />
             </div>
@@ -233,7 +233,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full py-2.5 px-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? t('magicLink.sending') : t('magicLink.send')}
             </button>
@@ -263,7 +263,7 @@ export default function LoginPage() {
           {logoUrl ? (
             <img src={logoUrl} alt={branding.appName} className="h-14 mx-auto mb-4 object-contain" />
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
               <LogIn className="w-7 h-7 text-white" />
             </div>
           )}
@@ -271,7 +271,7 @@ export default function LoginPage() {
           <p className="text-dark-400 mt-2">{subtext}</p>
         </div>
 
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6 space-y-4">
+        <div className="bg-dark-900 border border-white/8 rounded-lg p-6 space-y-4">
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400">
               {error}
@@ -285,7 +285,7 @@ export default function LoginPage() {
                 {providers?.google && (
                   <a
                     href="/api/auth/google"
-                    className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
+                    className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-white/8 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <GoogleIcon className="w-5 h-5" />
                     {t('login.continueWithGoogle')}
@@ -294,7 +294,7 @@ export default function LoginPage() {
                 {providers?.github && (
                   <a
                     href="/api/auth/github"
-                    className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
+                    className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-white/8 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <Github className="w-5 h-5" />
                     {t('login.continueWithGitHub')}
@@ -303,7 +303,7 @@ export default function LoginPage() {
                 {providers?.microsoft && (
                   <a
                     href="/api/auth/microsoft"
-                    className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
+                    className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-white/8 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <MicrosoftIcon className="w-4 h-4" />
                     {t('login.continueWithMicrosoft')}
@@ -313,7 +313,7 @@ export default function LoginPage() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-dark-700" />
+                  <div className="w-full border-t border-white/8" />
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-3 bg-dark-900/50 text-dark-500">{t('or', { ns: 'common' })}</span>
@@ -328,7 +328,7 @@ export default function LoginPage() {
               type="button"
               onClick={handlePasskeyLogin}
               disabled={loading}
-              className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 disabled:opacity-50 transition-all"
+              className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-white/8 text-white font-medium rounded-lg hover:bg-dark-700 disabled:opacity-50 transition-all"
             >
               <Fingerprint className="w-5 h-5" />
               {t('login.signInWithPasskey')}
@@ -344,7 +344,7 @@ export default function LoginPage() {
                 required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                 placeholder={t('login.emailPlaceholder')}
               />
             </div>
@@ -356,7 +356,7 @@ export default function LoginPage() {
                 required
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                 placeholder={t('login.passwordPlaceholder')}
               />
             </div>
@@ -370,7 +370,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full py-2.5 px-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? t('login.signingIn') : t('login.signIn')}
             </button>

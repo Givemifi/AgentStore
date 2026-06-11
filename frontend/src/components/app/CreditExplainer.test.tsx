@@ -6,7 +6,8 @@ describe('CreditExplainer', () => {
   it('renders balance, per-message cost, and safety copy', () => {
     render(<CreditExplainer balance={1200} perMessageCost={3} />);
 
-    expect(screen.getByText('1,200 credits available')).toBeInTheDocument();
+    expect(screen.getByText('1,200')).toBeInTheDocument();
+    expect(screen.getByText('credits available')).toBeInTheDocument();
     expect(screen.getByText('Most selected Agents cost 3 credits/message.')).toBeInTheDocument();
     expect(screen.getByText('Credits are charged only after a successful response.')).toBeInTheDocument();
   });
@@ -20,7 +21,7 @@ describe('CreditExplainer', () => {
   it('renders singular balance copy for one available credit', () => {
     render(<CreditExplainer balance={1} />);
 
-    expect(screen.getByText('1 credit available')).toBeInTheDocument();
+    expect(screen.getByText('credit available')).toBeInTheDocument();
   });
 
   it('renders loading state when balance is unknown', () => {

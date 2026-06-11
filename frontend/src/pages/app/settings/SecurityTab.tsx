@@ -98,7 +98,7 @@ export default function SecurityTab() {
     <div className="space-y-6 max-w-2xl">
       {/* MFA Section */}
       {showMfaSection && (
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
           <Shield className="w-5 h-5 text-dark-400" />
           Two-Factor Authentication
@@ -125,7 +125,7 @@ export default function SecurityTab() {
                     autoFocus
                     value={mfaDisableCode}
                     onChange={(e) => setMfaDisableCode(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                    className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                     placeholder="000000"
                   />
                 </div>
@@ -133,7 +133,7 @@ export default function SecurityTab() {
                   <button type="submit" disabled={mfaDisabling} className="py-2 px-4 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 text-sm disabled:opacity-50 transition-all">
                     {mfaDisabling ? 'Disabling...' : 'Confirm Disable'}
                   </button>
-                  <button type="button" onClick={() => { setShowDisableMfa(false); setMfaDisableCode(''); setMfaDisableError(''); }} className="py-2 px-4 bg-dark-800 text-dark-300 border border-dark-700 rounded-lg hover:bg-dark-700 text-sm transition-all">
+                  <button type="button" onClick={() => { setShowDisableMfa(false); setMfaDisableCode(''); setMfaDisableError(''); }} className="py-2 px-4 bg-dark-800 text-dark-300 border border-white/8 rounded-lg hover:bg-dark-700 text-sm transition-all">
                     Cancel
                   </button>
                 </div>
@@ -141,7 +141,7 @@ export default function SecurityTab() {
             ) : (
               <button
                 onClick={() => setShowDisableMfa(true)}
-                className="py-2 px-4 bg-dark-800 text-dark-300 border border-dark-700 rounded-lg hover:bg-dark-700 text-sm transition-all"
+                className="py-2 px-4 bg-dark-800 text-dark-300 border border-white/8 rounded-lg hover:bg-dark-700 text-sm transition-all"
               >
                 Disable MFA
               </button>
@@ -152,7 +152,7 @@ export default function SecurityTab() {
             <p className="text-sm text-dark-400 mb-4">Add an extra layer of security to your account with a TOTP authenticator app.</p>
             <button
               onClick={() => setShowMfaSetup(true)}
-              className="py-2.5 px-6 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 transition-all text-sm"
+              className="py-2.5 px-6 bg-primary-500 hover:bg-primary-600 transition-all text-sm"
             >
               Enable Two-Factor Authentication
             </button>
@@ -163,7 +163,7 @@ export default function SecurityTab() {
 
       {/* Passkeys Section */}
       {passkeysEnabled && (
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
           <Fingerprint className="w-5 h-5 text-dark-400" />
           Passkeys
@@ -201,10 +201,10 @@ export default function SecurityTab() {
                 type="text"
                 value={passkeyName}
                 onChange={(e) => setPasskeyName(e.target.value)}
-                className="flex-1 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-sm"
+                className="flex-1 px-4 py-2 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-sm"
                 placeholder="Passkey name (e.g., MacBook)"
               />
-              <button type="submit" disabled={addingPasskey} className="py-2 px-4 bg-dark-800 border border-dark-700 text-white rounded-lg hover:bg-dark-700 text-sm disabled:opacity-50 transition-all">
+              <button type="submit" disabled={addingPasskey} className="py-2 px-4 bg-dark-800 border border-white/8 text-white rounded-lg hover:bg-dark-700 text-sm disabled:opacity-50 transition-all">
                 {addingPasskey ? 'Adding...' : 'Add Passkey'}
               </button>
             </form>

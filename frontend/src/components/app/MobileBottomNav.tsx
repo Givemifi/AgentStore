@@ -54,7 +54,7 @@ export default function MobileBottomNav({ items, hasAdminAccess }: MobileBottomN
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-dark-800 bg-dark-900/95 px-2 pt-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-white/8 bg-dark-900/95 px-2 pt-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.95)] md:hidden"
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       aria-label="Primary mobile navigation"
     >
@@ -69,7 +69,7 @@ export default function MobileBottomNav({ items, hasAdminAccess }: MobileBottomN
               key={item.path}
               to={item.path}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-medium transition-colors ${
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition-colors ${
                 active ? 'bg-primary-500/15 text-primary-300' : 'text-dark-400 hover:bg-dark-800 hover:text-white'
               }`}
             >

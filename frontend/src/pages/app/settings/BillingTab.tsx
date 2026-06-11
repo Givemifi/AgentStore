@@ -62,7 +62,7 @@ export default function BillingTab() {
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Subscription Summary */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
           <CreditCard className="w-5 h-5 text-dark-400" />
           Subscription
@@ -72,7 +72,7 @@ export default function BillingTab() {
             <span className="text-sm text-dark-400">Plan</span>
             <span className="text-sm text-white font-medium">{currentPlanName}</span>
           </div>
-          <div className="flex items-center justify-between py-2 border-t border-dark-800">
+          <div className="flex items-center justify-between py-2 border-t border-white/8">
             <span className="text-sm text-dark-400">Status</span>
             <span className={`text-sm font-medium ${
               billingStatus === 'active' ? 'text-accent-emerald' :
@@ -87,13 +87,13 @@ export default function BillingTab() {
             </span>
           </div>
           {billingInterval && (
-            <div className="flex items-center justify-between py-2 border-t border-dark-800">
+            <div className="flex items-center justify-between py-2 border-t border-white/8">
               <span className="text-sm text-dark-400">Billing Interval</span>
               <span className="text-sm text-white capitalize">{billingInterval}ly</span>
             </div>
           )}
           {currentPeriodEnd && (
-            <div className="flex items-center justify-between py-2 border-t border-dark-800">
+            <div className="flex items-center justify-between py-2 border-t border-white/8">
               <span className="text-sm text-dark-400">
                 {billingStatus === 'canceled' ? 'Benefits Until' : 'Next Billing'}
               </span>
@@ -103,11 +103,11 @@ export default function BillingTab() {
         </div>
 
         {billingStatus !== 'none' && (
-          <div className="mt-4 pt-4 border-t border-dark-800">
+          <div className="mt-4 pt-4 border-t border-white/8">
             <button
               onClick={handlePortal}
               disabled={portalLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-dark-800 text-dark-300 border border-dark-700 rounded-lg hover:border-dark-600 hover:text-white transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-dark-800 text-dark-300 border border-white/8 rounded-lg hover:border-dark-600 hover:text-white transition-colors disabled:opacity-60"
             >
               {portalLoading ? <LoadingSpinner size="sm" /> : <><ExternalLink className="w-4 h-4" /> Update Payment Method</>}
             </button>
@@ -116,8 +116,8 @@ export default function BillingTab() {
       </div>
 
       {/* Transaction History */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/8">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Receipt className="w-5 h-5 text-dark-400" />
             Transaction History
@@ -131,7 +131,7 @@ export default function BillingTab() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-dark-800">
+                  <tr className="border-b border-white/8">
                     <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase">Date</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase">Description</th>
                     <th className="text-right px-6 py-3 text-xs font-medium text-dark-400 uppercase">Amount</th>
@@ -168,7 +168,7 @@ export default function BillingTab() {
             </div>
 
             {totalPages > 1 && (
-              <div className="px-6 py-3 border-t border-dark-800 flex items-center justify-between">
+              <div className="px-6 py-3 border-t border-white/8 flex items-center justify-between">
                 <span className="text-xs text-dark-400">{txTotal} total</span>
                 <div className="flex gap-2">
                   <button

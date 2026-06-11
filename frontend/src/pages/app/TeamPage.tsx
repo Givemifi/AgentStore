@@ -131,7 +131,7 @@ export default function TeamPage() {
         {canManage && (
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 transition-all text-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 transition-all text-sm"
           >
             <UserPlus className="w-4 h-4" />
             Invite Member
@@ -148,7 +148,7 @@ export default function TeamPage() {
 
       {/* Invite Form */}
       {showInvite && (
-        <form onSubmit={handleInvite} className="mb-6 bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+        <form onSubmit={handleInvite} className="mb-6 bg-dark-900 border border-white/8 rounded-lg p-6">
           <div className="flex items-end gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-dark-300 mb-1.5">Email Address</label>
@@ -157,7 +157,7 @@ export default function TeamPage() {
                 required
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                 placeholder="teammate@example.com"
               />
             </div>
@@ -166,7 +166,7 @@ export default function TeamPage() {
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -175,7 +175,7 @@ export default function TeamPage() {
             <button
               type="submit"
               disabled={inviting}
-              className="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 transition-all text-sm"
+              className="px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 transition-all text-sm"
             >
               {inviting ? 'Sending...' : 'Send Invite'}
             </button>
@@ -184,10 +184,10 @@ export default function TeamPage() {
       )}
 
       {/* Members Table */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
+      <div className="bg-dark-900 border border-white/8 rounded-lg overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-dark-800">
+            <tr className="border-b border-white/8">
               <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Member</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Role</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-dark-400">Joined</th>
@@ -199,7 +199,7 @@ export default function TeamPage() {
               const RoleIcon = roleIcons[member.role];
               const isMe = member.userId === user?.id;
               return (
-                <tr key={member.userId} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
+                <tr key={member.userId} className="border-b border-white/8/50 hover:bg-dark-800/30 transition-colors">
                   <td className="px-6 py-4">
                     <div>
                       <p className="text-sm font-medium text-white">
@@ -216,7 +216,7 @@ export default function TeamPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleChangeRole(member, e.target.value)}
-                          className="bg-dark-800 border border-dark-700 rounded text-sm text-dark-300 px-2 py-1 focus:outline-none focus:border-primary-500"
+                          className="bg-dark-800 border border-white/8 rounded text-sm text-dark-300 px-2 py-1 focus:outline-none focus:border-primary-500"
                         >
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
@@ -258,8 +258,8 @@ export default function TeamPage() {
           p.userLimit === 0 || p.userLimit > members.length
         );
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-md mx-4 w-full">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-md mx-4 w-full">
               <div className="flex items-center gap-3 mb-4">
                 <Zap className="w-6 h-6 text-primary-400" />
                 <h3 className="text-lg font-semibold text-white">

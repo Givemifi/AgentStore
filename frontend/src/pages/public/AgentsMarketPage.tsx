@@ -47,7 +47,7 @@ export default function AgentsMarketPage() {
   return (
     <div className="min-h-screen bg-dark-950">
       {/* Minimal header */}
-      <header className="sticky top-0 z-40 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800">
+      <header className="sticky top-0 z-40 bg-dark-900/80 border-b border-white/8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link to="/" className="font-semibold text-white text-lg">AgentStore</Link>
           <div className="flex items-center gap-4">
@@ -72,8 +72,8 @@ export default function AgentsMarketPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Hero search */}
-        <section className="rounded-[28px] border border-white/8 bg-dark-950/70 p-1 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] mb-10">
-          <div className="rounded-[24px] border border-primary-500/10 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),linear-gradient(180deg,rgba(17,24,39,0.96),rgba(2,6,23,0.92))] px-6 py-8 sm:px-10 sm:py-10">
+        <section className="rounded-lg border border-white/8 bg-dark-950/70 p-1 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] mb-10">
+          <div className="rounded-lg border border-primary-500/10 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),linear-gradient(180deg,rgba(17,24,39,0.96),rgba(2,6,23,0.92))] px-6 py-8 sm:px-10 sm:py-10">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary-200">
               <Sparkles className="h-3.5 w-3.5" />
               {t('dashboard.marketplace')}
@@ -84,7 +84,7 @@ export default function AgentsMarketPage() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-dark-300 sm:text-base">
               {t('dashboard.subtext')}
             </p>
-            <div className="mt-6 flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-dark-950 shadow-xl shadow-black/20">
+            <div className="mt-6 flex max-w-2xl items-center gap-3 rounded-xl border border-white/10 bg-white px-4 py-3 text-dark-950 shadow-xl shadow-black/20">
               <Search className="h-5 w-5 text-dark-400 flex-shrink-0" />
               <input
                 type="search"
@@ -157,12 +157,12 @@ export default function AgentsMarketPage() {
 function PublicAgentCard({ agent, onStart, onViewDetail }: { agent: Agent; onStart: () => void; onViewDetail: () => void }) {
   const { t } = useTranslation('app');
   return (
-    <div className="group rounded-[26px] border border-white/8 bg-gradient-to-br from-white/10 via-primary-500/5 to-transparent p-[1px] shadow-[0_24px_60px_-40px_rgba(0,0,0,0.95)] transition-transform duration-200 hover:-translate-y-1 hover:from-primary-400/30 hover:via-primary-500/10 hover:to-white/10">
-      <div className="flex h-full flex-col rounded-[25px] bg-dark-950/95 p-6">
+    <div className="group rounded-lg border border-white/8 bg-gradient-to-br from-white/10 via-primary-500/5 to-transparent p-[1px] shadow-[0_24px_60px_-40px_rgba(0,0,0,0.95)] transition-transform duration-200 hover:-translate-y-1 hover:from-primary-400/30 hover:via-primary-500/10 hover:to-white/10">
+      <div className="flex h-full flex-col rounded-lg bg-dark-950/95 p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             <div
-              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/6"
+              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-white/6"
               style={{ backgroundColor: `${agent.color || '#7C3AED'}20` }}
             >
               <MessageCircle className="h-6 w-6" style={{ color: agent.color || '#7C3AED' }} />
@@ -180,7 +180,7 @@ function PublicAgentCard({ agent, onStart, onViewDetail }: { agent: Agent; onSta
         <p className="mt-5 text-sm leading-6 text-dark-300">{agent.description}</p>
 
         {agent.suggestedPrompts && agent.suggestedPrompts.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-white/6 bg-dark-900/60 p-4">
+          <div className="mt-6 rounded-xl border border-white/6 bg-dark-900/60 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-dark-400">
               {t('dashboard.suggestedPrompts')}
             </p>
@@ -231,9 +231,9 @@ function AgentGridSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="rounded-[26px] border border-white/8 bg-dark-950/80 p-6 animate-pulse">
+        <div key={i} className="rounded-lg border border-white/8 bg-dark-950/80 p-6 animate-pulse">
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-dark-800" />
+            <div className="h-12 w-12 rounded-xl bg-dark-800" />
             <div className="space-y-2 flex-1">
               <div className="h-3 w-16 rounded bg-dark-800" />
               <div className="h-5 w-32 rounded bg-dark-800" />

@@ -267,7 +267,7 @@ export default function ModelSettingsTab() {
 
       {/* Provider Form */}
       {showProviderForm && (
-        <div className="border border-dark-700 rounded-lg p-4 mb-6 space-y-4">
+        <div className="border border-white/8 rounded-lg p-4 mb-6 space-y-4">
           <h3 className="font-medium text-white">{editingProviderId ? 'Edit Provider' : 'New Provider'}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -275,7 +275,7 @@ export default function ModelSettingsTab() {
               <input
                 value={providerForm.name}
                 onChange={e => setProviderForm({...providerForm, name: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
                 placeholder="My Provider"
               />
               {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -285,7 +285,7 @@ export default function ModelSettingsTab() {
               <select
                 value={providerForm.providerType}
                 onChange={e => setProviderForm({...providerForm, providerType: e.target.value as ProviderType})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               >
                 {providerTypeOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -299,7 +299,7 @@ export default function ModelSettingsTab() {
             <input
               value={providerForm.baseUrl}
               onChange={e => setProviderForm({...providerForm, baseUrl: e.target.value})}
-              className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+              className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               placeholder="https://api.openai.com/v1"
             />
             {errors.baseUrl && <p className="text-red-400 text-xs mt-1">{errors.baseUrl}</p>}
@@ -311,7 +311,7 @@ export default function ModelSettingsTab() {
               type="password"
               value={providerForm.apiKey}
               onChange={e => setProviderForm({...providerForm, apiKey: e.target.value})}
-              className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+              className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               placeholder={editingProviderId ? '(unchanged)' : 'sk-...'}
             />
             {errors.apiKey && <p className="text-red-400 text-xs mt-1">{errors.apiKey}</p>}
@@ -342,7 +342,7 @@ export default function ModelSettingsTab() {
 
       {/* Model Form */}
       {showModelForm && (
-        <div className="border border-dark-700 rounded-lg p-4 mb-6 space-y-4">
+        <div className="border border-white/8 rounded-lg p-4 mb-6 space-y-4">
           <h3 className="font-medium text-white">{editingModelId ? 'Edit Model' : 'New Model'}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -350,7 +350,7 @@ export default function ModelSettingsTab() {
               <select
                 value={modelForm.providerId}
                 onChange={e => setModelForm({...modelForm, providerId: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               >
                 <option value="">Select provider...</option>
                 {providers.filter(p => p.enabled).map(p => (
@@ -364,7 +364,7 @@ export default function ModelSettingsTab() {
               <select
                 value={modelForm.modality}
                 onChange={e => setModelForm({...modelForm, modality: e.target.value as ModelModality})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               >
                 {modalityOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -380,7 +380,7 @@ export default function ModelSettingsTab() {
               <input
                 value={modelForm.name}
                 onChange={e => setModelForm({...modelForm, name: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
                 placeholder="gpt-4o"
               />
               {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -390,7 +390,7 @@ export default function ModelSettingsTab() {
               <input
                 value={modelForm.displayName}
                 onChange={e => setModelForm({...modelForm, displayName: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
                 placeholder="GPT-4o"
               />
             </div>
@@ -401,7 +401,7 @@ export default function ModelSettingsTab() {
             <input
               value={modelForm.modelId}
               onChange={e => setModelForm({...modelForm, modelId: e.target.value})}
-              className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+              className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               placeholder="gpt-4o"
             />
             {errors.modelId && <p className="text-red-400 text-xs mt-1">{errors.modelId}</p>}
@@ -452,7 +452,7 @@ export default function ModelSettingsTab() {
       ) : (
         <div className="space-y-6">
           {providers.map(provider => (
-            <div key={provider.id} className="border border-dark-700 rounded-lg p-4">
+            <div key={provider.id} className="border border-white/8 rounded-lg p-4">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-semibold text-white flex items-center gap-2">
@@ -499,7 +499,7 @@ export default function ModelSettingsTab() {
               </div>
 
               {/* Models for this provider */}
-              <div className="ml-4 border-l border-dark-700 pl-4">
+              <div className="ml-4 border-l border-white/8 pl-4">
                 <h4 className="text-sm text-dark-400 mb-2">Models</h4>
                 {getModelsByProvider(provider.id).length === 0 ? (
                   <p className="text-sm text-dark-500">No models configured</p>

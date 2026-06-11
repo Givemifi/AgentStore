@@ -210,7 +210,7 @@ export default function PlanPage() {
 
       {/* Current Plan Banner */}
       {currentPlan && (
-        <div className="bg-gradient-to-r from-primary-500/10 via-accent-purple/10 to-primary-500/10 border border-primary-500/20 rounded-2xl p-6 mb-8">
+        <div className="bg-gradient-to-r from-primary-500/10 via-accent-purple/10 to-primary-500/10 border border-primary-500/20 rounded-xl p-6 mb-8">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -325,12 +325,12 @@ export default function PlanPage() {
             <div
               key={plan.id}
               ref={(el) => { cardRefs.current[plan.id] = el; }}
-              className={`relative rounded-2xl border p-6 transition-all ${
+              className={`relative rounded-xl border p-6 transition-all ${
                 isCurrent
                   ? 'bg-primary-500/5 border-primary-500/30 ring-1 ring-primary-500/20'
                   : isHighlighted
                     ? 'bg-primary-500/10 border-primary-400 ring-2 ring-primary-500 animate-pulse'
-                    : 'bg-dark-900/50 border-dark-800 hover:border-dark-700'
+                    : 'bg-dark-900/50 border-white/8 hover:border-white/8'
               }`}
             >
               {isCurrent && (
@@ -433,7 +433,7 @@ export default function PlanPage() {
                   className={`w-full py-2.5 text-sm font-medium rounded-lg transition-colors ${
                     isUpgrade
                       ? 'bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-60'
-                      : 'bg-dark-800 text-dark-300 border border-dark-700 hover:border-dark-600 disabled:opacity-60'
+                      : 'bg-dark-800 text-dark-300 border border-white/8 hover:border-dark-600 disabled:opacity-60'
                   }`}
                 >
                   {checkoutLoading === plan.id ? (
@@ -449,15 +449,15 @@ export default function PlanPage() {
       </div>
 
       {/* Comparison Table */}
-      <div className="bg-dark-900/50 rounded-2xl border border-dark-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-dark-800">
+      <div className="bg-dark-900/50 rounded-xl border border-white/8 overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/8">
           <h3 className="text-lg font-semibold text-white">Plan Comparison</h3>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-dark-800">
+              <tr className="border-b border-white/8">
                 <th className="text-left px-6 py-3 text-sm font-medium text-dark-400 min-w-[200px]">Feature</th>
                 {sortedPlans.map(plan => (
                   <th key={plan.id} className={`text-center px-6 py-3 text-sm font-medium min-w-[140px] ${
@@ -565,8 +565,8 @@ export default function PlanPage() {
 
       {/* Billing Waiver Confirmation Modal */}
       {showWaiverModal && pendingWaiverPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-md mx-4 w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-md mx-4 w-full">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="w-6 h-6 text-yellow-400" />
               <h3 className="text-lg font-semibold text-white">Billing Waiver Active</h3>
@@ -597,8 +597,8 @@ export default function PlanPage() {
 
       {/* Cancel Subscription Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-md mx-4 w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-md mx-4 w-full">
             <div className="flex items-center gap-3 mb-4">
               <XCircle className="w-6 h-6 text-red-400" />
               <h3 className="text-lg font-semibold text-white">Cancel Subscription</h3>

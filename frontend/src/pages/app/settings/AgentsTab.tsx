@@ -168,14 +168,14 @@ export default function AgentsTab() {
       </div>
 
       {showForm && (
-        <div className="border border-dark-700 rounded-lg p-4 mb-6 space-y-4">
+        <div className="border border-white/8 rounded-lg p-4 mb-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-dark-400 mb-1">Name *</label>
               <input
                 value={form.name}
                 onChange={e => setForm({...form, name: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
                 placeholder="My Agent"
               />
               {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -185,7 +185,7 @@ export default function AgentsTab() {
               <input
                 value={form.slug}
                 onChange={e => setForm({...form, slug: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
                 placeholder="my-agent (auto-generated if empty)"
               />
             </div>
@@ -197,7 +197,7 @@ export default function AgentsTab() {
               <input
                 value={form.category}
                 onChange={e => setForm({...form, category: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
                 placeholder="Marketing"
               />
               {errors.category && <p className="text-red-400 text-xs mt-1">{errors.category}</p>}
@@ -207,7 +207,7 @@ export default function AgentsTab() {
               <select
                 value={form.visibility}
                 onChange={e => setForm({...form, visibility: e.target.value as AgentVisibility})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               >
                 {visibilityOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -221,7 +221,7 @@ export default function AgentsTab() {
             <textarea
               value={form.description}
               onChange={e => setForm({...form, description: e.target.value})}
-              className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+              className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               rows={2}
               placeholder="What does this agent do?"
             />
@@ -233,7 +233,7 @@ export default function AgentsTab() {
             <textarea
               value={form.systemPrompt}
               onChange={e => setForm({...form, systemPrompt: e.target.value})}
-              className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+              className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               rows={4}
               placeholder="You are a helpful AI assistant..."
             />
@@ -245,7 +245,7 @@ export default function AgentsTab() {
             <input
               value={form.welcomeMessage}
               onChange={e => setForm({...form, welcomeMessage: e.target.value})}
-              className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+              className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               placeholder="How can I help you today?"
             />
           </div>
@@ -279,7 +279,7 @@ export default function AgentsTab() {
                 min="0"
                 value={form.creditCost.textMessageCredits}
                 onChange={e => setForm({...form, creditCost: {...form.creditCost, textMessageCredits: parseInt(e.target.value) || 0}})}
-                className="w-full bg-dark-800 border border-dark-700 rounded px-3 py-2"
+                className="w-full bg-dark-800 border border-white/8 rounded px-3 py-2"
               />
             </div>
             <p className="text-xs text-dark-500">Image and video generation are coming soon. P0 Agents use text chat only.</p>
@@ -307,7 +307,7 @@ export default function AgentsTab() {
       ) : (
         <div className="grid gap-4">
           {agents.map(agent => (
-            <div key={agent.id} className="border border-dark-700 rounded-lg p-4">
+            <div key={agent.id} className="border border-white/8 rounded-lg p-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-semibold text-white">{agent.name}</h3>

@@ -126,7 +126,7 @@ export default function TenantsPage() {
         </div>
         <button
           onClick={handleExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white transition-colors"
           title="Download CSV"
         >
           <Download className="w-3.5 h-3.5" />
@@ -143,13 +143,13 @@ export default function TenantsPage() {
             placeholder="Search by name or slug..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-sm"
           />
         </div>
         <select
           value={status}
           onChange={(e) => handleStatusChange(e.target.value)}
-          className="px-3 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
+          className="px-3 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
         >
           <option value="">All statuses</option>
           <option value="active">Active</option>
@@ -158,7 +158,7 @@ export default function TenantsPage() {
         <select
           value={billingStatus}
           onChange={(e) => handleBillingStatusChange(e.target.value)}
-          className="px-3 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
+          className="px-3 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
         >
           <option value="">All billing</option>
           <option value="active">Active</option>
@@ -169,7 +169,7 @@ export default function TenantsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl overflow-hidden">
+      <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl overflow-hidden">
         {loading && tenants.length === 0 ? (
           <TableSkeleton rows={8} cols={7} />
         ) : tenants.length === 0 ? (
@@ -181,7 +181,7 @@ export default function TenantsPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-dark-800">
+                  <tr className="border-b border-white/8">
                     <th className="text-left px-6 py-3.5">
                       <button onClick={() => toggleSort('name')} className="flex items-center gap-1.5 text-sm font-medium text-dark-400 hover:text-white transition-colors">
                         Tenant
@@ -206,7 +206,7 @@ export default function TenantsPage() {
                     <tr
                       key={tenant.id}
                       onClick={() => navigate(`/admin/tenants/${tenant.id}`)}
-                      className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors cursor-pointer"
+                      className="border-b border-white/8/50 hover:bg-dark-800/30 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export default function TenantsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-3 border-t border-dark-800">
+              <div className="flex items-center justify-between px-6 py-3 border-t border-white/8">
                 <p className="text-sm text-dark-400">
                   Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
                 </p>

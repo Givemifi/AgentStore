@@ -112,17 +112,15 @@ describe('DashboardPage', () => {
   it('renders the agent marketplace hero, credit safety copy, search, categories, and agent cards', async () => {
     renderDashboardPage();
 
-    expect(await screen.findByText('Find the right AI agent for your next task.')).toBeInTheDocument();
+    expect(await screen.findByText('Agent Marketplace')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText('36 credits available')).toBeInTheDocument();
+      expect(screen.getByText(/36/)).toBeInTheDocument();
     });
     expect(screen.getByText('Credits are charged only after a successful response.')).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search Agents' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Marketing' })).toBeInTheDocument();
     expect(screen.getByText('Growth Strategist')).toBeInTheDocument();
-    expect(screen.getByText('Best for Marketing teams')).toBeInTheDocument();
     expect(screen.getByText('3 credits/message')).toBeInTheDocument();
-    expect(screen.getByText('Text chat')).toBeInTheDocument();
   });
 
   it('shows the Recommended category chip', async () => {
@@ -281,7 +279,7 @@ describe('DashboardPage', () => {
 
     renderDashboardPage();
 
-    expect(await screen.findByText('Text chat')).toBeInTheDocument();
+    expect(await screen.findByText('Growth Strategist')).toBeInTheDocument();
     expect(screen.queryByText('Image')).not.toBeInTheDocument();
     expect(screen.queryByText('Video')).not.toBeInTheDocument();
   });

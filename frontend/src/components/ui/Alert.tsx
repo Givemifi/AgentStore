@@ -9,14 +9,14 @@ interface AlertProps {
 }
 
 const variantClasses: Record<AlertVariant, string> = {
-  error: 'bg-red-500/10 border-red-500/20 text-red-400',
-  success: 'bg-accent-emerald/10 border-accent-emerald/20 text-accent-emerald',
-  info: 'bg-primary-500/10 border-primary-500/20 text-primary-400',
+  error: 'border-red-500/30 text-red-400',
+  success: 'border-accent-emerald/30 text-accent-emerald',
+  info: 'border-primary-500/30 text-primary-400',
 };
 
 export default function Alert({ variant = 'error', children, className = '' }: AlertProps) {
   return (
-    <div className={`px-3 py-2 border rounded-lg text-sm ${variantClasses[variant]} ${className}`}>
+    <div className={`px-3 py-2 border rounded-md text-[13px] ${variantClasses[variant]} ${className}`}>
       {children}
     </div>
   );

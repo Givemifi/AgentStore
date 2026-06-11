@@ -206,7 +206,7 @@ export default function LogsPage() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
               autoRefresh
                 ? 'border-primary-500/50 bg-primary-500/10 text-primary-400'
-                : 'border-dark-700 bg-dark-800 text-dark-300 hover:text-white'
+                : 'border-white/8 bg-dark-800 text-dark-300 hover:text-white'
             }`}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${autoRefresh ? 'animate-spin' : ''}`} />
@@ -214,14 +214,14 @@ export default function LogsPage() {
           </button>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
             CSV
@@ -242,7 +242,7 @@ export default function LogsPage() {
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
                 isActive
                   ? `${cfg.bg} ${cfg.color} border-current`
-                  : 'bg-dark-800/50 text-dark-600 border-dark-700/50 line-through'
+                  : 'bg-dark-800/50 text-dark-600 border-white/8/50 line-through'
               }`}
             >
               {cfg.label}{count > 0 ? `: ${count.toLocaleString()}` : ''}
@@ -273,14 +273,14 @@ export default function LogsPage() {
             className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
               fromDate && !toDate && Math.abs(new Date().getTime() - new Date(fromDate).getTime() - p.hours * 3600000) < 60000
                 ? 'border-primary-500/50 bg-primary-500/10 text-primary-400'
-                : 'border-dark-700 bg-dark-800 text-dark-400 hover:text-white'
+                : 'border-white/8 bg-dark-800 text-dark-400 hover:text-white'
             }`}
           >
             {p.label}
           </button>
         ))}
         {fromDate && (
-          <button onClick={clearDateFilter} className="px-2.5 py-1 text-xs text-dark-400 hover:text-white border border-dark-700 rounded-lg transition-colors">
+          <button onClick={clearDateFilter} className="px-2.5 py-1 text-xs text-dark-400 hover:text-white border border-white/8 rounded-lg transition-colors">
             Clear dates
           </button>
         )}
@@ -296,7 +296,7 @@ export default function LogsPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search logs..."
-              className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-white/8 rounded-lg text-sm text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
             />
           </div>
           <button
@@ -309,7 +309,7 @@ export default function LogsPage() {
             <button
               type="button"
               onClick={() => { setSearchInput(''); setSearch(''); setPage(1); }}
-              className="px-4 py-2 bg-dark-800 border border-dark-700 text-dark-300 text-sm rounded-lg hover:text-white transition-colors"
+              className="px-4 py-2 bg-dark-800 border border-white/8 text-dark-300 text-sm rounded-lg hover:text-white transition-colors"
             >
               Clear
             </button>
@@ -319,7 +319,7 @@ export default function LogsPage() {
         <select
           value={category}
           onChange={(e) => handleCategoryChange(e.target.value)}
-          className="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
+          className="px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
         >
           <option value="">All categories</option>
           {Object.entries(categoryLabels).map(([val, label]) => (
@@ -331,16 +331,16 @@ export default function LogsPage() {
       {loading ? (
         <LoadingSpinner size="lg" className="py-20" />
       ) : logs.length === 0 ? (
-        <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-12 text-center">
+        <div className="bg-dark-900/50 border border-white/8 rounded-xl p-12 text-center">
           <FileText className="w-12 h-12 text-dark-600 mx-auto mb-4" />
           <p className="text-dark-400">No log entries found</p>
         </div>
       ) : (
         <>
-          <div className="bg-dark-900/50 border border-dark-800 rounded-2xl overflow-hidden">
+          <div className="bg-dark-900/50 border border-white/8 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-dark-800">
+                <tr className="border-b border-white/8">
                   <th className="text-left px-4 py-3 text-dark-400 font-medium w-10"></th>
                   <th className="text-left px-4 py-3 text-dark-400 font-medium w-44">Timestamp</th>
                   <th className="text-left px-4 py-3 text-dark-400 font-medium w-24">Severity</th>
@@ -357,7 +357,7 @@ export default function LogsPage() {
                     <>
                       <tr
                         key={log.id}
-                        className="border-b border-dark-800/50 hover:bg-dark-800/30 cursor-pointer"
+                        className="border-b border-white/8/50 hover:bg-dark-800/30 cursor-pointer"
                         onClick={() => setExpandedRow(isExpanded ? null : log.id)}
                       >
                         <td className="px-4 py-3 text-dark-500">
@@ -398,7 +398,7 @@ export default function LogsPage() {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${log.id}-detail`} className="border-b border-dark-800/50 bg-dark-800/20">
+                        <tr key={`${log.id}-detail`} className="border-b border-white/8/50 bg-dark-800/20">
                           <td colSpan={6} className="px-8 py-4">
                             <div className="space-y-2 text-sm">
                               <div>
@@ -455,7 +455,7 @@ export default function LogsPage() {
               <select
                 value={perPage}
                 onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
-                className="px-2 py-1 bg-dark-800 border border-dark-700 rounded text-xs text-dark-300 focus:outline-none"
+                className="px-2 py-1 bg-dark-800 border border-white/8 rounded text-xs text-dark-300 focus:outline-none"
               >
                 {PER_PAGE_OPTIONS.map(n => (
                   <option key={n} value={n}>{n} / page</option>
@@ -466,7 +466,7 @@ export default function LogsPage() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="flex items-center gap-1 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white disabled:opacity-40 disabled:hover:text-dark-300 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white disabled:opacity-40 disabled:hover:text-dark-300 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" /> Prev
               </button>
@@ -476,7 +476,7 @@ export default function LogsPage() {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="flex items-center gap-1 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white disabled:opacity-40 disabled:hover:text-dark-300 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white disabled:opacity-40 disabled:hover:text-dark-300 transition-colors"
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>

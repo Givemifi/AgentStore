@@ -142,7 +142,7 @@ function ConversationListSkeleton() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="rounded-2xl border border-dark-800 bg-dark-900/60 p-4">
+        <div key={item} className="rounded-xl border border-white/8 bg-dark-900 p-4">
           <div className="h-4 w-3/4 animate-pulse rounded bg-dark-800" />
           <div className="mt-3 h-3 w-1/2 animate-pulse rounded bg-dark-800" />
         </div>
@@ -154,11 +154,11 @@ function ConversationListSkeleton() {
 function MessageSkeleton() {
   return (
     <div className="space-y-4 py-2">
-      <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-dark-800 px-4 py-4">
+      <div className="max-w-[80%] rounded-xl rounded-bl-md bg-dark-800 px-4 py-4">
         <div className="h-4 w-full animate-pulse rounded bg-dark-700" />
         <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-dark-700" />
       </div>
-      <div className="ml-auto max-w-[70%] rounded-2xl rounded-br-md bg-dark-800 px-4 py-4">
+      <div className="ml-auto max-w-[70%] rounded-xl rounded-br-md bg-dark-800 px-4 py-4">
         <div className="h-4 w-full animate-pulse rounded bg-dark-700" />
         <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-dark-700" />
       </div>
@@ -178,10 +178,10 @@ function ConversationItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full rounded-2xl border px-4 py-3 text-left transition-colors ${
+      className={`w-full rounded-md border px-3 py-2.5 text-left transition-colors ${
         isActive
           ? 'border-primary-500/60 bg-primary-500/10'
-          : 'border-dark-800 bg-dark-900/60 hover:border-dark-700 hover:bg-dark-900'
+          : 'border-white/8 bg-dark-900 hover:border-white/8 hover:bg-dark-900'
       }`}
     >
       <p className="truncate text-sm font-medium text-white">{conversation.title}</p>
@@ -235,15 +235,15 @@ function ConversationSidebarContent({
 }) {
   return (
     <>
-      <div className="border-b border-dark-800 p-4">
+      <div className="border-b border-white/8 p-4">
         <button
           onClick={startNewChat}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-500 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-600"
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-primary-500 h-8 text-[13px] font-medium text-white transition-colors hover:bg-primary-600"
         >
           <Plus className="h-4 w-4" />
           New chat
         </button>
-        <div className="mt-4 rounded-2xl border border-dark-800 bg-dark-950/60 p-4">
+        <div className="mt-4 rounded-xl border border-white/8 bg-dark-950/60 p-4">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-dark-500">Current Agent</p>
           <p className="mt-2 text-sm font-semibold text-white">{agent.name}</p>
           <p className="mt-1 text-sm text-dark-400">{agent.category}</p>
@@ -261,7 +261,7 @@ function ConversationSidebarContent({
         {conversationsLoading ? (
           <ConversationListSkeleton />
         ) : conversationsError ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
             {getErrorMessage(conversationsError)}
           </div>
         ) : conversations && conversations.length > 0 ? (
@@ -276,7 +276,7 @@ function ConversationSidebarContent({
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-dark-800 bg-dark-950/40 p-5 text-sm text-dark-400">
+          <div className="rounded-xl border border-dashed border-white/8 bg-dark-950/40 p-5 text-sm text-dark-400">
             No conversations yet. Start a new chat to create your first thread.
           </div>
         )}
@@ -893,8 +893,8 @@ export default function ChatPage() {
 
   if (agentMissing) {
     return (
-      <div className="mx-auto flex max-w-2xl flex-col items-center justify-center rounded-3xl border border-dark-800 bg-dark-900/60 px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-800 text-dark-300">
+      <div className="mx-auto flex max-w-2xl flex-col items-center justify-center rounded-xl border border-white/8 bg-dark-900 px-6 py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-dark-800 text-dark-300">
           <AlertCircle className="h-7 w-7" />
         </div>
         <h1 className="mt-5 text-2xl font-semibold text-white">Agent not found</h1>
@@ -914,8 +914,8 @@ export default function ChatPage() {
 
   if (agentError || !agent) {
     return (
-      <div className="mx-auto flex max-w-2xl flex-col items-center justify-center rounded-3xl border border-dark-800 bg-dark-900/60 px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-800 text-dark-300">
+      <div className="mx-auto flex max-w-2xl flex-col items-center justify-center rounded-xl border border-white/8 bg-dark-900 px-6 py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-dark-800 text-dark-300">
           <AlertCircle className="h-7 w-7" />
         </div>
         <h1 className="mt-5 text-2xl font-semibold text-white">Unable to load this Agent</h1>
@@ -933,7 +933,7 @@ export default function ChatPage() {
 
   return (
     <div ref={chatContainerRef} className="flex h-[calc(100dvh-13rem)] min-h-0 flex-col gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[40rem] lg:flex-row">
-      <aside className="hidden w-full flex-col rounded-3xl border border-dark-800 bg-dark-900/60 lg:flex lg:w-80 lg:min-w-80">
+      <aside className="hidden w-full flex-col rounded-xl border border-white/8 bg-dark-900 lg:flex lg:w-80 lg:min-w-80">
         <ConversationSidebarContent
           agent={agent}
           conversations={conversations}
@@ -956,9 +956,9 @@ export default function ChatPage() {
           <aside
             ref={drawerRef}
             onKeyDown={handleDrawerKeyDown}
-            className="relative z-10 flex h-full w-[min(22rem,86vw)] flex-col border-r border-dark-800 bg-dark-950 shadow-2xl"
+            className="relative z-10 flex h-full w-[min(22rem,86vw)] flex-col border-r border-white/8 bg-dark-950 shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b border-dark-800 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
               <h2 className="text-sm font-semibold text-white">Conversations</h2>
               <button
                 type="button"
@@ -984,8 +984,8 @@ export default function ChatPage() {
         </div>
       )}
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-3xl border border-dark-800 bg-dark-900/60">
-        <div className="border-b border-dark-800 p-4 sm:p-5">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-white/8 bg-dark-900">
+        <div className="border-b border-white/8 p-4 sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 gap-3">
               <button
@@ -1004,7 +1004,7 @@ export default function ChatPage() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
                 style={{ backgroundColor: `${agent.color}20` }}
               >
                 <ExpertIcon className="h-6 w-6" style={{ color: agent.color }} />
@@ -1028,14 +1028,14 @@ export default function ChatPage() {
                   type="button"
                   onClick={handleShareConversation}
                   disabled={shareState !== 'idle'}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-dark-700 bg-dark-950/60 px-3 py-2 text-sm text-dark-300 transition-colors hover:border-primary-500/30 hover:text-white disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/8 bg-dark-950/60 px-3 py-2 text-sm text-dark-300 transition-colors hover:border-primary-500/30 hover:text-white disabled:opacity-50"
                   title={shareState === 'copied' ? 'Link copied!' : 'Share conversation'}
                 >
                   <Share2 className="h-4 w-4" />
                   <span className="hidden sm:inline">{shareState === 'copied' ? 'Copied!' : shareState === 'sharing' ? '...' : 'Share'}</span>
                 </button>
               )}
-              <div className="inline-flex items-center gap-1.5 rounded-xl border border-dark-700 bg-dark-950/60 px-3 py-2 text-sm text-dark-200">
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-white/8 bg-dark-950/60 px-3 py-2 text-sm text-dark-200">
                 <Zap className="h-4 w-4 text-primary-400" />
                 <span className="font-medium">{remainingCredits.toLocaleString()}</span>
                 <span className="text-dark-500">credits left</span>
@@ -1050,7 +1050,7 @@ export default function ChatPage() {
           ) : !hasActiveThread ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div
-                className="flex h-18 w-18 items-center justify-center rounded-3xl"
+                className="flex h-18 w-18 items-center justify-center rounded-xl"
                 style={{ backgroundColor: `${agent.color}20` }}
               >
                 <ExpertIcon className="h-10 w-10" style={{ color: agent.color }} />
@@ -1067,7 +1067,7 @@ export default function ChatPage() {
                         key={example}
                         onClick={() => handleExampleClick(example)}
                         aria-label={`Use suggested prompt: ${example}`}
-                        className="rounded-2xl border border-dark-800 bg-dark-950/60 px-4 py-4 text-left text-sm text-dark-200 transition-colors hover:border-dark-700 hover:bg-dark-900 hover:text-white"
+                        className="rounded-xl border border-white/8 bg-dark-950/60 px-4 py-4 text-left text-sm text-dark-200 transition-colors hover:border-white/8 hover:bg-dark-900 hover:text-white"
                       >
                         {example}
                       </button>
@@ -1080,7 +1080,7 @@ export default function ChatPage() {
             <MessageSkeleton />
           ) : isConversationMissing ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-800 text-dark-300">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-dark-800 text-dark-300">
                 <AlertCircle className="h-7 w-7" />
               </div>
               <h2 className="mt-5 text-xl font-semibold text-white">Conversation not found</h2>
@@ -1113,10 +1113,10 @@ export default function ChatPage() {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[75%] ${
+                    className={`max-w-[85%] rounded-lg px-3 py-2.5 sm:max-w-[75%] ${
                       message.role === 'user'
-                        ? 'rounded-br-md bg-primary-500 text-white'
-                        : 'rounded-bl-md bg-dark-800 text-dark-100'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-dark-900 border border-white/8 text-dark-100'
                     }`}
                   >
                     {message.role === 'assistant' ? (
@@ -1159,7 +1159,7 @@ export default function ChatPage() {
                         <button
                           type="button"
                           onClick={() => handleRetryAssistantMessage(index)}
-                          className="rounded-lg border border-dark-700 px-2.5 py-1 text-xs font-medium text-dark-200 transition-colors hover:border-primary-400/40 hover:text-white"
+                          className="rounded-lg border border-white/8 px-2.5 py-1 text-xs font-medium text-dark-200 transition-colors hover:border-primary-400/40 hover:text-white"
                           aria-label="Retry message"
                         >
                           Retry
@@ -1173,7 +1173,7 @@ export default function ChatPage() {
               {/* Loading/streaming indicator */}
               {(sendMessageMutation.isPending || isStreaming) && (
                 <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-dark-800 px-4 py-3 text-dark-100 sm:max-w-[75%]">
+                  <div className="max-w-[85%] rounded-lg border border-white/8 bg-dark-900 px-3 py-2.5 text-dark-100 sm:max-w-[75%]">
                     {isStreaming ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-dark-300">
@@ -1203,12 +1203,12 @@ export default function ChatPage() {
         </div>
 
         <div
-          className="border-t border-dark-800 p-4 sm:p-5"
+          className="border-t border-white/8 p-4 sm:p-5"
           style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
         >
           {activeComposerNotice && (
             <div
-              className={`mb-3 rounded-2xl border px-4 py-3 text-sm ${
+              className={`mb-3 rounded-xl border px-4 py-3 text-sm ${
                 activeComposerNotice.tone === 'warning'
                   ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
                   : 'border-red-500/20 bg-red-500/10 text-red-200'
@@ -1234,7 +1234,7 @@ export default function ChatPage() {
               {attachments.map((attachment) => (
                 <div
                   key={attachment.id}
-                  className="group relative flex items-center gap-2 rounded-xl border border-dark-700 bg-dark-800 p-2"
+                  className="group relative flex items-center gap-2 rounded-xl border border-white/8 bg-dark-800 p-2"
                 >
                   {attachment.kind === 'image' ? (
                     <img
@@ -1268,7 +1268,7 @@ export default function ChatPage() {
 
           {/* Voice listening indicator */}
           {isListening && (
-            <div className="mb-3 flex items-center gap-2 rounded-2xl border border-primary-500/30 bg-primary-500/10 px-4 py-2.5 text-sm text-primary-100">
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary-500/30 bg-primary-500/10 px-4 py-2.5 text-sm text-primary-100">
               <span className="relative flex h-3 w-3">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-400 opacity-75" />
                 <span className="relative inline-flex h-3 w-3 rounded-full bg-primary-500" />
@@ -1298,7 +1298,7 @@ export default function ChatPage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={attachments.length >= MAX_ATTACHMENTS || isProcessingFiles}
-                className="flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 items-center justify-center rounded-2xl bg-dark-800 text-dark-300 transition-colors hover:bg-dark-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 items-center justify-center rounded-xl bg-dark-800 text-dark-300 transition-colors hover:bg-dark-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="上传图片或文档"
                 title="上传图片或文档"
               >
@@ -1318,7 +1318,7 @@ export default function ChatPage() {
                 onPointerLeave={() => isListening && stopVoice()}
                 onPointerCancel={() => stopVoice()}
                 disabled={sendMessageMutation.isPending}
-                className={`flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 select-none items-center justify-center rounded-2xl transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 select-none items-center justify-center rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   isListening
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-800 text-dark-300 hover:bg-dark-700 hover:text-white'
@@ -1334,7 +1334,7 @@ export default function ChatPage() {
             {isStreaming ? (
               <button
                 onClick={handleStopStreaming}
-                className="flex h-12 min-h-[48px] w-12 min-w-[48px] items-center justify-center rounded-2xl bg-red-500 text-white transition-colors hover:bg-red-600"
+                className="flex h-12 min-h-[48px] w-12 min-w-[48px] items-center justify-center rounded-xl bg-red-500 text-white transition-colors hover:bg-red-600"
                 aria-label="Stop generating"
               >
                 <Square className="h-5 w-5" />
@@ -1351,7 +1351,7 @@ export default function ChatPage() {
                   disabled={sendMessageMutation.isPending || isStreaming}
                   aria-invalid={hasInsufficientCredits}
                   aria-label={`Message ${agent.name}`}
-                  className="min-h-[48px] w-full resize-none rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 pr-4 text-base text-white placeholder-dark-500 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
+                  className="min-h-[48px] w-full resize-none rounded-xl border border-white/8 bg-dark-800 px-4 py-3 pr-4 text-base text-white placeholder-dark-500 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
                   style={{ maxHeight: '160px' }}
                 />
               </div>
@@ -1360,7 +1360,7 @@ export default function ChatPage() {
               <button
                 onClick={handleSendMessage}
                 disabled={(!draft.trim() && attachments.length === 0) || sendMessageMutation.isPending || hasInsufficientCredits}
-                className="flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 items-center justify-center rounded-2xl bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 items-center justify-center rounded-xl bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 {sendMessageMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}

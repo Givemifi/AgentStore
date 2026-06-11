@@ -47,8 +47,8 @@ export default function MFASetupModal({ onClose, onComplete }: MFASetupModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-md mx-4 w-full" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-md mx-4 w-full" onClick={e => e.stopPropagation()}>
         {step === 'qr' && (
           <>
             <h3 className="text-lg font-semibold text-white mb-4">Set Up Two-Factor Authentication</h3>
@@ -66,7 +66,7 @@ export default function MFASetupModal({ onClose, onComplete }: MFASetupModalProp
                 <code className="block text-xs bg-dark-800 text-dark-300 px-3 py-2 rounded-lg font-mono break-all">{secret}</code>
               </div>
             )}
-            <button onClick={() => setStep('verify')} className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 transition-all text-sm">
+            <button onClick={() => setStep('verify')} className="w-full py-2.5 px-4 bg-primary-500 hover:bg-primary-600 transition-all text-sm">
               Next
             </button>
           </>
@@ -86,11 +86,11 @@ export default function MFASetupModal({ onClose, onComplete }: MFASetupModalProp
                 inputMode="numeric"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white text-center text-lg tracking-widest focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white text-center text-lg tracking-widest focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                 placeholder="000000"
                 maxLength={6}
               />
-              <button type="submit" disabled={loading} className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 transition-all text-sm">
+              <button type="submit" disabled={loading} className="w-full py-2.5 px-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 transition-all text-sm">
                 {loading ? 'Verifying...' : 'Enable MFA'}
               </button>
             </form>
@@ -107,10 +107,10 @@ export default function MFASetupModal({ onClose, onComplete }: MFASetupModalProp
               ))}
             </div>
             <div className="flex gap-2">
-              <button onClick={copyRecoveryCodes} className="flex-1 py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all text-sm flex items-center justify-center gap-2">
+              <button onClick={copyRecoveryCodes} className="flex-1 py-2.5 px-4 bg-dark-800 border border-white/8 text-white font-medium rounded-lg hover:bg-dark-700 transition-all text-sm flex items-center justify-center gap-2">
                 <Copy className="w-4 h-4" /> Copy
               </button>
-              <button onClick={() => { onComplete(); onClose(); }} className="flex-1 py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 transition-all text-sm">
+              <button onClick={() => { onComplete(); onClose(); }} className="flex-1 py-2.5 px-4 bg-primary-500 hover:bg-primary-600 transition-all text-sm">
                 Done
               </button>
             </div>

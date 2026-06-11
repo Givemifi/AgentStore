@@ -133,50 +133,50 @@ export default function Layout() {
     <div className="min-h-screen bg-dark-950">
       <ImpersonationBanner />
       {/* Header */}
-      <header className={`sticky ${isImpersonating ? 'top-10' : 'top-0'} z-40 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800`}>
+      <header className={`sticky ${isImpersonating ? 'top-10' : 'top-0'} z-40 bg-dark-950/95 border-b border-white/8`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14">
             {/* Logo + Nav */}
             <div className="flex items-center gap-6">
               <Link to="/dashboard" className="flex items-center gap-2">
                 {(logoMode === 'image' || logoMode === 'both') && logoUrl ? (
-                  <img src={logoUrl} alt={appName} className="h-8 w-8 rounded-lg object-contain" />
+                  <img src={logoUrl} alt={appName} className="h-6 w-6 rounded-md object-contain" />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">{appName.slice(0, 2).toUpperCase()}</span>
+                  <div className="w-6 h-6 rounded-md bg-primary-500 flex items-center justify-center">
+                    <span className="text-white font-bold text-[10px]">{appName.slice(0, 2).toUpperCase()}</span>
                   </div>
                 )}
                 {(logoMode === 'text' || logoMode === 'both') && (
-                  <span className="font-semibold text-white hidden sm:block">{appName}</span>
+                  <span className="font-semibold text-white text-[13px] hidden sm:block">{appName}</span>
                 )}
               </Link>
 
               {isAuthenticated && (
-                <nav className="hidden md:flex items-center gap-1">
+                <nav className="hidden md:flex items-center gap-0.5">
                   {navItems.map((item) => (
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors ${
                         isActive(item.path)
-                          ? 'bg-primary-500/20 text-primary-400'
-                          : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
+                          ? 'bg-white/5 text-white'
+                          : 'text-dark-400 hover:text-white hover:bg-white/5'
                       }`}
                     >
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className="w-3.5 h-3.5" />
                       <span>{item.label}</span>
                     </Link>
                   ))}
                   {memberships.some(m => m.isRoot) && (
                     <Link
                       to="/admin"
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors ${
                         location.pathname.startsWith('/admin')
-                          ? 'bg-accent-purple/20 text-accent-purple'
-                          : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
+                          ? 'bg-white/5 text-white'
+                          : 'text-dark-400 hover:text-white hover:bg-white/5'
                       }`}
                     >
-                      <Shield className="w-4 h-4" />
+                      <Shield className="w-3.5 h-3.5" />
                       <span>Admin</span>
                     </Link>
                   )}
@@ -186,19 +186,19 @@ export default function Layout() {
 
             {/* Right side */}
             {isAuthenticated && (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 {/* Tenant Switcher */}
                 {memberships.length > 1 && (
                   <div className="relative" ref={menuRef}>
                     <button
                       onClick={() => setShowTenantMenu(!showTenantMenu)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800 border border-dark-700 text-sm text-dark-300 hover:text-white transition-colors"
+                      className="flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-white/8 text-[13px] text-dark-300 hover:border-white/14 hover:text-white transition-colors"
                     >
                       <span className="max-w-[120px] truncate">{activeTenant?.tenantName}</span>
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                     {showTenantMenu && (
-                      <div className="absolute right-0 mt-2 w-56 bg-dark-800 border border-dark-700 rounded-xl shadow-xl py-1 z-50">
+                      <div className="absolute right-0 mt-1.5 w-56 bg-dark-900 border border-white/8 rounded-lg py-1 z-50">
                         {memberships.map((m) => (
                           <button
                             key={m.tenantId}
@@ -206,10 +206,10 @@ export default function Layout() {
                               setActiveTenant(m);
                               setShowTenantMenu(false);
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                            className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${
                               m.tenantId === activeTenant?.tenantId
-                                ? 'bg-primary-500/10 text-primary-400'
-                                : 'text-dark-300 hover:bg-dark-700 hover:text-white'
+                                ? 'bg-white/5 text-white'
+                                : 'text-dark-400 hover:bg-white/5 hover:text-white'
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -227,10 +227,10 @@ export default function Layout() {
                 {showCredits && (
                   <button
                     onClick={() => navigate(hasBundles ? '/buy-credits' : '/plan')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-800 border border-dark-700 text-sm text-dark-300 hover:text-white hover:border-primary-500/30 transition-colors"
+                    className="flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-white/8 text-[13px] text-dark-300 hover:border-white/14 hover:text-white transition-colors"
                     title="Usage credits"
                   >
-                    <Zap className="w-4 h-4 text-primary-400" />
+                    <Zap className="w-3.5 h-3.5 text-primary-400" />
                     <span className="font-medium">{tenantCredits.toLocaleString()}</span>
                   </button>
                 )}
@@ -242,7 +242,7 @@ export default function Layout() {
                   title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
                   aria-label="Toggle theme"
                 >
-                  {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
 
                 {/* Language switcher */}
@@ -254,16 +254,16 @@ export default function Layout() {
                   className="relative text-dark-400 hover:text-white transition-colors"
                   aria-label="Messages"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-primary-500 text-white text-[10px] font-medium rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="absolute -top-1.5 -right-1.5 bg-primary-500 text-white text-[10px] font-medium rounded-full w-3.5 h-3.5 flex items-center justify-center">
                       {unreadCount}
                     </span>
                   )}
                 </Link>
 
                 {/* User info + Logout */}
-                <span className="text-sm text-dark-400 hidden sm:block">{user?.displayName}</span>
+                <span className="text-[13px] text-dark-400 hidden sm:block">{user?.displayName}</span>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-2 text-dark-400 hover:text-white transition-colors"
@@ -279,10 +279,10 @@ export default function Layout() {
 
       {/* Announcement Banner */}
       {latestAnnouncement && latestAnnouncement.id !== dismissedAnnouncement && (
-        <div className="bg-primary-500/10 border-b border-primary-500/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              <Megaphone className="w-4 h-4 text-primary-400 flex-shrink-0" />
+        <div className="border-b border-primary-500/20 bg-primary-500/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[13px]">
+              <Megaphone className="w-3.5 h-3.5 text-primary-400 flex-shrink-0" />
               <span className="text-primary-300">{latestAnnouncement.title}</span>
             </div>
             <button
@@ -299,7 +299,7 @@ export default function Layout() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 pb-28 pt-8 sm:px-6 lg:px-8 md:pb-8">
+      <main className="max-w-7xl mx-auto px-4 pb-28 pt-6 sm:px-6 lg:px-8 md:pb-8">
         <Outlet context={{ setUnreadCount, showTeam }} />
       </main>
 

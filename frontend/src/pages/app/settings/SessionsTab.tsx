@@ -54,7 +54,7 @@ export default function SessionsTab() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Monitor className="w-5 h-5 text-dark-400" />

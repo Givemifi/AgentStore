@@ -28,7 +28,7 @@ export default function AboutPage() {
         </h1>
       </div>
 
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8">
+      <div className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-8">
         <div className="space-y-6">
           <div>
             <p className="text-sm text-dark-400 mb-1">Software</p>

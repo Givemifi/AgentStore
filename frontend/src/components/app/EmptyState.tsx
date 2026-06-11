@@ -17,8 +17,8 @@ export default function EmptyState({ icon: Icon, title, description, action, cla
   const actionClassName = 'mt-6 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600';
 
   return (
-    <div className={`rounded-[26px] border border-dashed border-white/10 bg-dark-950/70 px-6 py-14 text-center ${className}`}>
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-dark-900/80 text-primary-300">
+    <div className={`rounded-lg border border-dashed border-white/10 bg-dark-950/70 px-6 py-14 text-center ${className}`}>
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-white/8 bg-dark-900/80 text-primary-300">
         <Icon className="h-6 w-6" />
       </div>
       <h2 className="mt-5 text-xl font-semibold text-white">{title}</h2>

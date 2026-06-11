@@ -78,7 +78,7 @@ export default function LLMConfigPage() {
 
   if (axios.isAxiosError(error) && error.response?.status === 403) {
     return (
-      <div className="max-w-2xl mx-auto rounded-2xl border border-amber-500/25 bg-amber-500/10 p-6 text-amber-100">
+      <div className="max-w-2xl mx-auto rounded-xl border border-amber-500/25 bg-amber-500/10 p-6 text-amber-100">
         <div className="flex items-start gap-3">
           <ShieldAlert className="mt-0.5 h-6 w-6 flex-shrink-0" />
           <div>
@@ -105,7 +105,7 @@ export default function LLMConfigPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6">
+        <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Key className="w-5 h-5" />
             API Configuration
@@ -125,7 +125,7 @@ export default function LLMConfigPage() {
                   setValidationErrors((current) => ({ ...current, apiKey: undefined }));
                 }}
                 placeholder={config?.apiKey ? '******** (saved)' : 'Enter API key'}
-                className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
               />
               {validationErrors.apiKey && <p className="mt-2 text-sm text-red-300">{validationErrors.apiKey}</p>}
             </div>
@@ -144,7 +144,7 @@ export default function LLMConfigPage() {
                   setValidationErrors((current) => ({ ...current, baseURL: undefined }));
                 }}
                 placeholder="https://api.openai.com/v1"
-                className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
               />
               {validationErrors.baseURL && <p className="mt-2 text-sm text-red-300">{validationErrors.baseURL}</p>}
               <p className="text-xs text-dark-500 mt-1">
@@ -165,7 +165,7 @@ export default function LLMConfigPage() {
                   setValidationErrors((current) => ({ ...current, model: undefined }));
                 }}
                 placeholder="gpt-4o-mini"
-                className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-3 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
               />
               {validationErrors.model && <p className="mt-2 text-sm text-red-300">{validationErrors.model}</p>}
             </div>
@@ -176,7 +176,7 @@ export default function LLMConfigPage() {
                 id="isActive"
                 checked={form.isActive}
                 onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                className="w-5 h-5 rounded border-dark-700 bg-dark-800 text-primary-500 focus:ring-primary-500"
+                className="w-5 h-5 rounded border-white/8 bg-dark-800 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="isActive" className="text-dark-300">
                 Enable AI Chat Feature

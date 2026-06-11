@@ -31,8 +31,8 @@ export default function InvoiceModal({ tx, tenantName, onClose }: InvoiceModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-lg mx-4 w-full" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-lg mx-4 w-full" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-white">Invoice</h3>
           <button onClick={onClose} className="text-dark-400 hover:text-white" aria-label="Close">&times;</button>
@@ -51,7 +51,7 @@ export default function InvoiceModal({ tx, tenantName, onClose }: InvoiceModalPr
             <span className="text-dark-400 text-sm">Bill To</span>
             <span className="text-white text-sm">{tenantName}</span>
           </div>
-          <hr className="border-dark-800" />
+          <hr className="border-white/8" />
           <div className="flex justify-between">
             <span className="text-dark-300 text-sm">{tx.description}</span>
             <span className="text-white text-sm font-medium">
@@ -70,7 +70,7 @@ export default function InvoiceModal({ tx, tenantName, onClose }: InvoiceModalPr
               </div>
             </>
           )}
-          <hr className="border-dark-800" />
+          <hr className="border-white/8" />
           <div className="flex justify-between">
             <span className="text-white font-semibold">Total</span>
             <span className="text-white font-semibold">${(tx.amountCents / 100).toFixed(2)} {tx.currency.toUpperCase()}</span>

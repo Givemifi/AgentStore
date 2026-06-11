@@ -40,15 +40,15 @@ export default function VerifyEmailPage() {
         )}
 
         {status === 'success' && (
-          <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8">
-            <div className="w-14 h-14 rounded-2xl bg-accent-emerald/20 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-dark-900 border border-white/8 rounded-lg p-8">
+            <div className="w-14 h-14 rounded-xl bg-accent-emerald/20 flex items-center justify-center mx-auto mb-4">
               <MailCheck className="w-7 h-7 text-accent-emerald" />
             </div>
             <h1 className="text-xl font-bold text-white mb-2">{t('verifyEmail.successHeading')}</h1>
             <p className="text-dark-400 mb-6">{message}</p>
             <Link
               to="/login"
-              className="inline-block py-2.5 px-6 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 transition-all"
+              className="inline-block py-2.5 px-6 bg-primary-500 hover:bg-primary-600 transition-all"
             >
               {t('verifyEmail.continueToLogin')}
             </Link>
@@ -56,15 +56,15 @@ export default function VerifyEmailPage() {
         )}
 
         {status === 'error' && (
-          <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-dark-900 border border-white/8 rounded-lg p-8">
+            <div className="w-14 h-14 rounded-xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
               <MailX className="w-7 h-7 text-red-400" />
             </div>
             <h1 className="text-xl font-bold text-white mb-2">{t('verifyEmail.failedHeading')}</h1>
             <p className="text-dark-400 mb-6">{message}</p>
             <Link
               to="/login"
-              className="inline-block py-2.5 px-6 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
+              className="inline-block py-2.5 px-6 bg-dark-800 border border-white/8 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
             >
               {t('verifyEmail.backToLogin')}
             </Link>

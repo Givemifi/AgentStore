@@ -34,7 +34,7 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8 text-center max-w-md">
+        <div className="bg-dark-900 border border-white/8 rounded-lg p-8 text-center max-w-md">
           <h1 className="text-xl font-bold text-white mb-2">{t('resetPassword.invalidLink')}</h1>
           <p className="text-dark-400 mb-4">{t('resetPassword.invalidLinkDesc')}</p>
           <Link to="/forgot-password" className="text-primary-400 hover:text-primary-300 transition-colors">
@@ -49,13 +49,13 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
             <KeyRound className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">{t('resetPassword.heading')}</h1>
         </div>
 
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+        <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
           {success ? (
             <div className="text-center py-4">
               <CheckCircle className="w-12 h-12 text-accent-emerald mx-auto mb-3" />
@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                   placeholder={t('resetPassword.passwordPlaceholder')}
                 />
               </div>
@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full py-2.5 px-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {loading ? t('resetPassword.resetting') : t('resetPassword.reset')}
               </button>

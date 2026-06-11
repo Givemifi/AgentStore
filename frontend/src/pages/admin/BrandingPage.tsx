@@ -216,7 +216,7 @@ export default function BrandingPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-dark-900/50 border border-dark-800 rounded-xl p-1">
+      <div className="flex gap-1 mb-6 bg-dark-900/50 border border-white/8 rounded-xl p-1">
         {tabs.map(t => (
           <button
             key={t.key}
@@ -383,18 +383,18 @@ export default function BrandingPage() {
           <Section title="Navigation" description="Configure which items appear in the app sidebar. Built-in items can be hidden but not removed. Custom items link to your custom pages.">
             <div className="space-y-2">
               {config.navItems.map((item, i) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 bg-dark-800/50 border border-dark-700/50 rounded-lg">
+                <div key={item.id} className="flex items-center gap-3 p-3 bg-dark-800/50 border border-white/8/50 rounded-lg">
                   <GripVertical className="w-4 h-4 text-dark-600 shrink-0" />
                   <input
                     value={item.label}
                     onChange={e => updateNavItem(i, 'label', e.target.value)}
-                    className={`w-32 px-2 py-1 border rounded text-sm ${!isOwner || item.isBuiltIn ? 'bg-dark-800/50 border-dark-700/50 text-dark-400 cursor-not-allowed' : 'bg-dark-800 border-dark-700 text-white'}`}
+                    className={`w-32 px-2 py-1 border rounded text-sm ${!isOwner || item.isBuiltIn ? 'bg-dark-800/50 border-white/8/50 text-dark-400 cursor-not-allowed' : 'bg-dark-800 border-white/8 text-white'}`}
                     disabled={!isOwner || item.isBuiltIn}
                   />
                   <select
                     value={item.icon}
                     onChange={e => updateNavItem(i, 'icon', e.target.value)}
-                    className={`w-40 px-2 py-1 border rounded text-sm ${!isOwner ? 'bg-dark-800/50 border-dark-700/50 text-dark-400 cursor-not-allowed' : 'bg-dark-800 border-dark-700 text-white'}`}
+                    className={`w-40 px-2 py-1 border rounded text-sm ${!isOwner ? 'bg-dark-800/50 border-white/8/50 text-dark-400 cursor-not-allowed' : 'bg-dark-800 border-white/8 text-white'}`}
                     disabled={!isOwner}
                   >
                     <option value="LayoutDashboard">Dashboard</option>
@@ -416,7 +416,7 @@ export default function BrandingPage() {
                     <input
                       value={item.target}
                       onChange={e => updateNavItem(i, 'target', e.target.value)}
-                      className={`flex-1 px-2 py-1 border rounded text-sm font-mono ${!isOwner ? 'bg-dark-800/50 border-dark-700/50 text-dark-400 cursor-not-allowed' : 'bg-dark-800 border-dark-700 text-white'}`}
+                      className={`flex-1 px-2 py-1 border rounded text-sm font-mono ${!isOwner ? 'bg-dark-800/50 border-white/8/50 text-dark-400 cursor-not-allowed' : 'bg-dark-800 border-white/8 text-white'}`}
                       disabled={!isOwner}
                       placeholder="/p/my-page"
                     />
@@ -470,13 +470,13 @@ export default function BrandingPage() {
           </div>
 
           {pagesLoading ? <LoadingSpinner size="lg" className="py-12" /> : (
-            <div className="bg-dark-900/50 border border-dark-800 rounded-2xl overflow-hidden">
+            <div className="bg-dark-900/50 border border-white/8 rounded-xl overflow-hidden">
               {pages.length === 0 ? (
                 <div className="py-12 text-center text-dark-400">No custom pages yet.</div>
               ) : (
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-dark-800">
+                    <tr className="border-b border-white/8">
                       <th className="text-left px-6 py-3 text-sm font-medium text-dark-400">Title</th>
                       <th className="text-left px-6 py-3 text-sm font-medium text-dark-400">Slug</th>
                       <th className="text-left px-6 py-3 text-sm font-medium text-dark-400">Status</th>
@@ -485,7 +485,7 @@ export default function BrandingPage() {
                   </thead>
                   <tbody>
                     {pages.map(page => (
-                      <tr key={page.id} className="border-b border-dark-800/50">
+                      <tr key={page.id} className="border-b border-white/8/50">
                         <td className="px-6 py-3 text-sm text-white font-medium">{page.title}</td>
                         <td className="px-6 py-3 text-sm text-dark-400 font-mono">/p/{page.slug}</td>
                         <td className="px-6 py-3">
@@ -498,7 +498,7 @@ export default function BrandingPage() {
                         {isOwner && (
                           <td className="px-6 py-3 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => setEditingPage(page)} className="text-xs px-3 py-1.5 rounded-lg border border-dark-700 text-dark-300 hover:text-white transition-colors">
+                              <button onClick={() => setEditingPage(page)} className="text-xs px-3 py-1.5 rounded-lg border border-white/8 text-dark-300 hover:text-white transition-colors">
                                 Edit
                               </button>
                               <button onClick={() => handlePageDelete(page.id)} className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">
@@ -518,7 +518,7 @@ export default function BrandingPage() {
           {/* Page Editor Modal */}
           {isOwner && editingPage && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-              <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 max-w-2xl mx-4 w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-dark-900 border border-white/8 rounded-xl p-6 max-w-2xl mx-4 w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-white">{editingPage.id ? 'Edit Page' : 'New Page'}</h3>
                   <button onClick={() => setEditingPage(null)} className="text-dark-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -585,11 +585,11 @@ export default function BrandingPage() {
           {mediaLoading ? <LoadingSpinner size="lg" className="py-12" /> : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {media.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-dark-400 bg-dark-900/50 border border-dark-800 rounded-2xl">
+                <div className="col-span-full py-12 text-center text-dark-400 bg-dark-900/50 border border-white/8 rounded-xl">
                   No media files yet. Upload images to use in your content.
                 </div>
               ) : media.map(item => (
-                <div key={item.id} className="bg-dark-900/50 border border-dark-800 rounded-xl overflow-hidden group">
+                <div key={item.id} className="bg-dark-900/50 border border-white/8 rounded-xl overflow-hidden group">
                   {item.contentType.startsWith('image/') ? (
                     <div className="aspect-square bg-dark-800 flex items-center justify-center">
                       <img src={item.url} alt={item.filename} className="max-w-full max-h-full object-contain" />
@@ -631,12 +631,12 @@ export default function BrandingPage() {
 
 // --- Sub-components ---
 
-const inputClass = 'w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 transition-colors text-sm';
-const disabledInputClass = 'w-full px-3 py-2 bg-dark-800/50 border border-dark-700/50 rounded-lg text-dark-400 placeholder-dark-500 cursor-not-allowed transition-colors text-sm';
+const inputClass = 'w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 transition-colors text-sm';
+const disabledInputClass = 'w-full px-3 py-2 bg-dark-800/50 border border-white/8/50 rounded-lg text-dark-400 placeholder-dark-500 cursor-not-allowed transition-colors text-sm';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6">
+    <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6">
       <h3 className="text-md font-semibold text-white mb-1">{title}</h3>
       {description && <p className="text-sm text-dark-400 mb-4">{description}</p>}
       {!description && <div className="mb-4" />}
@@ -663,7 +663,7 @@ function ColorField({ label, value, onChange, isOwner = true }: { label: string;
           type="color"
           value={value || '#0ea5e9'}
           onChange={e => onChange(e.target.value)}
-          className={`w-10 h-10 rounded-lg border border-dark-700 bg-transparent ${isOwner ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+          className={`w-10 h-10 rounded-lg border border-white/8 bg-transparent ${isOwner ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
           disabled={!isOwner}
         />
         <input
@@ -696,11 +696,11 @@ function AssetUploader({ label, currentUrl, onUpload, onDelete, isOwner = true }
     <Field label={label}>
       <div className="flex items-center gap-3">
         {currentUrl ? (
-          <div className="w-16 h-16 bg-dark-800 border border-dark-700 rounded-lg flex items-center justify-center overflow-hidden">
+          <div className="w-16 h-16 bg-dark-800 border border-white/8 rounded-lg flex items-center justify-center overflow-hidden">
             <img src={currentUrl} alt={label} className="max-w-full max-h-full object-contain" />
           </div>
         ) : (
-          <div className="w-16 h-16 bg-dark-800 border border-dark-700 border-dashed rounded-lg flex items-center justify-center">
+          <div className="w-16 h-16 bg-dark-800 border border-white/8 border-dashed rounded-lg flex items-center justify-center">
             <Upload className="w-5 h-5 text-dark-600" />
           </div>
         )}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Landmark, MessageCircle, PenLine, Scale, Search, Sparkles, TowerControl, Zap, Headphones, Globe2 } from 'lucide-react';
+import { ArrowRight, Landmark, MessageCircle, PenLine, Scale, Search, TowerControl, Zap, Headphones, Globe2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { agentsApi, brandingApi, usageApi } from '../../api/client';
@@ -127,44 +127,37 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-[28px] border border-white/8 bg-dark-950/70 p-1 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-        <div className="rounded-[24px] border border-primary-500/10 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),linear-gradient(180deg,rgba(17,24,39,0.96),rgba(2,6,23,0.92))] px-6 py-7 sm:px-8 sm:py-9 lg:px-10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary-200">
-                <Sparkles className="h-3.5 w-3.5" />
-                {t('dashboard.marketplace')}
-              </div>
-              <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                {t('dashboard.headline')}
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-dark-300 sm:text-base">
-                {t('dashboard.subtext')}
-              </p>
-              <label className="sr-only" htmlFor="agent-search">{t('dashboard.searchLabel')}</label>
-              <div className="mt-6 flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-dark-950 shadow-xl shadow-black/20">
-                <Search className="h-5 w-5 text-dark-400" />
-                <input
-                  id="agent-search"
-                  type="search"
-                  role="searchbox"
-                  aria-label={t('dashboard.searchLabel')}
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={t('dashboard.searchPlaceholder')}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-dark-950 placeholder:text-dark-400 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="min-w-full lg:min-w-[340px] lg:max-w-sm">
-              <CreditExplainer
-                balance={usageSummary ? availableCreditsValue : null}
-                perMessageCost={commonMessageCost}
-              />
-            </div>
+    <div className="space-y-6">
+      {/* Page header — Linear style: title + description + search, flat */}
+      <section className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-2xl flex-1">
+          <h1 className="text-[15px] font-semibold text-white">
+            {t('dashboard.marketplace')}
+          </h1>
+          <p className="mt-1 text-[13px] text-dark-400">
+            {t('dashboard.subtext')}
+          </p>
+          <label className="sr-only" htmlFor="agent-search">{t('dashboard.searchLabel')}</label>
+          <div className="mt-4 flex max-w-xl items-center gap-2 rounded-md border border-white/8 bg-dark-800 px-3 h-9 transition-colors focus-within:border-primary-500">
+            <Search className="h-4 w-4 text-dark-500 shrink-0" />
+            <input
+              id="agent-search"
+              type="search"
+              role="searchbox"
+              aria-label={t('dashboard.searchLabel')}
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={t('dashboard.searchPlaceholder')}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-dark-500 focus:outline-none"
+            />
           </div>
+        </div>
+
+        <div className="w-full lg:w-[300px] shrink-0">
+          <CreditExplainer
+            balance={usageSummary ? availableCreditsValue : null}
+            perMessageCost={commonMessageCost}
+          />
         </div>
       </section>
 
@@ -172,7 +165,7 @@ export default function DashboardPage() {
         <section
           role="region"
           aria-label="Custom dashboard content"
-          className="rounded-[26px] border border-white/8 bg-dark-950/80 p-6 text-dark-100"
+          className="rounded-lg border border-white/8 bg-dark-900 p-5 text-dark-100"
           dangerouslySetInnerHTML={{ __html: sanitizedDashboardHtml }}
         />
       ) : null}
@@ -186,17 +179,17 @@ export default function DashboardPage() {
       ) : null}
 
       {categories.length > 1 ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {categories.map((category) => (
             <button
               key={category}
               type="button"
               onClick={() => setSelectedCategory(category)}
               aria-pressed={selectedCategory === category}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              className={`rounded-md px-2.5 h-7 text-[13px] font-medium transition-colors ${
                 selectedCategory === category
                   ? 'bg-primary-500 text-white'
-                  : 'border border-white/8 bg-dark-900/70 text-dark-300 hover:border-primary-400/30 hover:text-white'
+                  : 'border border-white/8 text-dark-400 hover:border-white/14 hover:text-white'
               }`}
             >
               {category}
@@ -208,7 +201,7 @@ export default function DashboardPage() {
       {agentsLoading || !tenantReady ? (
         <AgentGridSkeleton />
       ) : agents && agents.length > 0 && filteredAgents.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filteredAgents.map((agent) => (
             <AgentCard
               key={agent.id}
@@ -244,76 +237,57 @@ function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
   const ExpertIcon = getExpertIcon(agent);
 
   return (
-    <div className="group rounded-[26px] border border-white/8 bg-gradient-to-br from-white/10 via-primary-500/5 to-transparent p-[1px] shadow-[0_24px_60px_-40px_rgba(0,0,0,0.95)] transition-transform duration-200 hover:-translate-y-1 hover:from-primary-400/30 hover:via-primary-500/10 hover:to-white/10">
-      <div className="flex h-full flex-col rounded-[25px] bg-dark-950/95 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div
-              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/6"
-              style={{ backgroundColor: `${agent.color}20` }}
-            >
-              <ExpertIcon className="h-6 w-6" style={{ color: agent.color }} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-dark-400">
-                {agent.category}
-              </p>
-              <h3 className="mt-2 text-xl font-semibold text-white">{agent.name}</h3>
-            </div>
-          </div>
-
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badge.className}`}>
-            {badge.label}
-          </span>
-        </div>
-
-        <p className="mt-5 text-sm leading-6 text-dark-300">{agent.description}</p>
-
-        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary-300">
-          {t('dashboard.bestFor', { category: agent.category })}
-        </p>
-
-        <div className="mt-6 rounded-2xl border border-white/6 bg-dark-900/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-dark-400">
-            {t('dashboard.suggestedPrompts')}
-          </p>
-          <ul className="mt-3 space-y-2.5">
-            {agent.suggestedPrompts?.slice(0, 3).map((example) => (
-              <li key={example}>
-                <button
-                  type="button"
-                  onClick={() => onPromptClick(example)}
-                  className="flex w-full items-start gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-dark-200 transition-colors hover:bg-dark-800 hover:text-white"
-                  aria-label={`Try prompt: ${example}`}
-                >
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary-400" />
-                  <span>{example}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-6 flex items-center justify-between border-t border-white/6 pt-5">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-dark-300">
-              <Zap className="h-4 w-4 text-primary-300" />
-              <span>{t('dashboard.creditsPerMessage', { count: agent.creditCost?.textMessageCredits ?? 1 })}</span>
-            </div>
-            {agent.capabilities?.includes('text_chat') && (
-              <span className="text-xs text-dark-400">{t('dashboard.textChat')}</span>
-            )}
-          </div>
-
-          <button
-            onClick={onStartChat}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
-            aria-label={`Start with ${agent.name}`}
+    <div className="group flex h-full flex-col rounded-lg border border-white/8 bg-dark-900 p-4 transition-colors hover:border-white/14">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
+            style={{ backgroundColor: `${agent.color}1a` }}
           >
-            {t('dashboard.start')}
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            <ExpertIcon className="h-4 w-4" style={{ color: agent.color }} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-[13px] font-semibold text-white">{agent.name}</h3>
+            <p className="mt-0.5 text-xs text-dark-500">{agent.category}</p>
+          </div>
         </div>
+
+        <span className={`rounded-md border px-1.5 py-0.5 text-[11px] font-medium ${badge.className}`}>
+          {badge.label}
+        </span>
+      </div>
+
+      <p className="mt-3 text-[13px] leading-5 text-dark-400 line-clamp-2">{agent.description}</p>
+
+      <div className="mt-3 space-y-0.5">
+        {agent.suggestedPrompts?.slice(0, 2).map((example) => (
+          <button
+            key={example}
+            type="button"
+            onClick={() => onPromptClick(example)}
+            className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-dark-400 transition-colors hover:bg-white/5 hover:text-white"
+            aria-label={`Try prompt: ${example}`}
+          >
+            <span className="h-1 w-1 shrink-0 rounded-full bg-primary-400" />
+            <span className="truncate">{example}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-auto flex items-center justify-between border-t border-white/8 pt-3 mt-4">
+        <div className="flex items-center gap-1.5 text-xs text-dark-400">
+          <Zap className="h-3 w-3 text-primary-400" />
+          <span>{t('dashboard.creditsPerMessage', { count: agent.creditCost?.textMessageCredits ?? 1 })}</span>
+        </div>
+
+        <button
+          onClick={onStartChat}
+          className="inline-flex h-7 items-center gap-1 rounded-md bg-primary-500 px-2.5 text-xs font-medium text-white transition-colors hover:bg-primary-600"
+          aria-label={`Start with ${agent.name}`}
+        >
+          {t('dashboard.start')}
+          <ArrowRight className="h-3 w-3" />
+        </button>
       </div>
     </div>
   );
@@ -321,37 +295,33 @@ function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
 
 function AgentGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="rounded-[26px] border border-white/8 bg-dark-950/80 p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <SkeletonBlock className="h-12 w-12 rounded-2xl" />
-              <div className="space-y-3">
+        <div key={index} className="rounded-lg border border-white/8 bg-dark-900 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <SkeletonBlock className="h-8 w-8 rounded-md" />
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3.5 w-28" />
                 <SkeletonBlock className="h-3 w-16" />
-                <SkeletonBlock className="h-6 w-40" />
               </div>
             </div>
-            <SkeletonBlock className="h-7 w-20 rounded-full" />
+            <SkeletonBlock className="h-5 w-14 rounded-md" />
           </div>
 
-          <div className="mt-6 space-y-3">
-            <SkeletonBlock className="h-4 w-full" />
-            <SkeletonBlock className="h-4 w-5/6" />
+          <div className="mt-4 space-y-2">
+            <SkeletonBlock className="h-3.5 w-full" />
+            <SkeletonBlock className="h-3.5 w-5/6" />
           </div>
 
-          <div className="mt-6 rounded-2xl border border-white/6 bg-dark-900/60 p-4">
-            <SkeletonBlock className="h-3 w-28" />
-            <div className="mt-4 space-y-3">
-              <SkeletonBlock className="h-4 w-full" />
-              <SkeletonBlock className="h-4 w-11/12" />
-              <SkeletonBlock className="h-4 w-4/5" />
-            </div>
+          <div className="mt-4 space-y-1.5">
+            <SkeletonBlock className="h-3 w-full" />
+            <SkeletonBlock className="h-3 w-11/12" />
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-white/6 pt-5">
-            <SkeletonBlock className="h-4 w-28" />
-            <SkeletonBlock className="h-10 w-28 rounded-xl" />
+          <div className="mt-4 flex items-center justify-between border-t border-white/8 pt-3">
+            <SkeletonBlock className="h-3 w-24" />
+            <SkeletonBlock className="h-7 w-16 rounded-md" />
           </div>
         </div>
       ))}
@@ -384,7 +354,7 @@ function EmptyExpertsState() {
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-xl bg-dark-800 ${className}`} />;
+  return <div className={`animate-pulse rounded-md bg-dark-800 ${className}`} />;
 }
 
 function getExpertBadge(agent: Agent) {

@@ -31,7 +31,7 @@ function RangeSelector({ value, onChange }: { value: Range; onChange: (r: Range)
   }, [onChange]);
 
   return (
-    <div className="flex gap-1 bg-dark-900/50 border border-dark-800 rounded-lg p-1">
+    <div className="flex gap-1 bg-dark-900/50 border border-white/8 rounded-lg p-1">
       {(['today', '7d', '30d', '90d', '1y'] as const).map(r => (
         <button
           key={r}
@@ -271,7 +271,7 @@ function RetentionTab() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-semibold text-white">Cohort Retention</h2>
-        <div className="flex gap-1 bg-dark-900/50 border border-dark-800 rounded-lg p-1">
+        <div className="flex gap-1 bg-dark-900/50 border border-white/8 rounded-lg p-1">
           {(['weekly', 'monthly'] as const).map(g => (
             <button
               key={g}
@@ -457,7 +457,7 @@ function GraphSubTab({ range }: { range: Range }) {
         <select
           value={selectedEvent}
           onChange={e => setSelectedEvent(e.target.value)}
-          className="bg-dark-800 border border-dark-700 text-white rounded-lg px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+          className="bg-dark-800 border border-white/8 text-white rounded-lg px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
         >
           <option value="">All Events</option>
           {eventTypes.map(et => (
@@ -520,7 +520,7 @@ function GraphSubTab({ range }: { range: Range }) {
             </thead>
             <tbody>
               {eventTypes.map(et => (
-                <tr key={et.eventName} className="border-t border-dark-800">
+                <tr key={et.eventName} className="border-t border-white/8">
                   <td className="py-2 text-white">{et.eventName}</td>
                   <td className="py-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -631,7 +631,7 @@ function FlowSubTab({ range, definitions, onEdit, onDelete }: {
             </thead>
             <tbody>
               {definitions.map(def => (
-                <tr key={def.id} className="border-t border-dark-800">
+                <tr key={def.id} className="border-t border-white/8">
                   <td className="py-2 text-white font-medium">{def.name}</td>
                   <td className="py-2 text-dark-300">{def.description || <span className="text-dark-600">&mdash;</span>}</td>
                   <td className="py-2 text-dark-400">{getParentName(def) || <span className="text-dark-600">&mdash;</span>}</td>
@@ -724,7 +724,7 @@ function EventsTab() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold text-white">Events</h2>
-          <div className="flex gap-1 bg-dark-900/50 border border-dark-800 rounded-lg p-1">
+          <div className="flex gap-1 bg-dark-900/50 border border-white/8 rounded-lg p-1">
             {([{ key: 'flow' as const, label: 'Flow' }, { key: 'graph' as const, label: 'Graph' }]).map(t => (
               <button
                 key={t.key}
@@ -805,7 +805,7 @@ export default function PMPage() {
       </div>
 
       {/* Tab Bar */}
-      <div className="flex gap-1 mb-8 bg-dark-900/50 border border-dark-800 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-8 bg-dark-900/50 border border-white/8 rounded-lg p-1 w-fit">
         {tabs.map(tab => (
           <button
             key={tab.key}

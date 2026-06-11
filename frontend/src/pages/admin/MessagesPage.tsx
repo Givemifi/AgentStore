@@ -47,7 +47,7 @@ export default function MessagesPage() {
       </div>
 
       {messages.length === 0 ? (
-        <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-12 text-center">
+        <div className="bg-dark-900/50 border border-white/8 rounded-xl p-12 text-center">
           <Mail className="w-12 h-12 text-dark-600 mx-auto mb-4" />
           <p className="text-dark-400">No messages yet</p>
         </div>
@@ -57,9 +57,9 @@ export default function MessagesPage() {
             <div
               key={msg.id}
               onClick={() => markAsRead(msg)}
-              className={`bg-dark-900/50 border rounded-2xl p-6 cursor-pointer transition-colors ${
+              className={`bg-dark-900/50 border rounded-xl p-6 cursor-pointer transition-colors ${
                 msg.read
-                  ? 'border-dark-800 opacity-70'
+                  ? 'border-white/8 opacity-70'
                   : 'border-primary-500/30 hover:border-primary-500/50'
               }`}
             >

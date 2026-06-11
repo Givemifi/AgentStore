@@ -149,7 +149,7 @@ export default function UserProfilePage() {
     <div className="py-20 text-center">
       <p className="text-red-400 text-lg mb-2">Failed to load user profile</p>
       <p className="text-dark-400 text-sm font-mono">{fetchError}</p>
-      <button onClick={() => navigate('/admin/users')} className="mt-4 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white transition-colors">
+      <button onClick={() => navigate('/admin/users')} className="mt-4 px-4 py-2 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white transition-colors">
         Back to Users
       </button>
     </div>
@@ -173,7 +173,7 @@ export default function UserProfilePage() {
       </div>
 
       {/* Info / Edit Section */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">User Information</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -184,7 +184,7 @@ export default function UserProfilePage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               disabled={!canWrite}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -194,7 +194,7 @@ export default function UserProfilePage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={!canWrite}
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function UserProfilePage() {
       </div>
 
       {/* Status Section */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">Account Status</h2>
         <div className="flex items-center gap-4">
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -268,7 +268,7 @@ export default function UserProfilePage() {
       </div>
 
       {/* Memberships Section */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-6 mb-6">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">Tenant Memberships</h2>
 
         {memberships.length === 0 ? (
@@ -276,7 +276,7 @@ export default function UserProfilePage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-dark-700">
+              <tr className="border-b border-white/8">
                 <th className="text-left px-4 py-2 text-dark-400 font-medium">Tenant</th>
                 <th className="text-left px-4 py-2 text-dark-400 font-medium">Role</th>
                 <th className="text-left px-4 py-2 text-dark-400 font-medium">Plan</th>
@@ -289,7 +289,7 @@ export default function UserProfilePage() {
                 <tr
                   key={m.tenantId}
                   onClick={() => navigate(`/admin/tenants/${m.tenantId}`)}
-                  className="border-b border-dark-800/50 hover:bg-dark-800/30 cursor-pointer transition-colors"
+                  className="border-b border-white/8/50 hover:bg-dark-800/30 cursor-pointer transition-colors"
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -335,14 +335,14 @@ export default function UserProfilePage() {
       <div className="flex flex-col gap-6">
         <Link
           to={`/admin/logs?userId=${userId}`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300 hover:text-white hover:border-dark-600 transition-colors w-fit"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-300 hover:text-white hover:border-dark-600 transition-colors w-fit"
         >
           <FileText className="w-4 h-4" />
           View User Logs
         </Link>
 
         {isOwner && !isSelf && (
-          <div className="bg-red-500/5 border border-red-500/15 rounded-2xl p-6">
+          <div className="bg-red-500/5 border border-red-500/15 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-red-400 mb-2">Danger Zone</h2>
             <p className="text-dark-400 text-sm mb-4">
               Permanently delete this user account and all associated data. This action cannot be undone.
@@ -363,7 +363,7 @@ export default function UserProfilePage() {
       {isOwner && showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
-          <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+          <div className="relative bg-dark-900 border border-white/8 rounded-xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -389,7 +389,7 @@ export default function UserProfilePage() {
                 {preflight.ownerships && preflight.ownerships.length > 0 && (
                   <div className="space-y-4 mb-4">
                     {preflight.ownerships.map((own) => (
-                      <div key={own.tenantId} className="p-4 bg-dark-800 border border-dark-700 rounded-lg">
+                      <div key={own.tenantId} className="p-4 bg-dark-800 border border-white/8 rounded-lg">
                         <p className="text-sm text-white font-medium mb-2">
                           Tenant: {own.tenantName}
                           {own.isRoot && <span className="ml-2 text-xs text-red-400">(Root — cannot delete owner)</span>}
@@ -405,7 +405,7 @@ export default function UserProfilePage() {
                             <select
                               value={replacementOwners[own.tenantId] || ''}
                               onChange={(e) => setReplacementOwners(prev => ({ ...prev, [own.tenantId]: e.target.value }))}
-                              className="w-full px-3 py-2 bg-dark-900 border border-dark-700 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
+                              className="w-full px-3 py-2 bg-dark-900 border border-white/8 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
                             >
                               <option value="">Choose a replacement owner...</option>
                               {own.otherMembers.map((member) => (
@@ -451,7 +451,7 @@ export default function UserProfilePage() {
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={() => setShowDeleteModal(false)}
-                    className="px-4 py-2 bg-dark-800 border border-dark-700 text-dark-300 text-sm rounded-lg hover:text-white transition-colors"
+                    className="px-4 py-2 bg-dark-800 border border-white/8 text-dark-300 text-sm rounded-lg hover:text-white transition-colors"
                   >
                     Cancel
                   </button>

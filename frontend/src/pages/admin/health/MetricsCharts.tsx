@@ -158,7 +158,7 @@ export default function MetricsCharts({ metrics, filterMode }: MetricsChartsProp
 
   if (metrics.length === 0) {
     return (
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-8 text-center text-dark-400">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-8 text-center text-dark-400">
         No historical metrics available for this time range.
       </div>
     );

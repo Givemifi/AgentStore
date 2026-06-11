@@ -86,7 +86,7 @@ export default function BillingSuccessPage() {
   if (pollStatus === 'polling') {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center justify-center py-20 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-yellow-500/20 bg-yellow-500/10 text-yellow-400 mx-auto">
+        <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-yellow-400 mx-auto">
           <Clock className="h-10 w-10 animate-pulse" />
         </div>
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary-200">
@@ -110,7 +110,7 @@ export default function BillingSuccessPage() {
   if (pollStatus === 'timeout') {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center justify-center py-20 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-red-500/20 bg-red-500/10 text-red-400 mx-auto">
+        <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 mx-auto">
           <Clock className="h-10 w-10" />
         </div>
         <h1 className="mt-6 text-3xl font-bold text-white">未能确认支付状态</h1>
@@ -120,13 +120,13 @@ export default function BillingSuccessPage() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             to="/buy-credits"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-dark-700 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/8 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
           >
             重新购买
           </Link>
           <Link
             to="/dashboard"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-dark-700 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/8 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
           >
             <MessageCircle className="h-4 w-4" />
             Browse Agents
@@ -140,7 +140,7 @@ export default function BillingSuccessPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center justify-center py-20 text-center">
       <div role="status" aria-live="polite">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-accent-emerald/20 bg-accent-emerald/10 text-accent-emerald mx-auto">
+        <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-accent-emerald/20 bg-accent-emerald/10 text-accent-emerald mx-auto">
           <CheckCircle className="h-10 w-10" />
         </div>
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary-200">
@@ -165,14 +165,14 @@ export default function BillingSuccessPage() {
         ) : null}
         <Link
           to="/dashboard"
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-dark-700 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/8 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
         >
           <MessageCircle className="h-4 w-4" />
           Browse Agents
         </Link>
         <Link
           to="/plan"
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-dark-700 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/8 bg-dark-900 px-5 py-3 text-sm font-semibold text-dark-100 transition-colors hover:bg-dark-800"
         >
           <Receipt className="h-4 w-4" />
           View billing

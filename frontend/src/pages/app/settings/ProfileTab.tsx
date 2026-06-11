@@ -113,7 +113,7 @@ export default function ProfileTab() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
           <User className="w-5 h-5 text-dark-400" />
           Profile
@@ -123,11 +123,11 @@ export default function ProfileTab() {
             <span className="text-sm text-dark-400">Name</span>
             <span className="text-sm text-white">{user?.displayName}</span>
           </div>
-          <div className="flex items-center justify-between py-2 border-t border-dark-800">
+          <div className="flex items-center justify-between py-2 border-t border-white/8">
             <span className="text-sm text-dark-400">Email</span>
             <span className="text-sm text-white">{user?.email}</span>
           </div>
-          <div className="flex items-center justify-between py-2 border-t border-dark-800">
+          <div className="flex items-center justify-between py-2 border-t border-white/8">
             <span className="text-sm text-dark-400">Email Verified</span>
             <div className="flex items-center gap-2">
               {user?.emailVerified ? (
@@ -149,7 +149,7 @@ export default function ProfileTab() {
               )}
             </div>
           </div>
-          <div className="flex items-center justify-between py-2 border-t border-dark-800">
+          <div className="flex items-center justify-between py-2 border-t border-white/8">
             <span className="text-sm text-dark-400">Auth Methods</span>
             <div className="flex gap-2">
               {user?.authMethods.map((method) => (
@@ -163,7 +163,7 @@ export default function ProfileTab() {
       </div>
 
       {/* Change Password */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
           <KeyRound className="w-5 h-5 text-dark-400" />
           Change Password
@@ -184,7 +184,7 @@ export default function ProfileTab() {
               required
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
             />
           </div>
           <div>
@@ -194,7 +194,7 @@ export default function ProfileTab() {
               required
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
               placeholder="Min 10 chars, mixed case, number, special"
             />
             {newPassword && <PasswordStrength password={newPassword} />}
@@ -202,7 +202,7 @@ export default function ProfileTab() {
           <button
             type="submit"
             disabled={changingPassword}
-            className="py-2.5 px-6 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+            className="py-2.5 px-6 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
           >
             {changingPassword ? 'Changing...' : 'Change Password'}
           </button>
@@ -211,7 +211,7 @@ export default function ProfileTab() {
 
       {/* Invite Friends */}
       {user?.referralCode && (
-        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+        <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-2">
             <Share2 className="w-5 h-5 text-primary-400" />
             Invite Friends
@@ -223,7 +223,7 @@ export default function ProfileTab() {
             <input
               readOnly
               value={`${window.location.origin}/signup?ref=${user.referralCode}`}
-              className="flex-1 px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-200 font-mono truncate focus:outline-none"
+              className="flex-1 px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-sm text-dark-200 font-mono truncate focus:outline-none"
             />
             <button
               onClick={() => {
@@ -240,7 +240,7 @@ export default function ProfileTab() {
       )}
 
       {/* Data Export */}
-      <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+      <div className="bg-dark-900 border border-white/8 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-2">
           <Download className="w-5 h-5 text-dark-400" />
           Export My Data
@@ -256,7 +256,7 @@ export default function ProfileTab() {
       </div>
 
       {/* Delete Account */}
-      <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6">
+      <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-red-400 flex items-center gap-2 mb-2">
           <Trash2 className="w-5 h-5" />
           Delete Account
@@ -275,8 +275,8 @@ export default function ProfileTab() {
       {/* Delete Account Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
-          <div className="relative bg-dark-900 rounded-2xl border border-dark-700 p-6 w-full max-w-md" role="dialog" aria-modal="true">
+          <div className="fixed inset-0 bg-black/60" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-dark-900 rounded-xl border border-white/8 p-6 w-full max-w-md" role="dialog" aria-modal="true">
             <h3 className="text-lg font-semibold text-red-400 mb-2">Delete Account</h3>
             <p className="text-sm text-dark-400 mb-4">
               This will permanently delete your account and all data. If you own any teams with other members, you must transfer ownership first.
@@ -288,7 +288,7 @@ export default function ProfileTab() {
                   type="password"
                   value={deletePassword}
                   onChange={e => setDeletePassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-red-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-dark-800 border border-white/8 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-red-500 transition-colors"
                   placeholder="Enter your password"
                 />
               </div>

@@ -118,18 +118,18 @@ export default function PromotionsPage() {
       </div>
 
       {loading ? (
-        <div className="bg-dark-900/50 border border-dark-800 rounded-2xl overflow-hidden">
+        <div className="bg-dark-900/50 border border-white/8 rounded-xl overflow-hidden">
           <TableSkeleton rows={6} cols={6} />
         </div>
       ) : (
-        <div className="bg-dark-900/50 border border-dark-800 rounded-2xl overflow-hidden">
+        <div className="bg-dark-900/50 border border-white/8 rounded-xl overflow-hidden">
           {promotions.length === 0 ? (
             <div className="text-center py-12 text-dark-400">No promotion codes yet</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-dark-800">
+                  <tr className="border-b border-white/8">
                     <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase">Code</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase">Discount</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase">Status</th>
@@ -290,7 +290,7 @@ function EditPromotionModal({ promo, productNames, onClose, onUpdated }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-dark-900 rounded-2xl border border-dark-700 p-6 w-full max-w-lg" role="dialog" aria-modal="true">
+      <div className="relative bg-dark-900 rounded-xl border border-white/8 p-6 w-full max-w-lg" role="dialog" aria-modal="true">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-white">Edit Promotion</h3>
           <button onClick={onClose} className="p-2 text-dark-400 hover:text-white transition-colors" aria-label="Close">
@@ -347,7 +347,7 @@ function EditPromotionModal({ promo, productNames, onClose, onUpdated }: {
             )}
           </div>
 
-          <div className="border-t border-dark-800 pt-4 space-y-4">
+          <div className="border-t border-white/8 pt-4 space-y-4">
             <p className="text-xs text-dark-500">Editable fields below. Code, discount, redemption limit, expiration, and product restrictions cannot be changed after creation.</p>
 
             {/* Editable: coupon name */}
@@ -356,7 +356,7 @@ function EditPromotionModal({ promo, productNames, onClose, onUpdated }: {
               <input
                 value={couponName}
                 onChange={e => setCouponName(e.target.value)}
-                className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
 
@@ -368,7 +368,7 @@ function EditPromotionModal({ promo, productNames, onClose, onUpdated }: {
                   type="button"
                   onClick={() => setActive(true)}
                   className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    active ? 'bg-accent-emerald/20 border-accent-emerald/50 text-accent-emerald' : 'bg-dark-800 border-dark-700 text-dark-400'
+                    active ? 'bg-accent-emerald/20 border-accent-emerald/50 text-accent-emerald' : 'bg-dark-800 border-white/8 text-dark-400'
                   }`}
                 >
                   Active
@@ -377,7 +377,7 @@ function EditPromotionModal({ promo, productNames, onClose, onUpdated }: {
                   type="button"
                   onClick={() => setActive(false)}
                   className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    !active ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-dark-800 border-dark-700 text-dark-400'
+                    !active ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-dark-800 border-white/8 text-dark-400'
                   }`}
                 >
                   Inactive
@@ -483,7 +483,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-dark-900 rounded-2xl border border-dark-700 p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
+      <div className="relative bg-dark-900 rounded-xl border border-white/8 p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-white">Create Promotion Code</h3>
           <button onClick={onClose} className="p-2 text-dark-400 hover:text-white transition-colors" aria-label="Close">
@@ -498,7 +498,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase())}
               placeholder="e.g. SAVE20"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm font-mono focus:border-primary-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm font-mono focus:border-primary-500 focus:outline-none"
             />
           </div>
 
@@ -508,7 +508,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Display name for the coupon"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
             />
           </div>
 
@@ -519,7 +519,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                 type="button"
                 onClick={() => setDiscountType('percent')}
                 className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                  discountType === 'percent' ? 'bg-primary-500/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-dark-700 text-dark-400'
+                  discountType === 'percent' ? 'bg-primary-500/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-white/8 text-dark-400'
                 }`}
               >
                 Percentage
@@ -528,7 +528,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                 type="button"
                 onClick={() => setDiscountType('amount')}
                 className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                  discountType === 'amount' ? 'bg-primary-500/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-dark-700 text-dark-400'
+                  discountType === 'amount' ? 'bg-primary-500/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-white/8 text-dark-400'
                 }`}
               >
                 Fixed Amount
@@ -544,7 +544,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                 inputMode="decimal"
                 value={percentOff}
                 onChange={e => setPercentOff(e.target.value)}
-                className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
           ) : (
@@ -555,7 +555,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                 inputMode="decimal"
                 value={amountOff}
                 onChange={e => setAmountOff(e.target.value)}
-                className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
           )}
@@ -569,7 +569,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                 value={maxRedemptions}
                 onChange={e => setMaxRedemptions(e.target.value)}
                 placeholder="Unlimited"
-                className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
             <div className="flex-1">
@@ -582,13 +582,13 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                 value={expiresAt}
                 onChange={e => setExpiresAt(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none [color-scheme:dark]"
+                className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm focus:border-primary-500 focus:outline-none [color-scheme:dark]"
               />
             </div>
           </div>
 
           {/* Product restrictions */}
-          <div className="border-t border-dark-800 pt-4">
+          <div className="border-t border-white/8 pt-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -613,7 +613,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                         <p className="text-xs font-medium text-dark-400 uppercase tracking-wide mb-2">Plans</p>
                         <div className="space-y-1.5">
                           {plans.map(p => (
-                            <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-dark-800/50 border border-dark-700/50 cursor-pointer hover:border-dark-600 transition-colors">
+                            <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-dark-800/50 border border-white/8/50 cursor-pointer hover:border-dark-600 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={selectedProducts.has(p.id)}
@@ -631,7 +631,7 @@ function CreatePromotionModal({ onClose, onCreated }: { onClose: () => void; onC
                         <p className="text-xs font-medium text-dark-400 uppercase tracking-wide mb-2">Credit Bundles</p>
                         <div className="space-y-1.5">
                           {bundles.map(b => (
-                            <label key={b.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-dark-800/50 border border-dark-700/50 cursor-pointer hover:border-dark-600 transition-colors">
+                            <label key={b.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-dark-800/50 border border-white/8/50 cursor-pointer hover:border-dark-600 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={selectedProducts.has(b.id)}

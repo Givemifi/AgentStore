@@ -146,8 +146,8 @@ export default function BuyCreditsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[28px] border border-white/8 bg-dark-950/70 p-1">
-        <div className="rounded-[24px] border border-primary-500/10 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),linear-gradient(180deg,rgba(17,24,39,0.96),rgba(2,6,23,0.92))] px-6 py-7 sm:px-8">
+      <section className="rounded-lg border border-white/8 bg-dark-950/70 p-1">
+        <div className="rounded-lg border border-primary-500/10 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),linear-gradient(180deg,rgba(17,24,39,0.96),rgba(2,6,23,0.92))] px-6 py-7 sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary-200">
@@ -162,7 +162,7 @@ export default function BuyCreditsPage() {
                 Use credits to chat with Agents. Credits are charged only after a successful response.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-dark-900/70 px-5 py-4">
+            <div className="rounded-xl border border-white/8 bg-dark-900/70 px-5 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-dark-400">Current balance</p>
               <p className="mt-2 text-2xl font-semibold text-white">{totalCredits.toLocaleString()} credits</p>
             </div>
@@ -170,7 +170,7 @@ export default function BuyCreditsPage() {
         </div>
       </section>
 
-      <div className="rounded-2xl border border-accent-emerald/20 bg-accent-emerald/10 p-4 text-sm text-accent-emerald">
+      <div className="rounded-xl border border-accent-emerald/20 bg-accent-emerald/10 p-4 text-sm text-accent-emerald">
         <div className="flex items-center gap-2 font-semibold">
           <CheckCircle className="h-4 w-4" />
           Credits are available immediately after checkout.
@@ -189,7 +189,7 @@ export default function BuyCreditsPage() {
                 className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
                   paymentMethod === m.id
                     ? m.color + ' ring-1 ring-current/30'
-                    : 'border-dark-800 bg-dark-900/50 text-dark-400 hover:border-dark-700'
+                    : 'border-white/8 bg-dark-900/50 text-dark-400 hover:border-white/8'
                 }`}
               >
                 <span className="shrink-0">{m.icon}</span>
@@ -217,7 +217,7 @@ export default function BuyCreditsPage() {
           'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
         }`}>
           {bundles.map((bundle, index) => (
-            <div key={bundle.id} className="rounded-2xl border border-dark-800 bg-dark-900/50 p-6 transition-all hover:border-primary-500/30">
+            <div key={bundle.id} className="rounded-xl border border-white/8 bg-dark-900/50 p-6 transition-all hover:border-primary-500/30">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-bold text-white">{bundle.name}</h3>

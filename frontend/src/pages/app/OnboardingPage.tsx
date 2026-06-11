@@ -82,7 +82,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-dark-950 px-4 py-10">
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-300">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary-500/15 text-primary-300">
             <Sparkles className="h-7 w-7" />
           </div>
           <h1 className="mt-5 text-3xl font-bold text-white">{t('onboarding.heading')}</h1>
@@ -114,12 +114,12 @@ export default function OnboardingPage() {
         </div>
 
         {step === 'goal' && (
-          <section className="rounded-3xl border border-dark-800 bg-dark-900/60 p-6">
+          <section className="rounded-xl border border-white/8 bg-dark-900/60 p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Target className="h-5 w-5 text-primary-300" />{t('onboarding.goalHeading')}</h2>
             <p className="mt-2 text-sm text-dark-400">{t('onboarding.goalSubtext')}</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {GOAL_KEYS.map((key) => (
-                <button key={key} type="button" onClick={() => chooseGoal(GOAL_VALUES[key])} className="rounded-2xl border border-dark-800 bg-dark-950/60 px-4 py-4 text-left font-semibold text-white transition-colors hover:border-primary-500/40 hover:bg-dark-900">
+                <button key={key} type="button" onClick={() => chooseGoal(GOAL_VALUES[key])} className="rounded-xl border border-white/8 bg-dark-950/60 px-4 py-4 text-left font-semibold text-white transition-colors hover:border-primary-500/40 hover:bg-dark-900">
                   {t(`onboarding.goals.${key}`)}
                 </button>
               ))}
@@ -128,7 +128,7 @@ export default function OnboardingPage() {
         )}
 
         {step === 'agent' && (
-          <section className="rounded-3xl border border-dark-800 bg-dark-900/60 p-6">
+          <section className="rounded-xl border border-white/8 bg-dark-900/60 p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white"><MessageCircle className="h-5 w-5 text-primary-300" />{t('onboarding.agentHeading')}</h2>
             <p className="mt-2 text-sm text-dark-400">
               {selectedGoal && selectedGoal !== 'Other' ? t('onboarding.agentSubtext_goal', { goal: selectedGoal }) : t('onboarding.agentSubtext_default')}
@@ -139,7 +139,7 @@ export default function OnboardingPage() {
                 <LoadingSpinner />
               </div>
             ) : recommendedAgents.length === 0 ? (
-              <div className="mt-8 rounded-2xl border border-dark-800 bg-dark-950/60 p-6 text-center">
+              <div className="mt-8 rounded-xl border border-white/8 bg-dark-950/60 p-6 text-center">
                 <p className="text-dark-400">{t('onboarding.noAgentsYet')}</p>
                 <button
                   type="button"
@@ -158,7 +158,7 @@ export default function OnboardingPage() {
                     type="button"
                     onClick={() => chooseAgent(agent)}
                     aria-label={`Choose ${agent.name}`}
-                    className="rounded-2xl border border-dark-800 bg-dark-950/60 p-4 text-left transition-colors hover:border-primary-500/40 hover:bg-dark-900"
+                    className="rounded-xl border border-white/8 bg-dark-950/60 p-4 text-left transition-colors hover:border-primary-500/40 hover:bg-dark-900"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-semibold text-white">{agent.name}</span>
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
         )}
 
         {step === 'prompt' && selectedAgent && (
-          <section className="rounded-3xl border border-dark-800 bg-dark-900/60 p-6">
+          <section className="rounded-xl border border-white/8 bg-dark-900/60 p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Sparkles className="h-5 w-5 text-primary-300" />{t('onboarding.promptHeading')}</h2>
             <p className="mt-2 text-sm text-dark-400">
               {t('onboarding.promptSubtext')}
@@ -205,7 +205,7 @@ export default function OnboardingPage() {
                   className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
                     selectedPrompt === prompt
                       ? 'border-primary-500 bg-primary-500/10 text-white'
-                      : 'border-dark-800 bg-dark-950/60 text-dark-200 hover:border-primary-500/40 hover:bg-dark-900'
+                      : 'border-white/8 bg-dark-950/60 text-dark-200 hover:border-primary-500/40 hover:bg-dark-900'
                   }`}
                 >
                   {prompt}
@@ -237,7 +237,7 @@ export default function OnboardingPage() {
         )}
 
         {step === 'credits' && (
-          <section className="rounded-3xl border border-dark-800 bg-dark-900/60 p-6">
+          <section className="rounded-xl border border-white/8 bg-dark-900/60 p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Zap className="h-5 w-5 text-primary-300" />{t('onboarding.readyHeading')}</h2>
             <p className="mt-2 text-sm text-dark-400">
               {t('onboarding.creditsBalance', { count: totalCredits.toLocaleString() }).split('<strong>').map((part, i) => {
@@ -247,7 +247,7 @@ export default function OnboardingPage() {
               })}
             </p>
 
-            <div className="mt-6 rounded-2xl border border-accent-emerald/20 bg-accent-emerald/10 p-4">
+            <div className="mt-6 rounded-xl border border-accent-emerald/20 bg-accent-emerald/10 p-4">
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-accent-emerald" />
                 <p className="text-sm text-accent-emerald">{t('onboarding.creditsNote')}</p>
@@ -255,7 +255,7 @@ export default function OnboardingPage() {
             </div>
 
             {selectedAgent && (
-              <div className="mt-6 rounded-2xl border border-dark-800 bg-dark-950/60 p-4">
+              <div className="mt-6 rounded-xl border border-white/8 bg-dark-950/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-dark-500">{t('onboarding.yourFirstChat')}</p>
                 <p className="mt-2 font-medium text-white">
                   {selectedAgent.name}
@@ -268,7 +268,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setStep('prompt')}
-                className="flex-1 rounded-xl border border-dark-700 bg-dark-900 px-4 py-3 font-semibold text-dark-200 transition-colors hover:bg-dark-800"
+                className="flex-1 rounded-xl border border-white/8 bg-dark-900 px-4 py-3 font-semibold text-dark-200 transition-colors hover:bg-dark-800"
               >
                 {t('onboarding.back')}
               </button>

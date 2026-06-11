@@ -18,7 +18,7 @@ function timeAgo(dateStr: string): string {
 export default function NodeCards({ nodes }: NodeCardsProps) {
   if (nodes.length === 0) {
     return (
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-8 text-center text-dark-400">
+      <div className="bg-dark-900/50 border border-white/8 rounded-xl p-8 text-center text-dark-400">
         No nodes registered yet. Metrics will appear after the first collection cycle (~60s).
       </div>
     );
@@ -29,7 +29,7 @@ export default function NodeCards({ nodes }: NodeCardsProps) {
       {nodes.map((node) => (
         <div
           key={node.id}
-          className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-5"
+          className="bg-dark-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-5"
         >
           <div className="flex items-start gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${

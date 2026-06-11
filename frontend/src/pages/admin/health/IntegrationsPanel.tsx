@@ -135,8 +135,8 @@ function SetupModal({ name, setupHelp, onClose }: { name: string; setupHelp: Rec
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <h3 className="text-lg font-semibold text-white">{help.title}</h3>
           <button onClick={onClose} className="text-dark-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -154,7 +154,7 @@ function SetupModal({ name, setupHelp, onClose }: { name: string; setupHelp: Rec
             ))}
           </ol>
           {help.links.length > 0 && (
-            <div className="pt-4 border-t border-dark-800">
+            <div className="pt-4 border-t border-white/8">
               <p className="text-xs font-medium text-dark-400 uppercase tracking-wide mb-2">Useful Links</p>
               <div className="flex flex-wrap gap-2">
                 {help.links.map((link) => (
@@ -163,7 +163,7 @@ function SetupModal({ name, setupHelp, onClose }: { name: string; setupHelp: Rec
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-700 border border-dark-700 rounded-lg text-xs text-dark-300 hover:text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-700 border border-white/8 rounded-lg text-xs text-dark-300 hover:text-white transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
                     {link.label}
@@ -200,8 +200,8 @@ function SendTestEmailModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+      <div className="bg-dark-900 border border-white/8 rounded-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-white/8">
           <h3 className="text-lg font-semibold text-white">Send Test Email</h3>
           <button onClick={onClose} className="text-dark-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -216,7 +216,7 @@ function SendTestEmailModal({ onClose }: { onClose: () => void }) {
               onChange={e => setEmail(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !loading) handleSend(); }}
               placeholder="you@example.com"
-              className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+              className="w-full px-3 py-2 bg-dark-800 border border-white/8 rounded-lg text-white text-sm placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
               autoFocus
               disabled={loading}
             />
@@ -273,10 +273,10 @@ export default function IntegrationsPanel({ integrations }: { integrations: Inte
           return (
             <div
               key={check.name}
-              className={`bg-dark-900/50 backdrop-blur-sm border rounded-2xl p-5 ${
+              className={`bg-dark-900/50 backdrop-blur-sm border rounded-xl p-5 ${
                 isUnhealthy ? 'border-red-500/30' :
                 isNotConfigured ? 'border-yellow-500/20' :
-                'border-dark-800'
+                'border-white/8'
               }`}
             >
               <div className="flex items-start gap-3">

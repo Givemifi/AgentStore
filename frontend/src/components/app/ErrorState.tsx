@@ -18,7 +18,7 @@ export default function ErrorState({
   className = '',
 }: ErrorStateProps) {
   return (
-    <div role="alert" className={`flex flex-col gap-4 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200 sm:flex-row sm:items-center sm:justify-between ${className}`}>
+    <div role="alert" className={`flex flex-col gap-4 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200 sm:flex-row sm:items-center sm:justify-between ${className}`}>
       <div className="flex gap-3">
         <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-300" />
         <div>

@@ -54,7 +54,7 @@ export default function AgentDetailPage() {
   return (
     <div className="min-h-screen bg-dark-950">
       {/* Minimal header */}
-      <header className="sticky top-0 z-40 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800">
+      <header className="sticky top-0 z-40 bg-dark-900/80 border-b border-white/8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link to="/" className="font-semibold text-white text-lg">AgentStore</Link>
           <div className="flex items-center gap-4">
@@ -88,10 +88,10 @@ export default function AgentDetailPage() {
         </Link>
 
         {/* Agent hero */}
-        <div className="rounded-[28px] border border-white/8 bg-dark-900/60 p-8">
+        <div className="rounded-lg border border-white/8 bg-dark-900/60 p-8">
           <div className="flex items-start gap-5">
             <div
-              className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-white/6"
+              className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border border-white/6"
               style={{ backgroundColor: `${agent.color || '#7C3AED'}20` }}
             >
               <MessageCircle className="h-8 w-8" style={{ color: agent.color || '#7C3AED' }} />
@@ -130,7 +130,7 @@ export default function AgentDetailPage() {
                     key={i}
                     type="button"
                     onClick={handleStart}
-                    className="w-full rounded-xl border border-dark-700 bg-dark-900 px-4 py-3 text-left text-sm text-dark-200 transition-colors hover:border-primary-500/30 hover:text-white"
+                    className="w-full rounded-xl border border-white/8 bg-dark-900 px-4 py-3 text-left text-sm text-dark-200 transition-colors hover:border-primary-500/30 hover:text-white"
                   >
                     {prompt}
                   </button>

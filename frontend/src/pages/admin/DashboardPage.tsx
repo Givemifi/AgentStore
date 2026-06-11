@@ -106,11 +106,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {readinessLoading ? (
-        <section className="mb-8 rounded-3xl border border-dark-800 bg-dark-900/60 p-6 text-sm text-dark-400">
+        <section className="mb-8 rounded-xl border border-white/8 bg-dark-900/60 p-6 text-sm text-dark-400">
           Loading launch readiness...
         </section>
       ) : readinessError ? (
-        <section className="mb-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-6 text-yellow-100">
+        <section className="mb-8 rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-6 text-yellow-100">
           <h2 className="text-xl font-bold text-white">Launch readiness unavailable</h2>
           <p className="mt-2 text-sm text-yellow-100/90">
             Refresh the page or check admin API health before using the checklist for launch decisions.
@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
       {unconfiguredIntegrations.length > 0 && (
         <Link
           to="/admin/health#integrations"
-          className="flex items-center gap-3 mb-6 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl hover:border-yellow-500/30 transition-colors"
+          className="flex items-center gap-3 mb-6 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl hover:border-yellow-500/30 transition-colors"
         >
           <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
             <Plug className="w-5 h-5 text-yellow-400" />
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Link to="/admin/users">
-          <Card className="hover:border-dark-700 transition-colors">
+          <Card className="hover:border-white/8 transition-colors">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center">
                 <Users className="w-6 h-6 text-primary-400" />
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
         </Link>
 
         <Link to="/admin/tenants">
-          <Card className="hover:border-dark-700 transition-colors">
+          <Card className="hover:border-white/8 transition-colors">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-accent-purple/20 flex items-center justify-center">
                 <Building2 className="w-6 h-6 text-accent-purple" />
@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
         </Link>
 
         <Link to="/admin/health">
-          <Card className={`hover:border-dark-700 transition-colors ${!healthy ? 'border-red-500/30' : ''}`}>
+          <Card className={`hover:border-white/8 transition-colors ${!healthy ? 'border-red-500/30' : ''}`}>
             <div className="flex items-center gap-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                 healthy ? 'bg-accent-emerald/20' : 'bg-red-500/20'
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
       {/* Business Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Link to="/admin/financial">
-          <Card className="hover:border-dark-700 transition-colors">
+          <Card className="hover:border-white/8 transition-colors">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-accent-emerald/20 flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-accent-emerald" />
@@ -246,7 +246,7 @@ export default function AdminDashboardPage() {
       {/* Charts */}
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Business Metrics</h2>
-        <div className="flex gap-1 bg-dark-900/50 border border-dark-800 rounded-lg p-1">
+        <div className="flex gap-1 bg-dark-900/50 border border-white/8 rounded-lg p-1">
           {(['7d', '30d', '1y'] as const).map(range => (
             <button
               key={range}
