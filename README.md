@@ -12,8 +12,6 @@ AgentStore helps operators launch a curated AI Agent marketplace where users can
 
 For builders, AgentStore is still a fork-ready SaaS/AI platform foundation built through conversation with [Claude Code](https://claude.ai/claude-code). It lets you start from a working marketplace and keep customizing the product through agentic engineering instead of rebuilding the same SaaS plumbing from scratch.
 
-**[Project Page](https://metavert.io/agentstore)**
-
 ---
 
 ## Why AgentStore Exists
@@ -979,14 +977,6 @@ Here's what's already wired up for you:
 
 ---
 
-## Privacy Policy
-
-AgentStore is self-hosted software — you control your database, your hosting, and your data. The MCP server connects to your AgentStore instance via the HTTP API using read-only tools — no data is transmitted to Metavert LLC or any third party.
-
-For the full privacy policy, see: https://www.metavert.io/agentstore-privacy-policy
-
----
-
 ## License
 
-[MIT](LICENSE) - Copyright 2026 Metavert LLC
+[MIT](LICENSE) - Copyright 2026 Givemifi

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 )
 
 func SecurityHeaders(next http.Handler) http.Handler {
@@ -13,14 +12,8 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
-		// Allow /api/docs to be embedded by metavert.io; deny framing for everything else
 		frameAncestors := "'none'"
-		xFrameOptions := "DENY"
-		if strings.HasPrefix(r.URL.Path, "/api/docs") {
-			frameAncestors = "https://metavert.io"
-			xFrameOptions = "ALLOW-FROM https://metavert.io"
-		}
-		w.Header().Set("X-Frame-Options", xFrameOptions)
+		w.Header().Set("X-Frame-Options", "DENY")
 
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+

@@ -244,8 +244,8 @@ func TestSecurityHeadersApiDocsPath(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	xfo := rr.Header().Get("X-Frame-Options")
-	if xfo != "ALLOW-FROM https://metavert.io" {
-		t.Errorf("expected ALLOW-FROM for /api/docs, got %q", xfo)
+	if xfo != "DENY" {
+		t.Errorf("expected DENY for /api/docs, got %q", xfo)
 	}
 
 	csp := rr.Header().Get("Content-Security-Policy")
