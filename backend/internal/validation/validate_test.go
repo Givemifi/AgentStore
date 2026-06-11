@@ -556,3 +556,145 @@ func TestValidate_GeneratingChatMessageAllowsEmptyContent(t *testing.T) {
 		t.Fatalf("expected generating placeholder message to pass: %v", err)
 	}
 }
+
+func validKnowledgeDocument() models.KnowledgeDocument {
+	return models.KnowledgeDocument{
+		TenantID:   primitive.NewObjectID(),
+		AgentID:    "growth-strategist",
+		Name:       "Pricing FAQ",
+		SourceType: models.KnowledgeSourceText,
+		Status:     models.KnowledgeStatusProcessing,
+		ChunkCount: 0,
+		CharCount:  120,
+		CreatedBy:  primitive.NewObjectID(),
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+}
+
+func TestValidate_ValidKnowledgeDocument(t *testing.T) {
+	doc := validKnowledgeDocument()
+	if err := Validate(&doc); err != nil {
+		t.Fatalf("expected valid knowledge document to pass: %v", err)
+	}
+}
+
+func TestValidate_KnowledgeDocumentInvalidSourceType(t *testing.T) {
+	doc := validKnowledgeDocument()
+	doc.SourceType = "spreadsheet"
+	if err := Validate(&doc); err == nil {
+		t.Fatal("expected invalid knowledge source type to fail")
+	}
+}
+
+func TestValidate_KnowledgeDocumentInvalidStatus(t *testing.T) {
+	doc := validKnowledgeDocument()
+	doc.Status = "pending"
+	if err := Validate(&doc); err == nil {
+		t.Fatal("expected invalid knowledge status to fail")
+	}
+}
+
+func validKnowledgeChunk() models.KnowledgeChunk {
+	return models.KnowledgeChunk{
+		TenantID:   primitive.NewObjectID(),
+		AgentID:    "growth-strategist",
+		DocumentID: primitive.NewObjectID(),
+		Seq:        0,
+		Text:       "Our pricing starts at $10/month.",
+		Embedding:  []float64{0.1, 0.2, 0.3},
+		CreatedAt:  time.Now(),
+	}
+}
+
+func TestValidate_ValidKnowledgeChunk(t *testing.T) {
+	chunk := validKnowledgeChunk()
+	if err := Validate(&chunk); err != nil {
+		t.Fatalf("expected valid knowledge chunk to pass: %v", err)
+	}
+}
+
+func TestValidate_KnowledgeChunkRequiresText(t *testing.T) {
+	chunk := validKnowledgeChunk()
+	chunk.Text = ""
+	if err := Validate(&chunk); err == nil {
+		t.Fatal("expected empty chunk text to fail")
+	}
+}
+
+func validMessageFeedback() models.MessageFeedback {
+	return models.MessageFeedback{
+		TenantID:       primitive.NewObjectID(),
+		UserID:         primitive.NewObjectID(),
+		ConversationID: primitive.NewObjectID(),
+		MessageID:      primitive.NewObjectID(),
+		AgentID:        "growth-strategist",
+		Rating:         1,
+		Comment:        "Helpful answer",
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+}
+
+func TestValidate_ValidMessageFeedback(t *testing.T) {
+	fb := validMessageFeedback()
+	if err := Validate(&fb); err != nil {
+		t.Fatalf("expected valid message feedback to pass: %v", err)
+	}
+}
+
+func TestValidate_MessageFeedbackInvalidRating(t *testing.T) {
+	fb := validMessageFeedback()
+	fb.Rating = 5
+	if err := Validate(&fb); err == nil {
+		t.Fatal("expected invalid rating to fail")
+	}
+}
+
+func validAnnotation() models.Annotation {
+	return models.Annotation{
+		TenantID:       primitive.NewObjectID(),
+		ConversationID: primitive.NewObjectID(),
+		MessageID:      primitive.NewObjectID(),
+		AgentID:        "growth-strategist",
+		AnnotatorID:    primitive.NewObjectID(),
+		QualityScore:   4,
+		IssueTags:      []string{"wrong_fact", "incomplete"},
+		IdealAnswer:    "The correct answer is X.",
+		Notes:          "Reviewed",
+		Status:         models.AnnotationStatusAnnotated,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+}
+
+func TestValidate_ValidAnnotation(t *testing.T) {
+	a := validAnnotation()
+	if err := Validate(&a); err != nil {
+		t.Fatalf("expected valid annotation to pass: %v", err)
+	}
+}
+
+func TestValidate_AnnotationInvalidIssueTag(t *testing.T) {
+	a := validAnnotation()
+	a.IssueTags = []string{"made_up_tag"}
+	if err := Validate(&a); err == nil {
+		t.Fatal("expected invalid issue tag to fail")
+	}
+}
+
+func TestValidate_AnnotationScoreOutOfRange(t *testing.T) {
+	a := validAnnotation()
+	a.QualityScore = 6
+	if err := Validate(&a); err == nil {
+		t.Fatal("expected out-of-range quality score to fail")
+	}
+}
+
+func TestValidate_AnnotationInvalidStatus(t *testing.T) {
+	a := validAnnotation()
+	a.Status = "draft"
+	if err := Validate(&a); err == nil {
+		t.Fatal("expected invalid annotation status to fail")
+	}
+}

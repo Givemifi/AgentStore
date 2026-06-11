@@ -79,6 +79,13 @@ export default function ModelSettingsTab() {
     },
   });
 
+  const updateDefaultsMutation = useMutation({
+    mutationFn: (data: { defaultEmbeddingModelConfigId?: string }) => tenantModelsApi.updateDefaults(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant'] });
+    },
+  });
+
   const updateModelMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ModelConfig> }) =>
       tenantModelsApi.updateModel(id, data),
@@ -238,6 +245,7 @@ export default function ModelSettingsTab() {
 
   const modalityOptions: { value: ModelModality; label: string }[] = [
     { value: 'text', label: 'Text chat' },
+    { value: 'embedding', label: 'Embedding (knowledge base)' },
   ];
 
   const getModelsByProvider = (providerId: string) =>
@@ -265,7 +273,31 @@ export default function ModelSettingsTab() {
         </div>
       </div>
 
-      {/* Provider Form */}
+      {/* Default embedding model — powers agent knowledge bases (RAG). */}
+      <div className="border border-white/8 rounded-lg p-4 mb-6">
+        <h3 className="font-medium text-white mb-1">Knowledge base embedding model</h3>
+        <p className="text-xs text-dark-500 mb-3">
+          Select an embedding model to enable agent knowledge bases. If none is set, the
+          OPENAI_EMBEDDING_MODEL environment variable is used (if configured).
+        </p>
+        {models.filter(m => m.modality === 'embedding').length === 0 ? (
+          <p className="text-sm text-dark-400">Add a model with the “Embedding” modality first.</p>
+        ) : (
+          <select
+            defaultValue=""
+            onChange={e => updateDefaultsMutation.mutate({ defaultEmbeddingModelConfigId: e.target.value })}
+            className="w-full max-w-md bg-dark-800 border border-white/8 rounded px-3 py-2 text-sm"
+          >
+            <option value="">— Select embedding model —</option>
+            {models.filter(m => m.modality === 'embedding').map(m => (
+              <option key={m.id} value={m.id}>{m.displayName || m.name} ({m.modelId})</option>
+            ))}
+          </select>
+        )}
+        {updateDefaultsMutation.isSuccess && (
+          <p className="text-xs text-green-400 mt-2">Default embedding model saved.</p>
+        )}
+      </div>
       {showProviderForm && (
         <div className="border border-white/8 rounded-lg p-4 mb-6 space-y-4">
           <h3 className="font-medium text-white">{editingProviderId ? 'Edit Provider' : 'New Provider'}</h3>

@@ -49,8 +49,10 @@
 
 - 两类积分:**订阅积分**(套餐每月分配)+ **购买积分**(积分包一次性,经 Stripe)。
 - **对话扣费**:每次对话按 `agent.CreditCost`(即 `agent.TextCreditCost()`)扣费,reason 为 `agent_chat`。
-- **扣费时序**:`CheckSufficientCredits` → 调用 LLM(流式)→ 成功后 `DeductCredits`。即**先验后扣**,LLM 失败不应扣费。
-- **余额不足**:`CheckSufficientCredits` 为假时返回 HTTP 402(`Insufficient credits`)。
+- **扣费时序**:`CheckSufficientCredits`(预检,仅用于快速拦截)→ **先扣费 `DeductCredits` → 再调用 LLM**。LLM 失败或客户端取消(流式)时调用 `RefundDeduction` 退款。即**先扣后用、失败退款**,杜绝"回答已发但因并发耗尽余额而未扣到钱"的免费请求。
+- **扣减原子性与并发**:`DeductCredits` 不使用多文档事务(兼容单节点 MongoDB)。常见情形(单一余额桶即可覆盖)用一次带 `$gte` 条件的原子 `$inc`,无竞争;仅当需跨"订阅+购买"两桶拆分时回退到精确余额的乐观 CAS,并最多重试 `maxDeductAttempts` 次。任何并发下余额都不会变负,合法并发请求也不会被乐观锁误拒。`usage.go` 的 `RecordUsage` 与对话走同一 `credits.Service`,行为一致。
+- **退款语义**:`RefundDeduction` 将积分退回 `purchasedCredits`(避免把订阅余额顶超套餐月额度),并写一条 `<type>_refund` 的补偿 `usage_event`,使流水净额归零。
+- **余额不足**:`CheckSufficientCredits` 为假,或 `DeductCredits` 返回 `ErrInsufficientCredits` 时返回 HTTP 402(`Insufficient credits`);此时不调用 LLM、不落任何消息。
 - `ErrInsufficientCredits` / `ErrBalanceChanged` 映射到对应 HTTP 状态(见 `mapCreditDeductionErrorStatus`)。
 - Agent 成本模型 `AgentCreditCost` 含 `TextMessageCredits`/`ImageGenerationCredits`/`VideoGenerationCredits`;当前对话只用文本积分,图像/视频生成积分为 0(待确认:后续若启用需补扣费逻辑)。
 
@@ -90,11 +92,42 @@
 
 模型结构体的 `validate` tag 与 `internal/db/schema.go` 的 MongoDB JSON Schema 必须等价。任何模型改动须同步两处并跑 `go test ./internal/validation/...`。
 
+## 知识库 / RAG 规则(本轮新增)
+
+代码位置:`backend/internal/knowledge/`、`api/handlers/knowledge.go`、`api/handlers/chat.go`、`llm/openai.go`(`EmbedWithConfig`)、`llm/router.go`(`ResolveEmbeddingModel`)。
+
+- **归属与权限**:知识库按 `(tenantId, agentId)` 作用域。仅 **DB agent**(数据库里的 agent,非静态 catalog demo agent)支持知识库;写操作(增/删/重建索引)要求 `admin`,列表对租户成员可读。平台自营 agent 的知识由根租户 admin 管理。
+- **文档来源**:沿用「前端提取文字」决策——PDF/Word/TXT 在浏览器用 pdfjs/mammoth 解析后,只把纯文本 `POST` 给后端;后端不引入文档解析依赖。也支持粘贴文本、问答对。
+- **嵌入模型**:租户 `defaultEmbeddingModelConfigId`(modality=embedding)→ 回退到环境变量 `OPENAI_EMBEDDING_MODEL` + legacy LLMConfig 的 key/baseURL。**未配置嵌入模型时拒绝上传知识**(返回引导提示),但**不影响对话**。
+- **上限**:每 agent 最多 20 个文档、1000 个 chunk;单次上传文本 ≤ 400k 字符。超限报错提示精简。
+- **检索注入**:对话时以 owner 租户 + agent 检索 top 6 且余弦相似度 ≥ 0.35、注入文本 ≤ 8000 字符的 chunk,拼到 systemPrompt 之后。**检索失败一律降级为无知识对话,绝不阻断聊天**(仅 `slog.Warn`)。
+- **计费**:知识检索与嵌入由**运营方承担成本**,不额外扣用户积分;对话仍按 `agent.CreditCost` 扣文本积分,规则不变。
+- **向量存储**:chunk 向量直接存 MongoDB(`knowledge_chunks.embedding`),检索在 Go 进程内算余弦相似度(自托管 mongo:7 无 Atlas Vector Search)。进程内 5 分钟 TTL 缓存,文档增删/重建时主动失效。
+
+## 反馈 / 数据标注规则(本轮新增)
+
+代码位置:`api/handlers/feedback.go`、`api/handlers/annotations.go`、`frontend/src/pages/admin/AnnotationsPage.tsx`。
+
+- **用户反馈**:用户对 **assistant 消息**点 👍/👎(+可选评论),每人每条消息最多一条(`message_feedback` 唯一索引 `messageId+userId`)。只能评价自己会话里的消息。
+- **标注工作台(admin)**:租户 admin 审阅本租户的负反馈消息,打 1-5 质量分、问题分类标签、撰写「理想回答」。**admin 可读本租户内其他用户的会话上下文用于质量审计**,该读取写 `syslog.Medium` 审计日志。严格限本租户,不跨租户。
+- **沉淀知识**:把标注的「理想回答」一键生成 `问:…\n答:…` 知识文档并立即嵌入(同步),agent 下次对话即生效。已沉淀的标注幂等(重复返回 409)。
+- **导出训练集**:导出 SFT 格式 JSONL(每行 system+多轮 user/assistant,assistant 用理想回答优先,否则原回答且仅 score≥minScore),供未来微调。
+
+## token 用量字段语义(本轮新增)
+
+`ChatMessage.promptTokens` / `completionTokens` 记录 assistant 消息的 token 用量:优先取 provider 的 usage 上报(流式经 `stream_options.include_usage`),provider 未上报时按字符估算(ASCII/4 + 非 ASCII 逐字),故为**近似值**,用于成本/质量分析,不用于计费。
+
+## 上下文窗口截断(本轮新增)
+
+对话历史在送入 LLM 前按估算 token 总额 ≤ 12000 从最新往前截断(`truncateHistory`),至少保留最近 2 条消息。防止长对话 token 失控,被截断不报错。
+
 ## 不能被后续误改的逻辑(汇总)
 
 1. 租户隔离:所有查询按租户作用域,严禁跨租户。
-2. 积分先验后扣、余额不足返回 402、LLM 失败不扣费。
+2. 积分先扣后用、失败退款、余额不足返回 402;扣减原子且并发不变负、不误拒(无多文档事务,兼容单节点 MongoDB)。
 3. Stripe webhook 幂等与金额计算;微信/支付宝回调验签、金额校验、pending→completed 幂等。
 4. 模型校验双写同步(Go tag + JSON Schema)。
 5. 多模态:图片不入库、`/api/chat` body 上限、附件数量/大小限制。
 6. JWT + `X-Tenant-ID` 的认证/隔离链路。
+7. 知识库:按租户+agent 隔离、检索失败降级不阻断对话、不额外扣用户积分、嵌入未配置时拒绝上传但不影响聊天。
+8. 数据标注:admin 仅可审阅本租户会话上下文(有 syslog 审计),严禁跨租户。

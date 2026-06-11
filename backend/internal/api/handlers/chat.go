@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -14,9 +15,11 @@ import (
 	"agentstore/internal/agents"
 	"agentstore/internal/credits"
 	"agentstore/internal/db"
+	"agentstore/internal/knowledge"
 	"agentstore/internal/llm"
 	"agentstore/internal/middleware"
 	"agentstore/internal/models"
+	"agentstore/internal/validation"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,10 +29,11 @@ import (
 
 // ChatHandler handles AI chat endpoints.
 type ChatHandler struct {
-	db          *db.MongoDB
-	creditsSvc  *credits.Service
-	llmClient   *llm.Client
-	modelRouter *llm.Router
+	db           *db.MongoDB
+	creditsSvc   *credits.Service
+	llmClient    *llm.Client
+	modelRouter  *llm.Router
+	knowledgeSvc *knowledge.Service
 }
 
 type publicAgent struct {
@@ -89,12 +93,13 @@ func dbAgentToPublicAgent(agent models.Agent) publicAgent {
 }
 
 // NewChatHandler creates a new chat handler.
-func NewChatHandler(database *db.MongoDB, creditsSvc *credits.Service, llmClient *llm.Client, modelRouter *llm.Router) *ChatHandler {
+func NewChatHandler(database *db.MongoDB, creditsSvc *credits.Service, llmClient *llm.Client, modelRouter *llm.Router, knowledgeSvc *knowledge.Service) *ChatHandler {
 	return &ChatHandler{
-		db:          database,
-		creditsSvc:  creditsSvc,
-		llmClient:   llmClient,
-		modelRouter: modelRouter,
+		db:           database,
+		creditsSvc:   creditsSvc,
+		llmClient:    llmClient,
+		modelRouter:  modelRouter,
+		knowledgeSvc: knowledgeSvc,
 	}
 }
 
@@ -392,20 +397,14 @@ func (h *ChatHandler) resolveChatRequestConfig(ctx context.Context, tenant model
 	return requestConfig, nil
 }
 
-func buildSendMessageDeductionFailureUpdate(answer string) bson.M {
+func buildStreamMessageSuccessUpdate(content, usedModel string, creditCost int, usage llm.Usage) bson.M {
 	return bson.M{"$set": bson.M{
-		"status":         models.ChatMessageStatusError,
-		"content":        answer,
-		"creditsCharged": 0,
-	}}
-}
-
-func buildStreamMessageSuccessUpdate(content, usedModel string, creditCost int) bson.M {
-	return bson.M{"$set": bson.M{
-		"status":         models.ChatMessageStatusCompleted,
-		"content":        content,
-		"creditsCharged": creditCost,
-		"model":          usedModel,
+		"status":           models.ChatMessageStatusCompleted,
+		"content":          content,
+		"creditsCharged":   creditCost,
+		"model":            usedModel,
+		"promptTokens":     usage.PromptTokens,
+		"completionTokens": usage.CompletionTokens,
 	}}
 }
 
@@ -535,12 +534,43 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	messages = append(messages, buildUserMessage(req.Message, req.Attachments))
+	messages = truncateHistory(messages, historyTokenBudget)
 
-	answer, usedModel, err := h.llmClient.CompleteWithConfig(ctx, requestConfig, agent.SystemPrompt, messages)
+	// Augment the system prompt with retrieved knowledge (degrades to base prompt
+	// on any failure — chat is never blocked by the knowledge layer).
+	systemPrompt := h.buildSystemPrompt(ctx, *resolvedAgent, req.Message)
+
+	// Deduct credits BEFORE calling the LLM. If anything downstream fails we
+	// refund, so the user is never charged for an answer they didn't receive —
+	// and an answer is never produced for free when the balance ran out between
+	// the pre-check above and now.
+	metadata := map[string]interface{}{
+		"agentId":        resolvedAgent.CanonicalID,
+		"agentSlug":      resolvedAgent.Slug,
+		"conversationId": conversationID.Hex(),
+	}
+	remainingCredits, err := h.creditsSvc.DeductCredits(ctx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata)
 	if err != nil {
+		statusCode := mapCreditDeductionErrorStatus(err)
+		if statusCode == http.StatusPaymentRequired {
+			respondWithError(w, statusCode, "Insufficient credits")
+			return
+		}
+		respondWithError(w, statusCode, "Failed to deduct credits")
+		return
+	}
+
+	completion, err := h.llmClient.CompleteWithUsage(ctx, requestConfig, systemPrompt, messages)
+	if err != nil {
+		// Refund the charge: the work it paid for was not delivered.
+		if refundErr := h.creditsSvc.RefundDeduction(ctx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata); refundErr != nil {
+			slog.Error("Chat: refund after LLM failure failed", "tenantId", tenant.ID.Hex(), "error", refundErr)
+		}
 		respondWithError(w, http.StatusInternalServerError, "AI service is temporarily unavailable. Please try again.")
 		return
 	}
+	answer := completion.Content
+	usedModel := completion.Model
 
 	now := time.Now()
 	if createConversation {
@@ -582,38 +612,22 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	assistantMessageID := primitive.NewObjectID()
 	assistantMessage := models.ChatMessage{
-		ID:             assistantMessageID,
-		TenantID:       tenant.ID,
-		UserID:         user.ID,
-		ConversationID: conversationID,
-		AgentID:        resolvedAgent.CanonicalID,
-		Role:           "assistant",
-		Content:        answer,
-		Status:         models.ChatMessageStatusCompleted,
-		CreditsCharged: agent.CreditCost,
-		Model:          usedModel,
-		CreatedAt:      now,
+		ID:               assistantMessageID,
+		TenantID:         tenant.ID,
+		UserID:           user.ID,
+		ConversationID:   conversationID,
+		AgentID:          resolvedAgent.CanonicalID,
+		Role:             "assistant",
+		Content:          answer,
+		Status:           models.ChatMessageStatusCompleted,
+		CreditsCharged:   agent.CreditCost,
+		Model:            usedModel,
+		PromptTokens:     completion.Usage.PromptTokens,
+		CompletionTokens: completion.Usage.CompletionTokens,
+		CreatedAt:        now,
 	}
 	if _, err := h.db.ChatMessages().InsertMany(ctx, []interface{}{userMessage, assistantMessage}); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to save messages")
-		return
-	}
-
-	metadata := map[string]interface{}{
-		"agentId":        resolvedAgent.CanonicalID,
-		"agentSlug":      resolvedAgent.Slug,
-		"conversationId": conversationID.Hex(),
-		"model":          usedModel,
-	}
-	remainingCredits, err := h.creditsSvc.DeductCredits(ctx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata)
-	if err != nil {
-		_, _ = h.db.ChatMessages().UpdateOne(ctx, bson.M{"_id": assistantMessageID}, buildSendMessageDeductionFailureUpdate(answer))
-		statusCode := mapCreditDeductionErrorStatus(err)
-		if statusCode == http.StatusPaymentRequired {
-			respondWithError(w, statusCode, "Insufficient credits")
-			return
-		}
-		respondWithError(w, statusCode, "Failed to deduct credits")
 		return
 	}
 
@@ -654,6 +668,91 @@ func (h *ChatHandler) getMessageHistory(ctx context.Context, conversationID, ten
 	}
 
 	return messages, nil
+}
+
+// historyTokenBudget bounds the estimated tokens of prior conversation turns
+// sent to the LLM. Keeping recent turns within a budget prevents long
+// conversations from inflating cost without bound (and from exceeding context
+// limits once a knowledge block is also prepended to the system prompt).
+const historyTokenBudget = 12000
+
+// minRetainedMessages is the floor of most-recent messages always kept, so a
+// single very large turn never starves the model of immediate context.
+const minRetainedMessages = 2
+
+// estimateMessageTokens approximates the token cost of a message using the same
+// heuristic as the llm package (ASCII/4 + non-ASCII runes).
+func estimateMessageTokens(m llm.Message) int {
+	s, _ := m.Content.(string)
+	ascii, nonASCII := 0, 0
+	for _, r := range s {
+		if r < 128 {
+			ascii++
+		} else {
+			nonASCII++
+		}
+	}
+	return ascii/4 + nonASCII
+}
+
+// truncateHistory keeps the most recent messages whose estimated token total
+// fits within budget, always retaining at least minRetainedMessages. The
+// returned slice preserves chronological order. The just-appended current user
+// message is part of msgs and is always retained (it falls inside the floor).
+func truncateHistory(msgs []llm.Message, budget int) []llm.Message {
+	if len(msgs) <= minRetainedMessages {
+		return msgs
+	}
+	total := 0
+	keepFrom := len(msgs)
+	for i := len(msgs) - 1; i >= 0; i-- {
+		total += estimateMessageTokens(msgs[i])
+		kept := len(msgs) - i
+		if total > budget && kept > minRetainedMessages {
+			break
+		}
+		keepFrom = i
+	}
+	return msgs[keepFrom:]
+}
+
+// buildSystemPrompt augments an agent's base system prompt with retrieved
+// knowledge for the given query. Retrieval failures degrade gracefully to the
+// base prompt — chat must never be blocked by the knowledge layer. Only DB
+// agents (resolvedAgent.DBAgent != nil) have a knowledge base; the owner tenant
+// is the agent's tenant (a root tenant for platform agents).
+func (h *ChatHandler) buildSystemPrompt(ctx context.Context, resolvedAgent resolvedChatAgent, query string) string {
+	base := resolvedAgent.Agent.SystemPrompt
+	if h.knowledgeSvc == nil || resolvedAgent.DBAgent == nil {
+		return base
+	}
+
+	ownerTenant, err := h.loadAgentOwnerTenant(ctx, resolvedAgent.DBAgent.TenantID)
+	if err != nil {
+		slog.Warn("Chat: knowledge owner tenant load failed", "agentId", resolvedAgent.CanonicalID, "error", err)
+		return base
+	}
+
+	chunks, err := h.knowledgeSvc.Retrieve(ctx, ownerTenant, resolvedAgent.CanonicalID, query)
+	if err != nil {
+		// Degrade silently: an unconfigured embedding model or provider hiccup
+		// must not break chat.
+		slog.Warn("Chat: knowledge retrieval failed", "agentId", resolvedAgent.CanonicalID, "error", err)
+		return base
+	}
+	block := knowledge.BuildKnowledgeBlock(chunks)
+	if block == "" {
+		return base
+	}
+	return base + block
+}
+
+// loadAgentOwnerTenant fetches the tenant that owns an agent (for resolving the
+// embedding model and scoping knowledge retrieval).
+func (h *ChatHandler) loadAgentOwnerTenant(ctx context.Context, tenantID primitive.ObjectID) (models.Tenant, error) {
+	var tenant models.Tenant
+	err := h.db.Tenants().FindOne(ctx, bson.M{"_id": tenantID}).Decode(&tenant)
+	return tenant, err
 }
 
 // ListConversations returns all conversations for the current user/tenant.
@@ -958,6 +1057,10 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	messages = append(messages, buildUserMessage(req.Message, req.Attachments))
+	messages = truncateHistory(messages, historyTokenBudget)
+
+	// Augment the system prompt with retrieved knowledge (degrades gracefully).
+	systemPrompt := h.buildSystemPrompt(ctx, *resolvedAgent, req.Message)
 
 	now := time.Now()
 
@@ -1006,6 +1109,31 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Stream the assistant reply (insert placeholder, deduct, stream, persist, SSE).
+	h.streamAssistantReply(ctx, w, *tenant, *user, conversationID, *resolvedAgent, requestConfig, messages, systemPrompt)
+}
+
+// streamAssistantReply runs the shared streaming-generation tail used by both
+// StreamMessage and StreamRegenerate: it inserts the assistant placeholder,
+// deducts credits up front, streams the LLM response over SSE, persists the
+// final message (completed/interrupted/error), and refunds on failure/cancel.
+// The caller is responsible for having already created/updated the conversation
+// and (for first sends) saved the user message; `messages` is the full prepared
+// history (already truncated) and `systemPrompt` already carries any knowledge.
+func (h *ChatHandler) streamAssistantReply(
+	ctx context.Context,
+	w http.ResponseWriter,
+	tenant models.Tenant,
+	user models.User,
+	conversationID primitive.ObjectID,
+	resolvedAgent resolvedChatAgent,
+	requestConfig llm.RequestConfig,
+	messages []llm.Message,
+	systemPrompt string,
+) {
+	agent := resolvedAgent.Agent
+	now := time.Now()
+
 	// Create assistant message placeholder (status: generating)
 	assistantMessageID := primitive.NewObjectID()
 	assistantMessage := models.ChatMessage{
@@ -1043,9 +1171,46 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Deduct credits BEFORE streaming. The pre-check earlier is advisory only;
+	// deducting up front closes the race where a concurrent request drains the
+	// balance mid-stream and the user receives a free answer. On any failure
+	// below (cancel / provider error) we refund.
+	metadata := map[string]interface{}{
+		"agentId":        resolvedAgent.CanonicalID,
+		"agentSlug":      resolvedAgent.Slug,
+		"conversationId": conversationID.Hex(),
+		"model":          requestConfig.Model,
+	}
+	remainingCredits, err := h.creditsSvc.DeductCredits(ctx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata)
+	if err != nil {
+		dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer dbCancel()
+		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
+			bson.M{"_id": assistantMessageID},
+			buildStreamMessageDeductionFailureUpdate("", requestConfig.Model),
+		)
+		statusMsg := "Failed to process payment. Please contact support."
+		if errors.Is(err, credits.ErrInsufficientCredits) {
+			statusMsg = "Insufficient credits."
+		}
+		_ = h.writeSSE(w, "error", map[string]string{"message": statusMsg})
+		return
+	}
+
+	// refundStream reverses the charge taken above when the answer is not delivered.
+	refundStream := func(dbCtx context.Context) {
+		if refundErr := h.creditsSvc.RefundDeduction(dbCtx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata); refundErr != nil {
+			slog.Error("Chat: stream refund failed", "tenantId", tenant.ID.Hex(), "error", refundErr)
+		}
+	}
+
 	// Call the streaming LLM synchronously on this goroutine.
 	// All writes to w (delta events) happen here — no concurrent writer.
-	_, usedModel, err := h.llmClient.CompleteStreamWithConfig(ctx, requestConfig, agent.SystemPrompt, messages, onDelta)
+	completion, err := h.llmClient.CompleteStreamWithUsage(ctx, requestConfig, systemPrompt, messages, onDelta)
+	usedModel := completion.Model
+	if usedModel == "" {
+		usedModel = requestConfig.Model
+	}
 
 	// Use a fresh background context for all DB writes that happen after the
 	// request context may have been cancelled (client disconnected).
@@ -1054,6 +1219,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if request was cancelled (client disconnected)
 	if ctx.Err() == context.Canceled {
+		refundStream(dbCtx)
 		// Update message status to interrupted using dbCtx (req ctx already done)
 		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 			bson.M{"_id": assistantMessageID},
@@ -1064,7 +1230,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 			}},
 		)
 
-		// Send error event (no credits charged)
+		// Send error event (credits refunded)
 		_ = h.writeSSE(w, "error", map[string]string{
 			"message": "Request was cancelled. No credits were charged.",
 		})
@@ -1073,6 +1239,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Handle provider errors
 	if err != nil && err != io.EOF {
+		refundStream(dbCtx)
 		// Update message status to error
 		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 			bson.M{"_id": assistantMessageID},
@@ -1084,36 +1251,18 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 			}},
 		)
 
-		// Send error event (no credits charged)
+		// Send error event (credits refunded)
 		_ = h.writeSSE(w, "error", map[string]string{
 			"message": streamProviderFailurePlaceholderText,
 		})
 		return
 	}
 
-	// Deduct credits before marking the assistant message as completed.
-	metadata := map[string]interface{}{
-		"agentId":        resolvedAgent.CanonicalID,
-		"agentSlug":      resolvedAgent.Slug,
-		"conversationId": conversationID.Hex(),
-		"model":          usedModel,
-	}
-	remainingCredits, err := h.creditsSvc.DeductCredits(dbCtx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata)
-	if err != nil {
-		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
-			bson.M{"_id": assistantMessageID},
-			buildStreamMessageDeductionFailureUpdate(fullContent.String(), usedModel),
-		)
-		_ = h.writeSSE(w, "error", map[string]string{
-			"message": "Failed to process payment. Please contact support.",
-		})
-		return
-	}
-
-	// Update assistant message with full content and completed status
+	// Stream completed successfully. Credits were already deducted up front;
+	// mark the assistant message completed.
 	_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 		bson.M{"_id": assistantMessageID},
-		buildStreamMessageSuccessUpdate(fullContent.String(), usedModel, agent.CreditCost),
+		buildStreamMessageSuccessUpdate(fullContent.String(), usedModel, agent.CreditCost, completion.Usage),
 	)
 
 	// Send message_done event with credits info
@@ -1134,4 +1283,277 @@ func (h *ChatHandler) GenerateImage(w http.ResponseWriter, r *http.Request) {
 // GenerateVideo handles video generation requests (coming soon).
 func (h *ChatHandler) GenerateVideo(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotImplemented, "Video generation is coming soon and no credits were charged.")
+}
+
+// DeleteConversation deletes a conversation and cascades to its messages,
+// feedback, and annotations. Scoped to the requesting tenant+user.
+func (h *ChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	tenant, ok := middleware.GetTenantFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusBadRequest, "Tenant context required")
+		return
+	}
+
+	conversationID, err := primitive.ObjectIDFromHex(mux.Vars(r)["conversationId"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid conversation ID")
+		return
+	}
+
+	// Verify ownership before deleting anything.
+	result, err := h.db.Conversations().DeleteOne(ctx, bson.M{
+		"_id":      conversationID,
+		"tenantId": tenant.ID,
+		"userId":   user.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete conversation")
+		return
+	}
+	if result.DeletedCount == 0 {
+		respondWithError(w, http.StatusNotFound, "Conversation not found")
+		return
+	}
+
+	// Cascade: messages, feedback, and annotations for this conversation. All
+	// three collections carry conversationId; scope by tenant for safety.
+	if _, err := h.db.ChatMessages().DeleteMany(ctx, bson.M{"conversationId": conversationID, "tenantId": tenant.ID}); err != nil {
+		slog.Error("Chat: failed to delete conversation messages", "conversationId", conversationID.Hex(), "error", err)
+	}
+	if _, err := h.db.MessageFeedback().DeleteMany(ctx, bson.M{"conversationId": conversationID, "tenantId": tenant.ID}); err != nil {
+		slog.Error("Chat: failed to delete conversation feedback", "conversationId", conversationID.Hex(), "error", err)
+	}
+	if _, err := h.db.Annotations().DeleteMany(ctx, bson.M{"conversationId": conversationID, "tenantId": tenant.ID}); err != nil {
+		slog.Error("Chat: failed to delete conversation annotations", "conversationId", conversationID.Hex(), "error", err)
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// RenameConversation updates a conversation's title (tenant+user scoped).
+func (h *ChatHandler) RenameConversation(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	tenant, ok := middleware.GetTenantFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusBadRequest, "Tenant context required")
+		return
+	}
+
+	conversationID, err := primitive.ObjectIDFromHex(mux.Vars(r)["conversationId"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid conversation ID")
+		return
+	}
+
+	var req struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	title := strings.TrimSpace(req.Title)
+
+	// Validate against the same rules as the model (required, 1..200).
+	candidate := models.Conversation{
+		ID:        conversationID,
+		TenantID:  tenant.ID,
+		UserID:    user.ID,
+		AgentID:   "placeholder", // not persisted; satisfies struct validation only
+		Title:     title,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := validation.Validate(&candidate); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := h.db.Conversations().UpdateOne(ctx,
+		bson.M{"_id": conversationID, "tenantId": tenant.ID, "userId": user.ID},
+		bson.M{"$set": bson.M{"title": title, "updatedAt": time.Now()}},
+	)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to rename conversation")
+		return
+	}
+	if result.MatchedCount == 0 {
+		respondWithError(w, http.StatusNotFound, "Conversation not found")
+		return
+	}
+
+	var updated models.Conversation
+	if err := h.db.Conversations().FindOne(ctx, bson.M{"_id": conversationID}).Decode(&updated); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to load conversation")
+		return
+	}
+	respondWithJSON(w, http.StatusOK, updated)
+}
+
+// RegenerateRequest is the body for StreamRegenerate.
+type RegenerateRequest struct {
+	ConversationID string `json:"conversationId"`
+	MessageID      string `json:"messageId"`
+}
+
+// precedingUserMessage returns the latest user message strictly before the given
+// assistant message in the same conversation (the prompt that produced it).
+func (h *ChatHandler) precedingUserMessage(ctx context.Context, conversationID, tenantID, userID primitive.ObjectID, before time.Time) (*models.ChatMessage, error) {
+	var msg models.ChatMessage
+	err := h.db.ChatMessages().FindOne(ctx,
+		bson.M{
+			"conversationId": conversationID,
+			"tenantId":       tenantID,
+			"userId":         userID,
+			"role":           "user",
+			"createdAt":      bson.M{"$lt": before},
+		},
+		options.FindOne().SetSort(bson.D{{Key: "createdAt", Value: -1}}),
+	).Decode(&msg)
+	if err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+// StreamRegenerate regenerates an assistant reply in place: it removes the target
+// assistant message and streams a fresh reply for the same preceding user turn,
+// reusing the shared streaming tail (credits, knowledge injection, persistence).
+func (h *ChatHandler) StreamRegenerate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// SSE: drop the server write deadline (see StreamMessage).
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{})
+
+	user, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	tenant, ok := middleware.GetTenantFromContext(ctx)
+	if !ok {
+		respondWithError(w, http.StatusBadRequest, "Tenant context required")
+		return
+	}
+
+	var req RegenerateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	conversationID, err := primitive.ObjectIDFromHex(req.ConversationID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid conversation ID")
+		return
+	}
+	targetID, err := primitive.ObjectIDFromHex(req.MessageID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid message ID")
+		return
+	}
+
+	// Verify the conversation belongs to this user+tenant.
+	var conv models.Conversation
+	if err := h.db.Conversations().FindOne(ctx, bson.M{
+		"_id":      conversationID,
+		"tenantId": tenant.ID,
+		"userId":   user.ID,
+	}).Decode(&conv); err != nil {
+		respondWithError(w, http.StatusNotFound, "Conversation not found")
+		return
+	}
+
+	// Load the target assistant message.
+	var target models.ChatMessage
+	if err := h.db.ChatMessages().FindOne(ctx, bson.M{
+		"_id":            targetID,
+		"conversationId": conversationID,
+		"tenantId":       tenant.ID,
+		"userId":         user.ID,
+	}).Decode(&target); err != nil {
+		respondWithError(w, http.StatusNotFound, "Message not found")
+		return
+	}
+	if target.Role != "assistant" {
+		respondWithError(w, http.StatusBadRequest, "Only assistant messages can be regenerated")
+		return
+	}
+
+	// Find the user turn that produced it.
+	userMsg, err := h.precedingUserMessage(ctx, conversationID, tenant.ID, user.ID, target.CreatedAt)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "No preceding user message to regenerate from")
+		return
+	}
+
+	// Resolve the agent + request config (same as StreamMessage).
+	resolvedAgent, err := h.resolvePublishedAgent(ctx, conv.AgentID, tenant.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get agent")
+		return
+	}
+	if resolvedAgent == nil {
+		respondWithError(w, http.StatusNotFound, "Agent not found")
+		return
+	}
+	agent := resolvedAgent.Agent
+
+	hasCredits, err := h.creditsSvc.CheckSufficientCredits(ctx, tenant.ID, agent.CreditCost)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to check credits")
+		return
+	}
+	if !hasCredits {
+		respondWithError(w, http.StatusPaymentRequired, "Insufficient credits")
+		return
+	}
+
+	requestConfig, err := h.resolveChatRequestConfig(ctx, *tenant, *resolvedAgent)
+	if err != nil {
+		if errors.Is(err, llm.ErrProviderTypeUnsupported) {
+			respondWithError(w, http.StatusInternalServerError, unsupportedChatProviderMessage)
+			return
+		}
+		if errors.Is(err, llm.ErrModelNotConfigured) {
+			respondWithError(w, http.StatusInternalServerError, "AI model is not configured. Please contact an administrator.")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "Failed to resolve AI model configuration")
+		return
+	}
+
+	// Remove the old assistant reply so it is replaced (not appended to).
+	if _, err := h.db.ChatMessages().DeleteOne(ctx, bson.M{"_id": targetID, "tenantId": tenant.ID}); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to clear previous reply")
+		return
+	}
+
+	// Build history (now excluding the deleted reply) + knowledge-augmented prompt.
+	messages, err := h.getMessageHistory(ctx, conversationID, tenant.ID, user.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get message history")
+		return
+	}
+	messages = truncateHistory(messages, historyTokenBudget)
+	systemPrompt := h.buildSystemPrompt(ctx, *resolvedAgent, userMsg.Content)
+
+	// Touch the conversation's updatedAt so it bubbles up the list.
+	_, _ = h.db.Conversations().UpdateOne(ctx,
+		bson.M{"_id": conversationID},
+		bson.M{"$set": bson.M{"updatedAt": time.Now()}},
+	)
+
+	h.streamAssistantReply(ctx, w, *tenant, *user, conversationID, *resolvedAgent, requestConfig, messages, systemPrompt)
 }

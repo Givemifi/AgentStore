@@ -89,7 +89,20 @@
     "typingIndicator": "Typing...",
     "noConversation": "Select an agent to start chatting",
     "insufficientCredits": "Insufficient credits. Please purchase more to continue.",
-    "errorSending": "Failed to send message"
+    "errorSending": "Failed to send message",
+    "feedback": {
+      "helpful": "Helpful",
+      "notHelpful": "Not helpful"
+    },
+    "actions": {
+      "copy": "Copy",
+      "regenerate": "Regenerate"
+    },
+    "deleteConversation": {
+      "title": "Delete conversation?",
+      "message": "This will permanently delete this conversation and all its messages. This cannot be undone.",
+      "confirm": "Delete"
+    }
   },
   "activity": {
     "heading": "Usage History",

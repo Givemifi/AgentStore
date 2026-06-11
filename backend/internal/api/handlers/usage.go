@@ -2,26 +2,25 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
 
+	"agentstore/internal/credits"
 	"agentstore/internal/db"
 	"agentstore/internal/middleware"
 	"agentstore/internal/models"
-	"agentstore/internal/validation"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UsageHandler struct {
-	db *db.MongoDB
+	db      *db.MongoDB
+	credits *credits.Service
 }
 
-func NewUsageHandler(database *db.MongoDB) *UsageHandler {
-	return &UsageHandler{db: database}
+func NewUsageHandler(database *db.MongoDB, creditsSvc *credits.Service) *UsageHandler {
+	return &UsageHandler{db: database, credits: creditsSvc}
 }
 
 // RecordUsage records a usage event and deducts credits from the tenant.
@@ -60,77 +59,30 @@ func (h *UsageHandler) RecordUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use a MongoDB transaction to atomically deduct credits and record the usage event.
-	// This prevents credits from being deducted without a corresponding usage record.
-	event := models.UsageEvent{
-		ID:        primitive.NewObjectID(),
-		TenantID:  tenant.ID,
-		UserID:    user.ID,
-		Type:      req.Type,
-		Quantity:  req.Quantity,
-		Metadata:  req.Metadata,
-		CreatedAt: time.Now(),
+	// Deduct credits and record the usage event via the shared credits service.
+	// This uses an atomic compare-and-swap with bounded retry (no multi-document
+	// transaction), so it works on standalone MongoDB and stays consistent with
+	// the chat deduction path.
+	metadata := make(map[string]interface{}, len(req.Metadata))
+	for k, v := range req.Metadata {
+		metadata[k] = v
 	}
 
-	if err := validation.Validate(&event); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadRequest)
-		return
-	}
-
-	session, err := h.db.Client.StartSession()
+	remaining, err := h.credits.DeductCredits(ctx, tenant.ID, user.ID, req.Quantity, req.Type, metadata)
 	if err != nil {
-		http.Error(w, `{"error":"Failed to start session"}`, http.StatusInternalServerError)
-		return
-	}
-	defer session.EndSession(ctx)
-
-	insufficient := false
-	_, txErr := session.WithTransaction(ctx, func(sc mongo.SessionContext) (interface{}, error) {
-		// Try subscription credits first.
-		result, err := h.db.Tenants().UpdateOne(sc,
-			bson.M{"_id": tenant.ID, "subscriptionCredits": bson.M{"$gte": int64(req.Quantity)}},
-			bson.M{"$inc": bson.M{"subscriptionCredits": -int64(req.Quantity)}},
-		)
-		if err != nil {
-			return nil, err
+		if errors.Is(err, credits.ErrInsufficientCredits) {
+			http.Error(w, `{"error":"Insufficient credits"}`, http.StatusPaymentRequired)
+			return
 		}
-
-		if result.ModifiedCount == 0 {
-			// Not enough subscription credits — try purchased credits.
-			result, err = h.db.Tenants().UpdateOne(sc,
-				bson.M{"_id": tenant.ID, "purchasedCredits": bson.M{"$gte": int64(req.Quantity)}},
-				bson.M{"$inc": bson.M{"purchasedCredits": -int64(req.Quantity)}},
-			)
-			if err != nil {
-				return nil, err
-			}
-			if result.ModifiedCount == 0 {
-				insufficient = true
-				return nil, fmt.Errorf("insufficient credits")
-			}
-		}
-
-		// Record the usage event within the same transaction.
-		if _, err := h.db.UsageEvents().InsertOne(sc, event); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	})
-
-	if insufficient {
-		http.Error(w, `{"error":"Insufficient credits"}`, http.StatusPaymentRequired)
-		return
-	}
-	if txErr != nil {
 		http.Error(w, `{"error":"Failed to deduct credits"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":       event.ID.Hex(),
-		"type":     event.Type,
-		"quantity": event.Quantity,
+		"type":             req.Type,
+		"quantity":         req.Quantity,
+		"remainingCredits": remaining,
 	})
 }
 

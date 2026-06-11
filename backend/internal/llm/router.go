@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 
 	"agentstore/internal/db"
 	"agentstore/internal/models"
@@ -108,6 +110,38 @@ func (r *Router) ResolveVideoModel(ctx context.Context, tenant models.Tenant, ag
 	}
 
 	return RequestConfig{}, fmt.Errorf("video %w", ErrModelNotConfigured)
+}
+
+// ResolveEmbeddingModel resolves the embedding model configuration for the given
+// tenant. Fallback chain: tenant.DefaultEmbeddingModelConfigID (modality=embedding)
+// -> environment OPENAI_EMBEDDING_MODEL combined with the legacy LLMConfig's
+// apiKey/baseURL -> ErrModelNotConfigured. Embeddings are not bound per-agent;
+// a single tenant-wide model keeps all of a tenant's knowledge in one vector space.
+func (r *Router) ResolveEmbeddingModel(ctx context.Context, tenant models.Tenant) (RequestConfig, error) {
+	if tenant.DefaultEmbeddingModelConfigID != nil {
+		if cfg, err := r.resolveModelConfig(ctx, tenant.ID, *tenant.DefaultEmbeddingModelConfigID, models.ModelModalityEmbedding); err == nil {
+			return cfg, nil
+		} else if !errors.Is(err, mongo.ErrNoDocuments) {
+			return RequestConfig{}, err
+		}
+	}
+
+	// Fallback: env-configured embedding model name reusing the legacy provider's
+	// credentials/base URL. This lets a single OPENAI_EMBEDDING_MODEL env var enable
+	// knowledge bases without configuring a full ModelProvider/ModelConfig pair.
+	envModel := strings.TrimSpace(os.Getenv("OPENAI_EMBEDDING_MODEL"))
+	if envModel != "" {
+		var legacy models.LLMConfig
+		if err := r.db.LLMConfigs().FindOne(ctx, bson.M{"key": models.DefaultLLMConfigKey, "isActive": true}).Decode(&legacy); err == nil {
+			return RequestConfig{
+				APIKey:  legacy.APIKey,
+				BaseURL: normalizeBaseURL(legacy.BaseURL),
+				Model:   envModel,
+			}, nil
+		}
+	}
+
+	return RequestConfig{}, fmt.Errorf("embedding %w", ErrModelNotConfigured)
 }
 
 // resolveModelConfig loads a ModelConfig and its associated ModelProvider,

@@ -171,10 +171,26 @@ func (h *BillingHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 				}
 				setFields["seatQuantity"] = seats
 			}
-			h.db.Tenants().UpdateOne(ctx, bson.M{"_id": tenant.ID}, bson.M{
-				"$set": setFields,
-				"$inc": bson.M{"purchasedCredits": plan.BonusCredits},
-			})
+			if _, err := h.db.Tenants().UpdateOne(ctx, bson.M{"_id": tenant.ID}, bson.M{"$set": setFields}); err != nil {
+				slog.Error("Billing: failed to assign free/waived plan", "tenantId", tenant.ID.Hex(), "error", err)
+				respondWithError(w, http.StatusInternalServerError, "Failed to assign plan")
+				return
+			}
+
+			// Grant the plan's one-time bonus credits at most once per plan. The
+			// `$ne` filter makes this atomic, so re-assigning a free/waived plan
+			// (or a double-submit) can't farm bonus credits.
+			if plan.BonusCredits > 0 {
+				if _, err := h.db.Tenants().UpdateOne(ctx,
+					bson.M{"_id": tenant.ID, "bonusGrantedPlanIds": bson.M{"$ne": planID}},
+					bson.M{
+						"$inc":      bson.M{"purchasedCredits": plan.BonusCredits},
+						"$addToSet": bson.M{"bonusGrantedPlanIds": planID},
+					},
+				); err != nil {
+					slog.Error("Billing: failed to grant plan bonus credits", "tenantId", tenant.ID.Hex(), "error", err)
+				}
+			}
 			respondWithJSON(w, http.StatusOK, map[string]interface{}{"waived": true})
 			return
 		}

@@ -22,6 +22,7 @@ import (
 	"agentstore/internal/email"
 	"agentstore/internal/events"
 	"agentstore/internal/health"
+	"agentstore/internal/knowledge"
 	"agentstore/internal/llm"
 	"agentstore/internal/metrics"
 	"agentstore/internal/middleware"
@@ -409,16 +410,20 @@ func main() {
 	webhooksHandler := handlers.NewWebhooksHandler(database, sysLogger, webhookDispatcher)
 	brandingHandler := handlers.NewBrandingHandler(database, cfgStore, sysLogger)
 	announcementsHandler := handlers.NewAnnouncementsHandler(database, sysLogger)
-	usageHandler := handlers.NewUsageHandler(database)
+	usageHandler := handlers.NewUsageHandler(database, credits.NewService(database))
 	publicAgentsHandler := handlers.NewPublicAgentsHandler()
 	chatCreditsService := credits.NewService(database)
 	chatLLMClient := llm.NewClientWithDB(database)
 	chatModelRouter := llm.NewRouter(database)
-	chatHandler := handlers.NewChatHandler(database, chatCreditsService, chatLLMClient, chatModelRouter)
+	knowledgeSvc := knowledge.NewService(database, chatLLMClient, chatModelRouter)
+	chatHandler := handlers.NewChatHandler(database, chatCreditsService, chatLLMClient, chatModelRouter, knowledgeSvc)
 	shareHandler := handlers.NewShareHandler(database)
 	llmConfigHandler := handlers.NewLLMConfigHandler(database)
 	paymentConfigHandler := handlers.NewPaymentConfigHandler(database, paymentReg)
 	agentHandler := handlers.NewAgentHandler(database)
+	knowledgeHandler := handlers.NewKnowledgeHandler(database, knowledgeSvc, chatModelRouter, sysLogger)
+	feedbackHandler := handlers.NewFeedbackHandler(database)
+	annotationsHandler := handlers.NewAnnotationsHandler(database, knowledgeSvc, sysLogger)
 	modelSettingsHandler := handlers.NewModelSettingsHandler(database)
 	brandingHandler.SetAuthProviders(map[string]bool{
 		"google":    googleOAuth != nil,
@@ -645,6 +650,23 @@ func main() {
 	agentWriteRouter.HandleFunc("/{agentId}/publish", agentHandler.PublishAgent).Methods("POST")
 	agentWriteRouter.HandleFunc("/{agentId}/archive", agentHandler.ArchiveAgent).Methods("POST")
 
+	// Agent knowledge base. Listing is allowed to any tenant member; mutations
+	// require admin (same gating as agent writes).
+	tenantAPI.HandleFunc("/agents/{agentId}/knowledge", knowledgeHandler.ListKnowledge).Methods("GET")
+	agentWriteRouter.HandleFunc("/{agentId}/knowledge", knowledgeHandler.CreateKnowledge).Methods("POST")
+	agentWriteRouter.HandleFunc("/{agentId}/knowledge/{docId}", knowledgeHandler.DeleteKnowledge).Methods("DELETE")
+	agentWriteRouter.HandleFunc("/{agentId}/knowledge/{docId}/reindex", knowledgeHandler.ReindexKnowledge).Methods("POST")
+
+	// Data-annotation workbench (tenant admin only).
+	annotationRouter := tenantAPI.PathPrefix("/annotations").Subrouter()
+	annotationRouter.Use(middleware.RequireRole(models.RoleAdmin))
+	annotationRouter.HandleFunc("/queue", annotationsHandler.GetQueue).Methods("GET")
+	annotationRouter.HandleFunc("/stats", annotationsHandler.GetStats).Methods("GET")
+	annotationRouter.HandleFunc("/export", annotationsHandler.ExportTraining).Methods("GET")
+	annotationRouter.HandleFunc("/context/{messageId}", annotationsHandler.GetContext).Methods("GET")
+	annotationRouter.HandleFunc("/{messageId}", annotationsHandler.UpsertAnnotation).Methods("PUT")
+	annotationRouter.HandleFunc("/{messageId}/promote", annotationsHandler.PromoteAnnotation).Methods("POST")
+
 	// Model settings (tenant admin only)
 	modelSettingsRouter := tenantAPI.PathPrefix("").Subrouter()
 	modelSettingsRouter.Use(middleware.RequireRole(models.RoleAdmin))
@@ -696,8 +718,14 @@ func main() {
 	chatAPI.HandleFunc("/agents/{agentId}", chatHandler.GetAgent).Methods("GET")
 	chatAPI.HandleFunc("", chatHandler.SendMessage).Methods("POST")
 	chatAPI.HandleFunc("/stream", chatHandler.StreamMessage).Methods("POST")
+	chatAPI.HandleFunc("/regenerate", chatHandler.StreamRegenerate).Methods("POST")
 	chatAPI.HandleFunc("/conversations", chatHandler.ListConversations).Methods("GET")
+	chatAPI.HandleFunc("/conversations/{conversationId}", chatHandler.RenameConversation).Methods("PATCH")
+	chatAPI.HandleFunc("/conversations/{conversationId}", chatHandler.DeleteConversation).Methods("DELETE")
 	chatAPI.HandleFunc("/conversations/{conversationId}/messages", chatHandler.ListMessages).Methods("GET")
+	chatAPI.HandleFunc("/conversations/{conversationId}/feedback", feedbackHandler.ListConversationFeedback).Methods("GET")
+	chatAPI.HandleFunc("/messages/{messageId}/feedback", feedbackHandler.SetFeedback).Methods("PUT")
+	chatAPI.HandleFunc("/messages/{messageId}/feedback", feedbackHandler.DeleteFeedback).Methods("DELETE")
 	chatAPI.HandleFunc("/conversations/{conversationId}/share", shareHandler.CreateShare).Methods("POST")
 	chatAPI.HandleFunc("/share", shareHandler.ListMyShares).Methods("GET")
 	chatAPI.HandleFunc("/share/{token}", shareHandler.RevokeShare).Methods("DELETE")

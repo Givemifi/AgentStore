@@ -585,6 +585,7 @@ func clearTenantDefaultsForModelIDsUpdate(modelIDs []primitive.ObjectID) bson.M 
 		"defaultTextModelConfigId",
 		"defaultImageModelConfigId",
 		"defaultVideoModelConfigId",
+		"defaultEmbeddingModelConfigId",
 	}
 	unset := bson.M{}
 	orClauses := make([]bson.M, 0, len(fields))
@@ -601,15 +602,17 @@ func clearTenantDefaultsForModelIDsUpdate(modelIDs []primitive.ObjectID) bson.M 
 }
 
 var (
-	errInvalidTextModelConfigID  = errors.New("invalid text model config ID")
-	errInvalidImageModelConfigID = errors.New("invalid image model config ID")
-	errInvalidVideoModelConfigID = errors.New("invalid video model config ID")
+	errInvalidTextModelConfigID      = errors.New("invalid text model config ID")
+	errInvalidImageModelConfigID     = errors.New("invalid image model config ID")
+	errInvalidVideoModelConfigID     = errors.New("invalid video model config ID")
+	errInvalidEmbeddingModelConfigID = errors.New("invalid embedding model config ID")
 )
 
 type tenantDefaultModelConfigUpdateRequest struct {
-	DefaultTextModelConfigID  *string `json:"defaultTextModelConfigId"`
-	DefaultImageModelConfigID *string `json:"defaultImageModelConfigId"`
-	DefaultVideoModelConfigID *string `json:"defaultVideoModelConfigId"`
+	DefaultTextModelConfigID      *string `json:"defaultTextModelConfigId"`
+	DefaultImageModelConfigID     *string `json:"defaultImageModelConfigId"`
+	DefaultVideoModelConfigID     *string `json:"defaultVideoModelConfigId"`
+	DefaultEmbeddingModelConfigID *string `json:"defaultEmbeddingModelConfigId"`
 }
 
 func buildTenantDefaultModelConfigUpdate(req tenantDefaultModelConfigUpdateRequest) (bson.M, error) {
@@ -623,6 +626,9 @@ func buildTenantDefaultModelConfigUpdate(req tenantDefaultModelConfigUpdateReque
 		return nil, err
 	}
 	if err := applyTenantDefaultModelConfigField(setDoc, unsetDoc, "defaultVideoModelConfigId", req.DefaultVideoModelConfigID, errInvalidVideoModelConfigID); err != nil {
+		return nil, err
+	}
+	if err := applyTenantDefaultModelConfigField(setDoc, unsetDoc, "defaultEmbeddingModelConfigId", req.DefaultEmbeddingModelConfigID, errInvalidEmbeddingModelConfigID); err != nil {
 		return nil, err
 	}
 

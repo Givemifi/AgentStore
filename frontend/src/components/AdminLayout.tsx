@@ -20,6 +20,7 @@ import {
   UserPlus,
   BarChart3,
   Cpu,
+  Sparkles,
   Menu,
   X,
 } from 'lucide-react';
@@ -104,6 +105,7 @@ export default function AdminLayout() {
       title: 'Growth',
       items: [
         { path: '/admin/pm', icon: BarChart3, label: 'Product' },
+        { path: '/admin/annotations', icon: Sparkles, label: 'Annotations' },
         { path: '/admin/announcements', icon: Megaphone, label: 'Announcements' },
       ],
     },

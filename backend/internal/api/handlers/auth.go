@@ -700,10 +700,12 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Revoke any previous unused password reset tokens for this user
-	h.db.VerificationTokens().UpdateMany(r.Context(),
+	if _, err := h.db.VerificationTokens().UpdateMany(r.Context(),
 		bson.M{"userId": user.ID, "type": models.TokenTypePasswordReset, "usedAt": nil},
 		bson.M{"$set": bson.M{"usedAt": time.Now()}},
-	)
+	); err != nil {
+		slog.Error("Failed to revoke prior password reset tokens", "userId", user.ID.Hex(), "error", err)
+	}
 
 	resetToken := generateRandomToken()
 	hashedToken := hashToken(resetToken)
@@ -715,7 +717,10 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt: time.Now().Add(30 * time.Minute),
 		CreatedAt: time.Now(),
 	}
-	h.db.VerificationTokens().InsertOne(r.Context(), verification)
+	if _, err := h.db.VerificationTokens().InsertOne(r.Context(), verification); err != nil {
+		slog.Error("Failed to create password reset token", "userId", user.ID.Hex(), "error", err)
+		return
+	}
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -771,7 +776,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.db.Users().UpdateOne(r.Context(), bson.M{"_id": token.UserID}, bson.M{
+	if _, err := h.db.Users().UpdateOne(r.Context(), bson.M{"_id": token.UserID}, bson.M{
 		"$set": bson.M{
 			"passwordHash": passwordHash,
 			"updatedAt":    now,
@@ -779,12 +784,19 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		"$addToSet": bson.M{
 			"authMethods": models.AuthMethodPassword,
 		},
-	})
+	}); err != nil {
+		slog.Error("Failed to update password hash on reset", "userId", token.UserID.Hex(), "error", err)
+		respondWithError(w, http.StatusInternalServerError, "Failed to reset password")
+		return
+	}
 
-	h.db.RefreshTokens().UpdateMany(r.Context(),
+	// Revoke all active sessions so stolen tokens can't persist after a reset.
+	if _, err := h.db.RefreshTokens().UpdateMany(r.Context(),
 		bson.M{"userId": token.UserID, "isRevoked": false},
 		bson.M{"$set": bson.M{"isRevoked": true}},
-	)
+	); err != nil {
+		slog.Warn("Failed to revoke sessions after password reset", "userId", token.UserID.Hex(), "error", err)
+	}
 
 	h.syslog.High(r.Context(), fmt.Sprintf("Password reset via token for user %s", token.UserID.Hex()))
 
@@ -1205,7 +1217,10 @@ func (h *AuthHandler) MagicLinkRequest(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		CreatedAt: time.Now(),
 	}
-	h.db.VerificationTokens().InsertOne(r.Context(), verification)
+	if _, err := h.db.VerificationTokens().InsertOne(r.Context(), verification); err != nil {
+		slog.Error("Failed to create magic link token", "userId", user.ID.Hex(), "error", err)
+		return
+	}
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

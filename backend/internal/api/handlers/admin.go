@@ -410,7 +410,10 @@ func (h *AdminHandler) GetTenant(w http.ResponseWriter, r *http.Request) {
 	defer cursor.Close(r.Context())
 
 	var memberships []models.TenantMembership
-	cursor.All(r.Context(), &memberships)
+	if err := cursor.All(r.Context(), &memberships); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch members")
+		return
+	}
 
 	// Batch-fetch all member users in a single query
 	userIDs := make([]primitive.ObjectID, len(memberships))
@@ -894,7 +897,10 @@ func (h *AdminHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	defer cursor.Close(r.Context())
 
 	var memberships []models.TenantMembership
-	cursor.All(r.Context(), &memberships)
+	if err := cursor.All(r.Context(), &memberships); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch memberships")
+		return
+	}
 
 	// Build plan name lookup for membership details (bounded to 500 plans)
 	planCursor, _ := h.db.Plans().Find(r.Context(), bson.M{}, options.Find().SetLimit(500))
@@ -1543,7 +1549,10 @@ func (h *AdminHandler) ImpersonateUser(w http.ResponseWriter, r *http.Request) {
 	defer cursor.Close(r.Context())
 
 	var memberships []models.TenantMembership
-	cursor.All(r.Context(), &memberships)
+	if err := cursor.All(r.Context(), &memberships); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to fetch memberships")
+		return
+	}
 
 	var membershipInfos []MembershipInfo
 	for _, m := range memberships {

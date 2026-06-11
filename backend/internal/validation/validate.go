@@ -73,6 +73,18 @@ func init() {
 	v.RegisterValidation("valid_chat_message_status", func(fl validator.FieldLevel) bool {
 		return models.ValidChatMessageStatus(models.ChatMessageStatus(fl.Field().String()))
 	})
+	v.RegisterValidation("valid_knowledge_source_type", func(fl validator.FieldLevel) bool {
+		return models.ValidKnowledgeSourceType(models.KnowledgeSourceType(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_knowledge_status", func(fl validator.FieldLevel) bool {
+		return models.ValidKnowledgeStatus(models.KnowledgeStatus(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_annotation_status", func(fl validator.FieldLevel) bool {
+		return models.ValidAnnotationStatus(models.AnnotationStatus(fl.Field().String()))
+	})
+	v.RegisterValidation("valid_annotation_issue_tag", func(fl validator.FieldLevel) bool {
+		return models.ValidAnnotationIssueTag(fl.Field().String())
+	})
 	v.RegisterStructValidation(validateChatMessage, models.ChatMessage{})
 }
 

@@ -253,8 +253,8 @@ func (h *TenantHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.stripe.UpdateSubscriptionQuantity(r.Context(), tenant.StripeSubscriptionID, int64(newSeats)); err != nil {
 			slog.Error("Failed to update seat quantity", "tenantId", tenant.ID.Hex(), "error", err)
-		} else {
-			h.db.Tenants().UpdateOne(r.Context(), bson.M{"_id": tenant.ID}, bson.M{"$set": bson.M{"seatQuantity": newSeats, "updatedAt": time.Now()}})
+		} else if _, err := h.db.Tenants().UpdateOne(r.Context(), bson.M{"_id": tenant.ID}, bson.M{"$set": bson.M{"seatQuantity": newSeats, "updatedAt": time.Now()}}); err != nil {
+			slog.Error("Stripe seat quantity updated but local mirror failed", "tenantId", tenant.ID.Hex(), "error", err)
 		}
 	}
 
@@ -352,8 +352,8 @@ func (h *TenantHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 			}
 			if err := h.stripe.UpdateSubscriptionQuantity(r.Context(), tenant.StripeSubscriptionID, int64(newSeats)); err != nil {
 				slog.Error("Failed to update seat quantity", "tenant", tenant.ID.Hex(), "error", err)
-			} else {
-				h.db.Tenants().UpdateOne(r.Context(), bson.M{"_id": tenant.ID}, bson.M{"$set": bson.M{"seatQuantity": newSeats, "updatedAt": time.Now()}})
+			} else if _, err := h.db.Tenants().UpdateOne(r.Context(), bson.M{"_id": tenant.ID}, bson.M{"$set": bson.M{"seatQuantity": newSeats, "updatedAt": time.Now()}}); err != nil {
+				slog.Error("Stripe seat quantity updated but local mirror failed", "tenant", tenant.ID.Hex(), "error", err)
 			}
 		}
 	}

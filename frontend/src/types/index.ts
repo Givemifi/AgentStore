@@ -714,7 +714,7 @@ export interface UsageSummary {
 export type AgentStatus = 'draft' | 'published' | 'archived';
 export type AgentVisibility = 'private' | 'public';
 export type AgentCapability = 'text_chat' | 'image_generation' | 'video_generation';
-export type ModelModality = 'text' | 'image' | 'video';
+export type ModelModality = 'text' | 'image' | 'video' | 'embedding';
 export type ProviderType = 'openai_compatible' | 'anthropic' | 'gemini';
 
 export interface AgentCreditCost {

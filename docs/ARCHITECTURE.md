@@ -16,7 +16,7 @@
 
 ### 后端模块(`backend/internal/`)
 
-- `api/handlers/` — HTTP handler:auth、bootstrap、admin、tenant、billing、chat、agent、usage、branding、webhook、telemetry、health、logs、docs、promotions、model settings。
+- `api/handlers/` — HTTP handler:auth、bootstrap、admin、tenant、billing、chat、agent、knowledge、feedback、annotations、usage、branding、webhook、telemetry、health、logs、docs、promotions、model settings。
 - `auth/` — JWT access/refresh、密码哈希、OAuth、magic link、MFA/TOTP、session。
 - `middleware/` — 认证、租户解析、RBAC、计费拦截、metrics、recovery、API 版本、安全。
 - `models/` — MongoDB 模型结构体(校验须与 JSON Schema 同步)。
@@ -25,7 +25,8 @@
 - `stripe/` — 客户、checkout、价格、订阅、portal、税、退款、争议、webhook。
 - `wechat/` — 微信支付 V3 客户端:H5 下单、异步回调解析验签、订单查询。
 - `alipay/` — 支付宝客户端:PC/WAP 下单(UA 自动选)、异步回调验签、订单查询。
-- `llm/` — provider client、模型/请求路由、流式与非流式 chat。
+- `llm/` — provider client、模型/请求路由、流式与非流式 chat、embeddings(`EmbedWithConfig`)、token usage(usage 上报 + 估算兜底)。
+- `knowledge/` — 知识库 RAG:文档分块(`Chunk`)、嵌入入库(`IngestDocument`)、进程内余弦检索 + TTL 缓存(`Retrieve`)、注入块拼装(`BuildKnowledgeBlock`)。
 - `agents/` — 市场 Agent 领域逻辑。
 - `configstore/` — DB 后端的运行时配置。
 - `planstore/` — 套餐与积分包种子数据。
@@ -55,6 +56,17 @@
 3. **Agent 对话**:`ChatPage.tsx` → `chatApi.stream`(SSE)→ `api/handlers/chat.go` → 先 `CheckSufficientCredits` → 调 `llm/` provider(流式)→ 成功后 `DeductCredits`(按 `agent.CreditCost`,reason `agent_chat`)。余额不足返回 402。
 4. **多模态**:前端 `utils/attachments.ts` 把图片转 base64 data URL、文档前端提取文字;`composeMessagePayload` 组装 → `chat.go` 用 `buildUserMessage` 走 OpenAI vision 多段 content 格式(`type:"text"` / `type:"image_url"`)发给 LLM。DB 只存纯文本,图片不持久化。
 5. **计费**:Stripe checkout/webhook → `stripe/` + `billing.go` 更新订阅/积分;积分包购买注入购买积分。微信/支付宝流程:前端 `POST /billing/checkout {bundleId, paymentMethod}` → 后端建 `payment_orders`(状态 pending)→ 返回跳转 URL → 渠道异步回调 `POST /billing/wechat/notify|/billing/alipay/notify` → 验签 + 金额校验 → 原子 pending→completed → 注入积分 + 写 `financial_transactions`；前端轮询 `GET /billing/payment/status?outTradeNo=xxx` 确认到账。
+6. **知识库 RAG**:admin 在 `settings/agents` 的知识库弹窗上传文档(前端提取文字)→ `POST /tenant/agents/{id}/knowledge` → `knowledge.IngestDocument` 异步分块 + 嵌入(`EmbedWithConfig`)入 `knowledge_chunks`。对话时 `chat.go` 调 `knowledge.Retrieve`(owner 租户 + agent,进程内余弦相似度)→ `BuildKnowledgeBlock` 拼到 systemPrompt 之后。检索失败降级为无知识对话。
+7. **数据标注闭环**:用户在 ChatPage 对 assistant 消息 👍/👎(`PUT /chat/messages/{id}/feedback`)→ admin 在 `/admin/annotations` 审阅队列(负反馈优先)、打分/分类/写理想回答 → 「沉淀为知识」生成 annotation 来源的知识文档(即时嵌入生效)或导出 SFT JSONL(`GET /tenant/annotations/export`)。token 用量随每条 assistant 消息落库,供质量看板聚合。
+
+## 新增集合(本轮)
+
+- `knowledge_documents` — 知识文档元数据(状态 processing/ready/error、chunk 数、字符数、来源类型)。
+- `knowledge_chunks` — 文档分块 + 嵌入向量(检索用)。
+- `message_feedback` — 用户对 assistant 消息的 👍/👎 + 评论(唯一索引 messageId+userId)。
+- `annotations` — admin 质量标注(评分、问题标签、理想回答、沉淀状态)。
+
+`chat_messages` 增 `promptTokens`/`completionTokens`;`tenants` 增 `defaultEmbeddingModelConfigId`;`ModelModality` 增 `embedding`。
 
 ## 关键文件
 
@@ -88,7 +100,8 @@
 - 积分:`credits/`、积分包 checkout、扣费、usage event、余额不足行为。
 - 租户隔离:`middleware/tenant.go`、租户作用域 handler、API key scope、model settings、chat、agents、credits、billing。
 - LLM 路由:`llm/`、模型/provider 设置、fallback、流式与非流式路径。
-- 对话:`api/handlers/chat.go`、`frontend/src/pages/app/ChatPage.tsx`、markdown 渲染、流式状态、重试/中断、扣费。
+- 对话:`api/handlers/chat.go`、`frontend/src/pages/app/ChatPage.tsx`、markdown 渲染、流式状态、重试/中断、扣费、知识注入、历史截断、token 落库。
+- 知识库:`knowledge/`、`api/handlers/knowledge.go`、嵌入入库与检索、检索失败降级。
 - 上线就绪:`api/handlers/admin_launch_readiness.go` 与对应 UI。
 
 ## 校验与 Schema 规则

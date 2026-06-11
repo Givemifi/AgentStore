@@ -297,8 +297,8 @@ func (h *EventDefinitionsHandler) DeleteEventDefinition(w http.ResponseWriter, r
 func (h *EventDefinitionsHandler) GetSankeyData(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Load all event definitions.
-	cursor, err := h.db.EventDefinitions().Find(ctx, bson.M{})
+	// Load all event definitions (bounded to guard against unbounded scans).
+	cursor, err := h.db.EventDefinitions().Find(ctx, bson.M{}, options.Find().SetLimit(2000))
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to load event definitions")
 		return

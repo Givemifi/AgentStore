@@ -36,6 +36,17 @@
 
 - **依赖项目必须用 `Dockerfile.saas` + `fly.saas.toml`**:多进程(产品后端 + AgentStore 后端,经 Caddy/supervisord)。裸跑 `fly deploy` 会丢 auth 路由导致登录静默失败。本仓库本体用根目录 `Dockerfile`。
 
+## 知识库 / 数据标注决策(本轮)
+
+- **垂直 Agent 持续进化的两条腿**:知识库(RAG,即时改善回答)+ 数据标注闭环(反馈→标注→沉淀知识/导出 SFT)。先靠知识注入快速见效,再靠标注数据沉淀长期资产,避免一上来就依赖微调。
+- **向量存 MongoDB + Go 内存余弦**:部署目标是自托管 `mongo:7`(docker-compose),无 Atlas Vector Search。chunk 向量存 `knowledge_chunks.embedding`,检索时把某 agent 全部 chunk 载入进程内算余弦相似度,5 分钟 TTL 缓存。规模依据:自营市场每 agent 几百~一千 chunk,内存余弦足够快。`knowledge.Service` 通过 `embedder`/`modelResolver` 接口抽象,未来可无痛替换为专业向量库(Qdrant 等)。
+- **知识文档前端提取文字**:复用既有多模态决策(pdfjs/mammoth 前端解析),后端不引入文档解析依赖,只接收纯文本 + 嵌入。
+- **嵌入模型独立 modality**:`ModelModality` 新增 `embedding`,经 `router.ResolveEmbeddingModel` 走「租户默认 → 环境变量 `OPENAI_EMBEDDING_MODEL`」回退链,与对话文本模型解耦。
+- **检索降级不阻断**:任何检索/嵌入失败只降级为无知识对话并 `slog.Warn`,绝不让知识层拖垮聊天主链路。
+- **token usage 取数 + 估算兜底**:流式请求加 `stream_options.include_usage` 取 provider 上报;未上报时用字符估算(ASCII/4 + 非 ASCII 逐字)。记录进 `ChatMessage`,为成本/质量分析打基础。早先「无 token 记录」是阻碍进化的盲区,本轮补上。
+- **历史截断**:对话历史按估算 token ≤ 12000 截断、至少留最近 2 条。配合知识注入,避免长对话上下文爆炸。
+- **SFT 导出格式**:标注导出为 OpenAI chat 微调风格 JSONL(system + 多轮 + assistant 理想回答 + meta),为未来微调留口子,但本轮不做训练。
+
 ## 流程决策
 
 - **不自动 git commit**:除非用户明确要求。

@@ -353,6 +353,33 @@ func (m *MongoDB) ensureIndexes() {
 				{Keys: bson.D{{Key: "userId", Value: 1}, {Key: "createdAt", Value: -1}}},
 			},
 		},
+		{
+			"knowledge_documents",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "agentId", Value: 1}, {Key: "createdAt", Value: -1}}},
+			},
+		},
+		{
+			"knowledge_chunks",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "agentId", Value: 1}}},
+				{Keys: bson.D{{Key: "documentId", Value: 1}}},
+			},
+		},
+		{
+			"message_feedback",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "messageId", Value: 1}, {Key: "userId", Value: 1}}, Options: options.Index().SetUnique(true)},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "agentId", Value: 1}, {Key: "rating", Value: 1}, {Key: "createdAt", Value: -1}}},
+			},
+		},
+		{
+			"annotations",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "messageId", Value: 1}}, Options: options.Index().SetUnique(true)},
+				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "agentId", Value: 1}, {Key: "status", Value: 1}, {Key: "createdAt", Value: -1}}},
+			},
+		},
 	}
 
 	criticalCollections := map[string]bool{
@@ -565,4 +592,20 @@ func (m *MongoDB) ModelProviders() *mongo.Collection {
 
 func (m *MongoDB) ModelConfigs() *mongo.Collection {
 	return m.Database.Collection("model_configs")
+}
+
+func (m *MongoDB) KnowledgeDocuments() *mongo.Collection {
+	return m.Database.Collection("knowledge_documents")
+}
+
+func (m *MongoDB) KnowledgeChunks() *mongo.Collection {
+	return m.Database.Collection("knowledge_chunks")
+}
+
+func (m *MongoDB) MessageFeedback() *mongo.Collection {
+	return m.Database.Collection("message_feedback")
+}
+
+func (m *MongoDB) Annotations() *mongo.Collection {
+	return m.Database.Collection("annotations")
 }

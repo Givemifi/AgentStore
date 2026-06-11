@@ -89,7 +89,20 @@
     "typingIndicator": "正在输入...",
     "noConversation": "选择一个智能体开始对话",
     "insufficientCredits": "积分不足，请购买更多积分以继续使用。",
-    "errorSending": "消息发送失败"
+    "errorSending": "消息发送失败",
+    "feedback": {
+      "helpful": "有帮助",
+      "notHelpful": "没帮助"
+    },
+    "actions": {
+      "copy": "复制",
+      "regenerate": "重新生成"
+    },
+    "deleteConversation": {
+      "title": "删除对话？",
+      "message": "这将永久删除该对话及其全部消息，且无法恢复。",
+      "confirm": "删除"
+    }
   },
   "activity": {
     "heading": "使用记录",

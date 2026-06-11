@@ -17,6 +17,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// Shared HTTP clients reused across all LLM requests so connections are pooled
+// rather than a fresh client (and connection) per call.
+//   - sharedHTTPClient has an overall timeout for unary (non-streaming) requests.
+//   - streamHTTPClient has no overall timeout because a stream can legitimately
+//     run long; cancellation is driven by the request context instead.
+var (
+	sharedHTTPClient = &http.Client{Timeout: 120 * time.Second}
+	streamHTTPClient = &http.Client{}
+)
+
 // TestOpenAICompatibleProvider tests connectivity to an OpenAI-compatible provider.
 // It makes an authenticated GET request to {normalizedBaseURL}/models.
 // Returns nil if the provider responds successfully, or an error if connectivity fails.
@@ -109,20 +119,40 @@ func NewVisionMessage(role, text string, imageDataURLs []string) Message {
 	return Message{Role: role, Content: parts}
 }
 
-// StreamChatRequest represents a streaming request to the chat completions API.
-type StreamChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-	Stream   bool      `json:"stream"`
+// StreamOptions configures optional behavior for a streaming request.
+// IncludeUsage asks OpenAI-compatible providers to emit a final chunk carrying
+// token usage; providers that ignore it simply never send a usage chunk.
+type StreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }
 
-// StreamChunk represents a single chunk in a streaming response.
+// StreamChatRequest represents a streaming request to the chat completions API.
+type StreamChatRequest struct {
+	Model         string         `json:"model"`
+	Messages      []Message      `json:"messages"`
+	Stream        bool           `json:"stream"`
+	StreamOptions *StreamOptions `json:"stream_options,omitempty"`
+}
+
+// StreamChunk represents a single chunk in a streaming response. The final
+// chunk (when stream_options.include_usage is honored) carries Usage and an
+// empty Choices slice.
 type StreamChunk struct {
 	Choices []struct {
 		Delta struct {
 			Content string `json:"content"`
 		} `json:"delta"`
 	} `json:"choices"`
+	Usage *Usage `json:"usage,omitempty"`
+}
+
+// CompletionResult is the full outcome of a completion (unary or streaming):
+// the assistant content, the model that produced it, and token usage. Usage
+// may be estimated when the provider does not report it (see estimateUsage).
+type CompletionResult struct {
+	Content string
+	Model   string
+	Usage   Usage
 }
 
 // ChatRequest represents a request to the chat completions API.
@@ -237,20 +267,33 @@ func (c *Client) Complete(ctx context.Context, systemPrompt string, messages []M
 	return answer, err
 }
 
-// CompleteWithConfig sends a chat completion request using a fixed per-request configuration snapshot.
+// CompleteWithConfig sends a chat completion request using a fixed per-request
+// configuration snapshot. It returns (content, model, error); callers that need
+// token usage should use CompleteWithUsage.
 func (c *Client) CompleteWithConfig(ctx context.Context, config RequestConfig, systemPrompt string, messages []Message) (string, string, error) {
+	result, err := c.CompleteWithUsage(ctx, config, systemPrompt, messages)
+	if err != nil {
+		return "", "", err
+	}
+	return result.Content, result.Model, nil
+}
+
+// CompleteWithUsage sends a chat completion request and returns the content,
+// model, and token usage. When the provider does not report usage, the usage
+// is estimated from the prompt and completion text.
+func (c *Client) CompleteWithUsage(ctx context.Context, config RequestConfig, systemPrompt string, messages []Message) (CompletionResult, error) {
 	apiKey := strings.TrimSpace(config.APIKey)
 	baseURL := normalizeBaseURL(config.BaseURL)
 	model := strings.TrimSpace(config.Model)
 
 	if apiKey == "" {
-		return "", "", fmt.Errorf("OPENAI_API_KEY is not set")
+		return CompletionResult{}, fmt.Errorf("OPENAI_API_KEY is not set")
 	}
 	if baseURL == "" {
-		return "", "", fmt.Errorf("OPENAI_BASE_URL is not set")
+		return CompletionResult{}, fmt.Errorf("OPENAI_BASE_URL is not set")
 	}
 	if model == "" {
-		return "", "", fmt.Errorf("OPENAI_MODEL is not set")
+		return CompletionResult{}, fmt.Errorf("OPENAI_MODEL is not set")
 	}
 
 	fullMessages := []Message{
@@ -265,38 +308,138 @@ func (c *Client) CompleteWithConfig(ctx context.Context, config RequestConfig, s
 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to marshal request: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create request: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	httpClient := &http.Client{}
-	resp, err := httpClient.Do(req)
+	resp, err := sharedHTTPClient.Do(req)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to send request: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("API request failed with status: %d", resp.StatusCode)
+		return CompletionResult{}, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
 	}
 
 	var chatResp ChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
-		return "", "", fmt.Errorf("failed to decode response: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(chatResp.Choices) == 0 {
-		return "", "", fmt.Errorf("no response choices returned")
+		return CompletionResult{}, fmt.Errorf("no response choices returned")
 	}
 
-	return contentToString(chatResp.Choices[0].Message.Content), model, nil
+	content := contentToString(chatResp.Choices[0].Message.Content)
+	usage := chatResp.Usage
+	if usage.TotalTokens == 0 && usage.PromptTokens == 0 && usage.CompletionTokens == 0 {
+		usage = estimateUsage(systemPrompt, messages, content)
+	}
+	return CompletionResult{Content: content, Model: model, Usage: usage}, nil
+}
+
+// maxEmbeddingBatch bounds how many inputs are sent per embeddings request so a
+// single document with many chunks does not exceed provider input limits.
+const maxEmbeddingBatch = 64
+
+// embeddingRequest is the request body for an OpenAI-compatible embeddings call.
+type embeddingRequest struct {
+	Model string   `json:"model"`
+	Input []string `json:"input"`
+}
+
+// embeddingResponse is the response body for an embeddings call.
+type embeddingResponse struct {
+	Data []struct {
+		Index     int       `json:"index"`
+		Embedding []float64 `json:"embedding"`
+	} `json:"data"`
+}
+
+// EmbedWithConfig produces embedding vectors for the given texts using an
+// OpenAI-compatible embeddings endpoint ({baseURL}/embeddings). Inputs are sent
+// in batches of at most maxEmbeddingBatch and the returned slice is aligned with
+// the input order. An empty input returns an empty result with no request.
+func (c *Client) EmbedWithConfig(ctx context.Context, config RequestConfig, texts []string) ([][]float64, error) {
+	apiKey := strings.TrimSpace(config.APIKey)
+	baseURL := normalizeBaseURL(config.BaseURL)
+	model := strings.TrimSpace(config.Model)
+
+	if apiKey == "" {
+		return nil, fmt.Errorf("OPENAI_API_KEY is not set")
+	}
+	if baseURL == "" {
+		return nil, fmt.Errorf("OPENAI_BASE_URL is not set")
+	}
+	if model == "" {
+		return nil, fmt.Errorf("embedding model is not set")
+	}
+	if len(texts) == 0 {
+		return [][]float64{}, nil
+	}
+
+	results := make([][]float64, 0, len(texts))
+	for start := 0; start < len(texts); start += maxEmbeddingBatch {
+		end := start + maxEmbeddingBatch
+		if end > len(texts) {
+			end = len(texts)
+		}
+		batch := texts[start:end]
+
+		reqBody := embeddingRequest{Model: model, Input: batch}
+		jsonBody, err := json.Marshal(reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal embedding request: %w", err)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/embeddings", bytes.NewBuffer(jsonBody))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create embedding request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+
+		resp, err := sharedHTTPClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send embedding request: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return nil, fmt.Errorf("embedding request failed with status: %d", resp.StatusCode)
+		}
+
+		var embResp embeddingResponse
+		if err := json.NewDecoder(resp.Body).Decode(&embResp); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode embedding response: %w", err)
+		}
+		resp.Body.Close()
+
+		if len(embResp.Data) != len(batch) {
+			return nil, fmt.Errorf("embedding response count mismatch: got %d, want %d", len(embResp.Data), len(batch))
+		}
+
+		// Reorder by index defensively (providers usually return in order).
+		batchVecs := make([][]float64, len(batch))
+		for _, d := range embResp.Data {
+			if d.Index < 0 || d.Index >= len(batch) {
+				return nil, fmt.Errorf("embedding response index out of range: %d", d.Index)
+			}
+			batchVecs[d.Index] = d.Embedding
+		}
+		results = append(results, batchVecs...)
+	}
+
+	return results, nil
 }
 
 // contentToString extracts the text from a message Content value, which the
@@ -318,21 +461,37 @@ func contentToString(content any) string {
 	}
 }
 
-// CompleteStreamWithConfig sends a streaming chat completion request and calls onDelta for each chunk.
-// Returns the full response content, the model used, and any error encountered.
+// CompleteStreamWithConfig sends a streaming chat completion request and calls
+// onDelta for each chunk. It returns (content, model, error); callers that need
+// token usage should use CompleteStreamWithUsage.
 func (c *Client) CompleteStreamWithConfig(ctx context.Context, config RequestConfig, systemPrompt string, messages []Message, onDelta func(string) error) (string, string, error) {
+	result, err := c.CompleteStreamWithUsage(ctx, config, systemPrompt, messages, onDelta)
+	if err != nil {
+		// Preserve the prior contract: partial content is returned alongside the
+		// error (e.g. when the onDelta callback fails mid-stream).
+		return result.Content, result.Model, err
+	}
+	return result.Content, result.Model, nil
+}
+
+// CompleteStreamWithUsage sends a streaming chat completion request, calls
+// onDelta for each chunk, and returns the full content, model, and token usage.
+// It requests stream_options.include_usage so OpenAI-compatible providers emit a
+// final usage chunk; when the provider does not report usage, it is estimated
+// from the prompt and completion text.
+func (c *Client) CompleteStreamWithUsage(ctx context.Context, config RequestConfig, systemPrompt string, messages []Message, onDelta func(string) error) (CompletionResult, error) {
 	apiKey := strings.TrimSpace(config.APIKey)
 	baseURL := normalizeBaseURL(config.BaseURL)
 	model := strings.TrimSpace(config.Model)
 
 	if apiKey == "" {
-		return "", "", fmt.Errorf("OPENAI_API_KEY is not set")
+		return CompletionResult{}, fmt.Errorf("OPENAI_API_KEY is not set")
 	}
 	if baseURL == "" {
-		return "", "", fmt.Errorf("OPENAI_BASE_URL is not set")
+		return CompletionResult{}, fmt.Errorf("OPENAI_BASE_URL is not set")
 	}
 	if model == "" {
-		return "", "", fmt.Errorf("OPENAI_MODEL is not set")
+		return CompletionResult{}, fmt.Errorf("OPENAI_MODEL is not set")
 	}
 
 	fullMessages := []Message{
@@ -341,34 +500,34 @@ func (c *Client) CompleteStreamWithConfig(ctx context.Context, config RequestCon
 	fullMessages = append(fullMessages, messages...)
 
 	reqBody := StreamChatRequest{
-		Model:    model,
-		Messages: fullMessages,
-		Stream:   true,
+		Model:         model,
+		Messages:      fullMessages,
+		Stream:        true,
+		StreamOptions: &StreamOptions{IncludeUsage: true},
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to marshal request: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create request: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Accept", "text/event-stream")
 
-	httpClient := &http.Client{}
-	resp, err := httpClient.Do(req)
+	resp, err := streamHTTPClient.Do(req)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to send request: %w", err)
+		return CompletionResult{}, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("API request failed with status: %d", resp.StatusCode)
+		return CompletionResult{}, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
 	}
 
 	// Create a bufio.Scanner to read line by line
@@ -379,6 +538,7 @@ func (c *Client) CompleteStreamWithConfig(ctx context.Context, config RequestCon
 	scanner.Buffer(buf, 1024*1024)
 
 	var fullContent strings.Builder
+	var reportedUsage *Usage
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -407,6 +567,12 @@ func (c *Client) CompleteStreamWithConfig(ctx context.Context, config RequestCon
 			continue
 		}
 
+		// Capture the usage chunk (emitted last when include_usage is honored).
+		if chunk.Usage != nil {
+			usageCopy := *chunk.Usage
+			reportedUsage = &usageCopy
+		}
+
 		// Extract content delta
 		if len(chunk.Choices) > 0 && len(chunk.Choices[0].Delta.Content) > 0 {
 			content := chunk.Choices[0].Delta.Content
@@ -415,14 +581,54 @@ func (c *Client) CompleteStreamWithConfig(ctx context.Context, config RequestCon
 			// Call the onDelta callback
 			if err := onDelta(content); err != nil {
 				// Return the partial content and the error
-				return fullContent.String(), model, err
+				return CompletionResult{Content: fullContent.String(), Model: model}, err
 			}
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return "", "", fmt.Errorf("error reading stream: %w", err)
+		return CompletionResult{}, fmt.Errorf("error reading stream: %w", err)
 	}
 
-	return fullContent.String(), model, nil
+	content := fullContent.String()
+	usage := Usage{}
+	if reportedUsage != nil {
+		usage = *reportedUsage
+	}
+	if usage.TotalTokens == 0 && usage.PromptTokens == 0 && usage.CompletionTokens == 0 {
+		usage = estimateUsage(systemPrompt, messages, content)
+	}
+	return CompletionResult{Content: content, Model: model, Usage: usage}, nil
+}
+
+// estimateUsage approximates token counts when the provider does not report
+// usage. The heuristic counts roughly one token per 4 ASCII characters and one
+// token per non-ASCII rune (CJK and similar), which is a reasonable proxy for
+// OpenAI-style tokenizers without pulling in a tokenizer dependency.
+func estimateUsage(systemPrompt string, messages []Message, completion string) Usage {
+	promptTokens := estimateTokens(systemPrompt)
+	for _, m := range messages {
+		promptTokens += estimateTokens(contentToString(m.Content))
+	}
+	completionTokens := estimateTokens(completion)
+	return Usage{
+		PromptTokens:     promptTokens,
+		CompletionTokens: completionTokens,
+		TotalTokens:      promptTokens + completionTokens,
+	}
+}
+
+// estimateTokens returns an approximate token count for a string: ASCII
+// characters count as 1/4 token each, non-ASCII runes as 1 token each.
+func estimateTokens(s string) int {
+	ascii := 0
+	nonASCII := 0
+	for _, r := range s {
+		if r < 128 {
+			ascii++
+		} else {
+			nonASCII++
+		}
+	}
+	return ascii/4 + nonASCII
 }

@@ -68,23 +68,8 @@ func TestConversationTitleFromMessage_TruncatesUnicodeSafely(t *testing.T) {
 	}
 }
 
-func TestBuildSendMessageDeductionFailureUpdate_MarksAssistantErrorWithoutCharge(t *testing.T) {
-	update := buildSendMessageDeductionFailureUpdate("configured answer")
-	setMap := requireSingleSetMap(t, update)
-
-	if got := setMap["status"]; got != models.ChatMessageStatusError {
-		t.Fatalf("expected status %q, got %#v", models.ChatMessageStatusError, got)
-	}
-	if got := setMap["creditsCharged"]; got != 0 {
-		t.Fatalf("expected creditsCharged 0, got %#v", got)
-	}
-	if got := setMap["content"]; got != "configured answer" {
-		t.Fatalf("expected retained content, got %#v", got)
-	}
-}
-
 func TestBuildStreamMessageSuccessUpdate_MarksCompletedAndCharges(t *testing.T) {
-	update := buildStreamMessageSuccessUpdate("Hello", "test-model", 3)
+	update := buildStreamMessageSuccessUpdate("Hello", "test-model", 3, llm.Usage{PromptTokens: 10, CompletionTokens: 5})
 	setMap := requireSingleSetMap(t, update)
 
 	if got := setMap["status"]; got != models.ChatMessageStatusCompleted {
@@ -95,6 +80,12 @@ func TestBuildStreamMessageSuccessUpdate_MarksCompletedAndCharges(t *testing.T) 
 	}
 	if got := setMap["content"]; got != "Hello" {
 		t.Fatalf("expected content %q, got %#v", "Hello", got)
+	}
+	if got := setMap["promptTokens"]; got != 10 {
+		t.Fatalf("expected promptTokens 10, got %#v", got)
+	}
+	if got := setMap["completionTokens"]; got != 5 {
+		t.Fatalf("expected completionTokens 5, got %#v", got)
 	}
 }
 
@@ -330,7 +321,7 @@ func TestGetPublishedAgent_ResolvesTenantAgentBySlugAndObjectID(t *testing.T) {
 		t.Fatalf("seed tenant agent: %v", err)
 	}
 
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	agentBySlug, err := handler.getPublishedAgent(context.Background(), dbAgent.Slug, tenant.ID)
 	if err != nil {
@@ -391,7 +382,7 @@ func TestGetAgent_ReturnsTenantPublishedAgentBySlugWithObjectCreditCost(t *testi
 	req := env.tenantRequest(t, http.MethodGet, "/api/chat/agents/"+dbAgent.Slug, nil, user, tenant.ID.Hex())
 	req = mux.SetURLVars(req, map[string]string{"agentId": dbAgent.Slug})
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.GetAgent(rr, req)
 
@@ -450,7 +441,7 @@ func TestListAgents_ReturnsTenantPublishedAgentWithObjectCreditCost(t *testing.T
 
 	req := env.tenantRequest(t, http.MethodGet, "/api/chat/agents", nil, user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.ListAgents(rr, req)
 
@@ -512,7 +503,7 @@ func TestChatListAgentsIncludesRootPublishedAgentsForNormalTenants(t *testing.T)
 	req := httptest.NewRequest(http.MethodGet, "/api/chat/agents", nil)
 	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantContextKey, normalTenant))
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.ListAgents(rr, req)
 
@@ -585,7 +576,7 @@ func TestStreamMessage_PersistsGeneratingPlaceholderThenCompletes(t *testing.T) 
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/stream", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.StreamMessage(rr, req)
 
@@ -696,7 +687,7 @@ func TestStreamMessageStoresCanonicalAgentIDForSlugRequests(t *testing.T) {
 	req = req.WithContext(context.WithValue(req.Context(), middleware.UserContextKey, user))
 	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantContextKey, tenant))
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.StreamMessage(rr, req)
 
@@ -756,7 +747,7 @@ func TestSendMessage_RejectsCrossAgentConversation(t *testing.T) {
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/send", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.SendMessage(rr, req)
 
@@ -809,7 +800,7 @@ func TestSendMessage_ConfigFailureDoesNotCreateConversationOrMessages(t *testing
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/send", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.SendMessage(rr, req)
 
@@ -887,7 +878,7 @@ func TestSendMessage_LLMFailureDoesNotCreateConversationOrMessages(t *testing.T)
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/send", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.SendMessage(rr, req)
 
@@ -910,9 +901,20 @@ func TestSendMessage_LLMFailureDoesNotCreateConversationOrMessages(t *testing.T)
 	if messageCount != 0 {
 		t.Fatalf("expected no messages saved on LLM failure, got %d", messageCount)
 	}
+
+	// Credits are deducted before the LLM call and refunded when it fails, so the
+	// combined balance must be fully restored to the seeded 50.
+	var refreshed models.Tenant
+	if err := env.DB.Tenants().FindOne(ctx, bson.M{"_id": tenant.ID}).Decode(&refreshed); err != nil {
+		t.Fatalf("refetch tenant: %v", err)
+	}
+	if total := refreshed.SubscriptionCredits + refreshed.PurchasedCredits; total != 50 {
+		t.Fatalf("expected credits fully refunded to 50 after LLM failure, got %d (subscription=%d purchased=%d)",
+			total, refreshed.SubscriptionCredits, refreshed.PurchasedCredits)
+	}
 }
 
-func TestSendMessage_DeductionRaceMarksAssistantMessageErrorWithoutCharging(t *testing.T) {
+func TestSendMessage_InsufficientCreditsChargesBeforeLLMAndPersistsNothing(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
@@ -922,22 +924,19 @@ func TestSendMessage_DeductionRaceMarksAssistantMessageErrorWithoutCharging(t *t
 	user, tenant := createAdminEnv(t, env)
 
 	ctx := context.Background()
+	var providerCalled bool
 	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := env.DB.Tenants().UpdateOne(ctx,
-			bson.M{"_id": tenant.ID},
-			bson.M{"$set": bson.M{"subscriptionCredits": int64(0)}},
-		)
-		if err != nil {
-			t.Fatalf("simulate concurrent credit drain: %v", err)
-		}
+		providerCalled = true
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"configured answer"}}]}`))
 	}))
 	defer provider.Close()
 
+	// Tenant has zero credits: deduction (which now runs BEFORE the LLM call)
+	// must fail up front, so the provider is never hit and nothing is persisted.
 	_, err := env.DB.Tenants().UpdateOne(ctx,
 		bson.M{"_id": tenant.ID},
-		bson.M{"$set": bson.M{"subscriptionCredits": int64(3), "purchasedCredits": int64(0)}},
+		bson.M{"$set": bson.M{"subscriptionCredits": int64(0), "purchasedCredits": int64(0)}},
 	)
 	if err != nil {
 		t.Fatalf("seed tenant credits: %v", err)
@@ -980,40 +979,23 @@ func TestSendMessage_DeductionRaceMarksAssistantMessageErrorWithoutCharging(t *t
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/send", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
-	// The provider above simulates another request spending the remaining credits
-	// after this request has passed its preflight credit check.
 	handler.SendMessage(rr, req)
 
 	if rr.Code != http.StatusPaymentRequired {
 		t.Fatalf("expected status %d, got %d with body %s", http.StatusPaymentRequired, rr.Code, rr.Body.String())
 	}
+	if providerCalled {
+		t.Fatal("expected LLM provider NOT to be called when credits are insufficient")
+	}
 
-	var saved []models.ChatMessage
-	cursor, err := env.DB.ChatMessages().Find(ctx, bson.M{"conversationId": conversationID}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}}))
+	count, err := env.DB.ChatMessages().CountDocuments(ctx, bson.M{"conversationId": conversationID})
 	if err != nil {
-		t.Fatalf("find chat messages: %v", err)
+		t.Fatalf("count chat messages: %v", err)
 	}
-	defer cursor.Close(ctx)
-	if err := cursor.All(ctx, &saved); err != nil {
-		t.Fatalf("decode chat messages: %v", err)
-	}
-	if len(saved) != 2 {
-		t.Fatalf("expected 2 saved messages, got %d", len(saved))
-	}
-	assistant := saved[1]
-	if assistant.Role != "assistant" {
-		t.Fatalf("expected assistant role, got %q", assistant.Role)
-	}
-	if assistant.Status != models.ChatMessageStatusError {
-		t.Fatalf("expected assistant status %q, got %q", models.ChatMessageStatusError, assistant.Status)
-	}
-	if assistant.CreditsCharged != 0 {
-		t.Fatalf("expected assistant credits 0 after failed deduction, got %d", assistant.CreditsCharged)
-	}
-	if assistant.Content != "configured answer" {
-		t.Fatalf("expected assistant content to be retained, got %q", assistant.Content)
+	if count != 0 {
+		t.Fatalf("expected no messages persisted on insufficient credits, got %d", count)
 	}
 }
 
@@ -1067,7 +1049,7 @@ func TestStreamMessage_DeductionFailureMarksAssistantMessageErrorAndSkipsMessage
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/stream", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	conversationCountBefore, err := env.DB.Conversations().CountDocuments(ctx, bson.M{"tenantId": tenant.ID, "userId": user.ID})
 	if err != nil {
@@ -1113,8 +1095,10 @@ func TestStreamMessage_DeductionFailureMarksAssistantMessageErrorAndSkipsMessage
 	if assistant.CreditsCharged != 0 {
 		t.Fatalf("expected assistant credits 0 after failed deduction, got %d", assistant.CreditsCharged)
 	}
-	if assistant.Content != "Hello" {
-		t.Fatalf("expected assistant content %q, got %q", "Hello", assistant.Content)
+	// Deduction now runs BEFORE streaming, so when it fails up front the provider
+	// is never consumed and no content is produced.
+	if assistant.Content != "" {
+		t.Fatalf("expected empty assistant content when deduction fails before streaming, got %q", assistant.Content)
 	}
 
 	conversationCountAfter, err := env.DB.Conversations().CountDocuments(ctx, bson.M{"tenantId": tenant.ID, "userId": user.ID})
@@ -1171,7 +1155,7 @@ func TestStreamMessage_ProviderFailureBeforeContentMarksAssistantMessageErrorWit
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/stream", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.StreamMessage(rr, req)
 
@@ -1340,7 +1324,7 @@ func TestStreamMessage_UnsupportedProviderDoesNotCreateMessagesOrChargeCredits(t
 
 	req := env.tenantRequest(t, http.MethodPost, "/api/chat/stream", strings.NewReader(string(body)), user, tenant.ID.Hex())
 	rr := httptest.NewRecorder()
-	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB))
+	handler := NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
 
 	handler.StreamMessage(rr, req)
 
@@ -1365,5 +1349,272 @@ func TestStreamMessage_UnsupportedProviderDoesNotCreateMessagesOrChargeCredits(t
 	}
 	if updatedTenant.SubscriptionCredits != 50 || updatedTenant.PurchasedCredits != 0 {
 		t.Fatalf("expected credits unchanged, got subscription=%d purchased=%d", updatedTenant.SubscriptionCredits, updatedTenant.PurchasedCredits)
+	}
+}
+
+func TestTruncateHistory_KeepsRecentWithinBudget(t *testing.T) {
+	// Each message ~25 ASCII chars => ~6 tokens. With a tiny budget, only the
+	// most recent messages (above the floor) survive.
+	mk := func(role string) llm.Message {
+		return llm.Message{Role: role, Content: strings.Repeat("a", 400)} // ~100 tokens
+	}
+	msgs := []llm.Message{mk("user"), mk("assistant"), mk("user"), mk("assistant"), mk("user")}
+
+	got := truncateHistory(msgs, 250)
+	if len(got) < minRetainedMessages {
+		t.Fatalf("expected at least %d retained, got %d", minRetainedMessages, len(got))
+	}
+	if len(got) >= len(msgs) {
+		t.Fatalf("expected truncation, kept all %d messages", len(got))
+	}
+	// The last message must always be present (chronological tail).
+	if got[len(got)-1].Content != msgs[len(msgs)-1].Content {
+		t.Fatal("expected the most recent message to be retained")
+	}
+}
+
+func TestTruncateHistory_ShortHistoryUntouched(t *testing.T) {
+	msgs := []llm.Message{{Role: "user", Content: "hi"}}
+	got := truncateHistory(msgs, 10)
+	if len(got) != 1 {
+		t.Fatalf("expected short history untouched, got %d", len(got))
+	}
+}
+
+func TestTruncateHistory_AlwaysKeepsFloor(t *testing.T) {
+	big := llm.Message{Role: "user", Content: strings.Repeat("x", 100000)}
+	msgs := []llm.Message{big, big, big}
+	got := truncateHistory(msgs, 1) // budget far below a single message
+	if len(got) != minRetainedMessages {
+		t.Fatalf("expected floor of %d, got %d", minRetainedMessages, len(got))
+	}
+}
+
+func newChatHandlerForTest(env *testEnv) *ChatHandler {
+	return NewChatHandler(env.DB, credits.NewService(env.DB), llm.NewClientWithDB(env.DB), llm.NewRouter(env.DB), nil)
+}
+
+func TestDeleteConversation_CascadesMessagesFeedbackAnnotations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	user, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+
+	conversationID := primitive.NewObjectID()
+	messageID := primitive.NewObjectID()
+	if _, err := env.DB.Conversations().InsertOne(ctx, models.Conversation{
+		ID: conversationID, TenantID: tenant.ID, UserID: user.ID, AgentID: "customer-support",
+		Title: "Old chat", CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed conversation: %v", err)
+	}
+	if _, err := env.DB.ChatMessages().InsertOne(ctx, models.ChatMessage{
+		ID: messageID, TenantID: tenant.ID, UserID: user.ID, ConversationID: conversationID,
+		AgentID: "customer-support", Role: "assistant", Content: "hi", CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed message: %v", err)
+	}
+	if _, err := env.DB.MessageFeedback().InsertOne(ctx, models.MessageFeedback{
+		ID: primitive.NewObjectID(), TenantID: tenant.ID, UserID: user.ID, ConversationID: conversationID,
+		MessageID: messageID, AgentID: "customer-support", Rating: -1, CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed feedback: %v", err)
+	}
+	if _, err := env.DB.Annotations().InsertOne(ctx, models.Annotation{
+		ID: primitive.NewObjectID(), TenantID: tenant.ID, ConversationID: conversationID, MessageID: messageID,
+		AgentID: "customer-support", AnnotatorID: user.ID, QualityScore: 2, Status: models.AnnotationStatusAnnotated,
+		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed annotation: %v", err)
+	}
+
+	req := env.tenantRequest(t, http.MethodDelete, "/api/chat/conversations/"+conversationID.Hex(), strings.NewReader(""), user, tenant.ID.Hex())
+	req = mux.SetURLVars(req, map[string]string{"conversationId": conversationID.Hex()})
+	rr := httptest.NewRecorder()
+	newChatHandlerForTest(env).DeleteConversation(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (%s)", rr.Code, rr.Body.String())
+	}
+	for name, count := range map[string]func() (int64, error){
+		"conversations": func() (int64, error) { return env.DB.Conversations().CountDocuments(ctx, bson.M{"_id": conversationID}) },
+		"messages":      func() (int64, error) { return env.DB.ChatMessages().CountDocuments(ctx, bson.M{"conversationId": conversationID}) },
+		"feedback":      func() (int64, error) { return env.DB.MessageFeedback().CountDocuments(ctx, bson.M{"conversationId": conversationID}) },
+		"annotations":   func() (int64, error) { return env.DB.Annotations().CountDocuments(ctx, bson.M{"conversationId": conversationID}) },
+	} {
+		n, err := count()
+		if err != nil {
+			t.Fatalf("count %s: %v", name, err)
+		}
+		if n != 0 {
+			t.Fatalf("expected %s cascade-deleted, got %d remaining", name, n)
+		}
+	}
+}
+
+func TestDeleteConversation_OtherUsersConversationNotFound(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	user, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+
+	otherUser := testutil.CreateTestUser(t, env.DB, "other@test.com", "Test1234!@#$", "Other")
+	conversationID := primitive.NewObjectID()
+	if _, err := env.DB.Conversations().InsertOne(ctx, models.Conversation{
+		ID: conversationID, TenantID: tenant.ID, UserID: otherUser.ID, AgentID: "customer-support",
+		Title: "Not yours", CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed conversation: %v", err)
+	}
+
+	req := env.tenantRequest(t, http.MethodDelete, "/api/chat/conversations/"+conversationID.Hex(), strings.NewReader(""), user, tenant.ID.Hex())
+	req = mux.SetURLVars(req, map[string]string{"conversationId": conversationID.Hex()})
+	rr := httptest.NewRecorder()
+	newChatHandlerForTest(env).DeleteConversation(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for other user's conversation, got %d", rr.Code)
+	}
+	n, _ := env.DB.Conversations().CountDocuments(ctx, bson.M{"_id": conversationID})
+	if n != 1 {
+		t.Fatalf("expected other user's conversation to survive, got %d", n)
+	}
+}
+
+func TestRenameConversation_ValidatesAndUpdates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	user, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+
+	conversationID := primitive.NewObjectID()
+	if _, err := env.DB.Conversations().InsertOne(ctx, models.Conversation{
+		ID: conversationID, TenantID: tenant.ID, UserID: user.ID, AgentID: "customer-support",
+		Title: "Original", CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed conversation: %v", err)
+	}
+
+	doRename := func(title string) *httptest.ResponseRecorder {
+		body, _ := json.Marshal(map[string]string{"title": title})
+		req := env.tenantRequest(t, http.MethodPatch, "/api/chat/conversations/"+conversationID.Hex(), strings.NewReader(string(body)), user, tenant.ID.Hex())
+		req = mux.SetURLVars(req, map[string]string{"conversationId": conversationID.Hex()})
+		rr := httptest.NewRecorder()
+		newChatHandlerForTest(env).RenameConversation(rr, req)
+		return rr
+	}
+
+	if rr := doRename("   "); rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty title, got %d", rr.Code)
+	}
+	if rr := doRename(strings.Repeat("x", 201)); rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for over-long title, got %d", rr.Code)
+	}
+	if rr := doRename("My renamed chat"); rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 for valid title, got %d (%s)", rr.Code, rr.Body.String())
+	}
+
+	var conv models.Conversation
+	if err := env.DB.Conversations().FindOne(ctx, bson.M{"_id": conversationID}).Decode(&conv); err != nil {
+		t.Fatalf("reload conversation: %v", err)
+	}
+	if conv.Title != "My renamed chat" {
+		t.Fatalf("expected updated title, got %q", conv.Title)
+	}
+}
+
+func TestStreamRegenerate_ReplacesAssistantReply(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	env := setupTestServer(t)
+	defer env.Cleanup()
+	user, tenant := createAdminEnv(t, env)
+	ctx := context.Background()
+
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"Regenerated reply\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+	}))
+	defer provider.Close()
+
+	if _, err := env.DB.Tenants().UpdateOne(ctx, bson.M{"_id": tenant.ID},
+		bson.M{"$set": bson.M{"subscriptionCredits": int64(50), "purchasedCredits": int64(0)}}); err != nil {
+		t.Fatalf("seed credits: %v", err)
+	}
+	if _, err := env.DB.LLMConfigs().InsertOne(ctx, models.LLMConfig{
+		Key: models.DefaultLLMConfigKey, APIKey: "test-key", BaseURL: provider.URL, Model: "test-model",
+		IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed llm config: %v", err)
+	}
+
+	conversationID := primitive.NewObjectID()
+	if _, err := env.DB.Conversations().InsertOne(ctx, models.Conversation{
+		ID: conversationID, TenantID: tenant.ID, UserID: user.ID, AgentID: "customer-support",
+		Title: "Chat", CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed conversation: %v", err)
+	}
+	base := time.Now()
+	if _, err := env.DB.ChatMessages().InsertOne(ctx, models.ChatMessage{
+		ID: primitive.NewObjectID(), TenantID: tenant.ID, UserID: user.ID, ConversationID: conversationID,
+		AgentID: "customer-support", Role: "user", Content: "What is your refund policy?", CreatedAt: base,
+	}); err != nil {
+		t.Fatalf("seed user message: %v", err)
+	}
+	oldAssistantID := primitive.NewObjectID()
+	if _, err := env.DB.ChatMessages().InsertOne(ctx, models.ChatMessage{
+		ID: oldAssistantID, TenantID: tenant.ID, UserID: user.ID, ConversationID: conversationID,
+		AgentID: "customer-support", Role: "assistant", Content: "Old answer", Status: models.ChatMessageStatusCompleted,
+		CreditsCharged: 3, CreatedAt: base.Add(time.Second),
+	}); err != nil {
+		t.Fatalf("seed old assistant message: %v", err)
+	}
+
+	body, _ := json.Marshal(RegenerateRequest{ConversationID: conversationID.Hex(), MessageID: oldAssistantID.Hex()})
+	req := env.tenantRequest(t, http.MethodPost, "/api/chat/regenerate", strings.NewReader(string(body)), user, tenant.ID.Hex())
+	rr := httptest.NewRecorder()
+	newChatHandlerForTest(env).StreamRegenerate(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (%s)", rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), "event: message_done") {
+		t.Fatalf("expected stream completion, got %s", rr.Body.String())
+	}
+
+	// Old assistant message removed.
+	if n, _ := env.DB.ChatMessages().CountDocuments(ctx, bson.M{"_id": oldAssistantID}); n != 0 {
+		t.Fatalf("expected old assistant message deleted, got %d", n)
+	}
+	// Exactly one user + one (new) assistant message remain.
+	var msgs []models.ChatMessage
+	cursor, err := env.DB.ChatMessages().Find(ctx, bson.M{"conversationId": conversationID}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}}))
+	if err != nil {
+		t.Fatalf("find messages: %v", err)
+	}
+	defer cursor.Close(ctx)
+	if err := cursor.All(ctx, &msgs); err != nil {
+		t.Fatalf("decode messages: %v", err)
+	}
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages after regenerate (no duplicate user turn), got %d", len(msgs))
+	}
+	if msgs[1].Role != "assistant" || msgs[1].Content != "Regenerated reply" {
+		t.Fatalf("expected regenerated assistant reply, got role=%q content=%q", msgs[1].Role, msgs[1].Content)
 	}
 }

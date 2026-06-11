@@ -116,7 +116,7 @@ func (h *PlansHandler) GetPlan(w http.ResponseWriter, r *http.Request) {
 
 // ListEntitlementKeys returns unique entitlement keys, types, and descriptions across all plans.
 func (h *PlansHandler) ListEntitlementKeys(w http.ResponseWriter, r *http.Request) {
-	cursor, err := h.db.Plans().Find(r.Context(), bson.M{})
+	cursor, err := h.db.Plans().Find(r.Context(), bson.M{}, options.Find().SetLimit(500))
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to list plans")
 		return

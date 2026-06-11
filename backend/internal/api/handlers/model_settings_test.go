@@ -1109,7 +1109,7 @@ func TestClearTenantDefaultsForModelIDsUpdate_MatchesAllDefaultFields(t *testing
 	if !ok {
 		t.Fatalf("expected $unset bson.M, got %T", update["$unset"])
 	}
-	for _, field := range []string{"defaultTextModelConfigId", "defaultImageModelConfigId", "defaultVideoModelConfigId"} {
+	for _, field := range []string{"defaultTextModelConfigId", "defaultImageModelConfigId", "defaultVideoModelConfigId", "defaultEmbeddingModelConfigId"} {
 		if value, ok := unsetDoc[field]; !ok || value != "" {
 			t.Fatalf("expected %s to be unset, got %v", field, unsetDoc[field])
 		}
@@ -1119,11 +1119,11 @@ func TestClearTenantDefaultsForModelIDsUpdate_MatchesAllDefaultFields(t *testing
 	if !ok {
 		t.Fatalf("expected $or clauses, got %T", update["$or"])
 	}
-	if len(orClauses) != 3 {
-		t.Fatalf("expected 3 default-field clauses, got %d", len(orClauses))
+	if len(orClauses) != 4 {
+		t.Fatalf("expected 4 default-field clauses, got %d", len(orClauses))
 	}
 
-	for _, field := range []string{"defaultTextModelConfigId", "defaultImageModelConfigId", "defaultVideoModelConfigId"} {
+	for _, field := range []string{"defaultTextModelConfigId", "defaultImageModelConfigId", "defaultVideoModelConfigId", "defaultEmbeddingModelConfigId"} {
 		found := false
 		for _, clause := range orClauses {
 			if condition, ok := clause[field].(bson.M); ok {

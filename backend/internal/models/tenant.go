@@ -16,6 +16,10 @@ type Tenant struct {
 	BillingWaived        bool                `json:"billingWaived" bson:"billingWaived"`
 	SubscriptionCredits  int64               `json:"subscriptionCredits" bson:"subscriptionCredits" validate:"gte=0"`
 	PurchasedCredits     int64               `json:"purchasedCredits" bson:"purchasedCredits" validate:"gte=0"`
+	// BonusGrantedPlanIDs records plan IDs whose one-time BonusCredits have already
+	// been granted to this tenant, so repeatedly (re)assigning a free/waived plan
+	// can't farm bonus credits. Stripe-paid grants are deduped by webhook idempotency.
+	BonusGrantedPlanIDs  []primitive.ObjectID `json:"bonusGrantedPlanIds,omitempty" bson:"bonusGrantedPlanIds,omitempty"`
 	StripeCustomerID     string              `json:"stripeCustomerId,omitempty" bson:"stripeCustomerId,omitempty"`
 	BillingStatus        BillingStatus       `json:"billingStatus" bson:"billingStatus" validate:"omitempty,valid_billing_status"`
 	StripeSubscriptionID string              `json:"stripeSubscriptionId,omitempty" bson:"stripeSubscriptionId,omitempty"`
@@ -27,6 +31,7 @@ type Tenant struct {
 	DefaultTextModelConfigID  *primitive.ObjectID `json:"defaultTextModelConfigId,omitempty" bson:"defaultTextModelConfigId,omitempty"`
 	DefaultImageModelConfigID *primitive.ObjectID `json:"defaultImageModelConfigId,omitempty" bson:"defaultImageModelConfigId,omitempty"`
 	DefaultVideoModelConfigID *primitive.ObjectID `json:"defaultVideoModelConfigId,omitempty" bson:"defaultVideoModelConfigId,omitempty"`
+	DefaultEmbeddingModelConfigID *primitive.ObjectID `json:"defaultEmbeddingModelConfigId,omitempty" bson:"defaultEmbeddingModelConfigId,omitempty"`
 	CreatedAt            time.Time           `json:"createdAt" bson:"createdAt" validate:"required"`
 	UpdatedAt            time.Time           `json:"updatedAt" bson:"updatedAt" validate:"required"`
 }

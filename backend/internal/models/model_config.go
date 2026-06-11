@@ -9,9 +9,10 @@ import (
 type ModelModality string
 
 const (
-	ModelModalityText  ModelModality = "text"
-	ModelModalityImage ModelModality = "image"
-	ModelModalityVideo ModelModality = "video"
+	ModelModalityText      ModelModality = "text"
+	ModelModalityImage     ModelModality = "image"
+	ModelModalityVideo     ModelModality = "video"
+	ModelModalityEmbedding ModelModality = "embedding"
 )
 
 type ModelConfig struct {
@@ -29,5 +30,5 @@ type ModelConfig struct {
 }
 
 func ValidModelModality(s ModelModality) bool {
-	return s == ModelModalityText || s == ModelModalityImage || s == ModelModalityVideo
+	return s == ModelModalityText || s == ModelModalityImage || s == ModelModalityVideo || s == ModelModalityEmbedding
 }

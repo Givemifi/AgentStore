@@ -16,6 +16,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	stripe "github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/coupon"
@@ -119,8 +120,8 @@ func (h *PromotionsHandler) ListPromotions(w http.ResponseWriter, r *http.Reques
 func (h *PromotionsHandler) buildProductNameMap(ctx context.Context) map[string]string {
 	nameMap := make(map[string]string)
 
-	// Get all stripe mappings.
-	cursor, err := h.db.StripeMappings().Find(ctx, bson.M{})
+	// Get all stripe mappings (bounded to guard against unbounded scans).
+	cursor, err := h.db.StripeMappings().Find(ctx, bson.M{}, options.Find().SetLimit(1000))
 	if err != nil {
 		return nameMap
 	}

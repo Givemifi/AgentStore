@@ -479,7 +479,7 @@ export const tenantModelsApi = {
   createModel: (data: Partial<ModelConfig>) => api.post<ModelConfig>('/tenant/model-configs', data).then(r => r.data),
   updateModel: (id: string, data: Partial<ModelConfig>) => api.put<ModelConfig>(`/tenant/model-configs/${id}`, data).then(r => r.data),
   deleteModel: (id: string) => api.delete(`/tenant/model-configs/${id}`).then(r => r.data),
-  updateDefaults: (data: { defaultTextModelConfigId?: string; defaultImageModelConfigId?: string; defaultVideoModelConfigId?: string }) => api.post('/tenant/model-defaults', data).then(r => r.data),
+  updateDefaults: (data: { defaultTextModelConfigId?: string; defaultImageModelConfigId?: string; defaultVideoModelConfigId?: string; defaultEmbeddingModelConfigId?: string }) => api.post('/tenant/model-defaults', data).then(r => r.data),
 };
 
 // Streaming chat types
@@ -496,15 +496,20 @@ export type StreamChatError = Error & {
   };
 };
 
-export async function streamChat(data: ChatRequest, onEvent: (event: ChatStreamEvent) => void, signal?: AbortSignal) {
-  const response = await fetch('/api/chat/stream', {
+async function streamSSE(
+  path: string,
+  body: unknown,
+  onEvent: (event: ChatStreamEvent) => void,
+  signal?: AbortSignal,
+) {
+  const response = await fetch(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(api.defaults.headers.common.Authorization ? { Authorization: String(api.defaults.headers.common.Authorization) } : {}),
       ...(api.defaults.headers.common['X-Tenant-ID'] ? { 'X-Tenant-ID': String(api.defaults.headers.common['X-Tenant-ID']) } : {}),
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(body),
     signal,
   });
   if (!response.ok || !response.body) {
@@ -545,14 +550,126 @@ export async function streamChat(data: ChatRequest, onEvent: (event: ChatStreamE
   }
 }
 
+export async function streamChat(data: ChatRequest, onEvent: (event: ChatStreamEvent) => void, signal?: AbortSignal) {
+  return streamSSE('/api/chat/stream', data, onEvent, signal);
+}
+
+export interface RegenerateRequest {
+  conversationId: string;
+  messageId: string;
+}
+
+export async function streamRegenerate(data: RegenerateRequest, onEvent: (event: ChatStreamEvent) => void, signal?: AbortSignal) {
+  return streamSSE('/api/chat/regenerate', data, onEvent, signal);
+}
+
 export const chatApi = {
   send: (data: ChatRequest) =>
     api.post<ChatResponse>('/chat', data).then(r => r.data),
   stream: streamChat,
+  regenerate: streamRegenerate,
   conversations: (agentId?: string) =>
     api.get<Conversation[]>('/chat/conversations', { params: { agentId } }).then(r => r.data),
   messages: (conversationId: string) =>
     api.get<ChatMessage[]>(`/chat/conversations/${conversationId}/messages`).then(r => r.data),
+  renameConversation: (conversationId: string, title: string) =>
+    api.patch<Conversation>(`/chat/conversations/${conversationId}`, { title }).then(r => r.data),
+  deleteConversation: (conversationId: string) =>
+    api.delete(`/chat/conversations/${conversationId}`).then(r => r.data),
+};
+
+// --- Message feedback (thumbs up/down) ---
+export interface MessageFeedbackEntry {
+  rating: number;
+  comment?: string;
+}
+
+export const feedbackApi = {
+  set: (messageId: string, rating: 1 | -1, comment?: string) =>
+    api.put<MessageFeedbackEntry>(`/chat/messages/${messageId}/feedback`, { rating, comment }).then(r => r.data),
+  remove: (messageId: string) =>
+    api.delete(`/chat/messages/${messageId}/feedback`).then(r => r.data),
+  forConversation: (conversationId: string) =>
+    api.get<Record<string, MessageFeedbackEntry>>(`/chat/conversations/${conversationId}/feedback`).then(r => r.data),
+};
+
+// --- Agent knowledge base ---
+export interface KnowledgeDocument {
+  id: string;
+  tenantId: string;
+  agentId: string;
+  name: string;
+  sourceType: 'document' | 'text' | 'qa' | 'annotation';
+  status: 'processing' | 'ready' | 'error';
+  errorMessage?: string;
+  chunkCount: number;
+  charCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const knowledgeApi = {
+  list: (agentId: string) =>
+    api.get<KnowledgeDocument[]>(`/tenant/agents/${agentId}/knowledge`).then(r => r.data),
+  create: (agentId: string, data: { name: string; sourceType: string; text: string }) =>
+    api.post<KnowledgeDocument>(`/tenant/agents/${agentId}/knowledge`, data).then(r => r.data),
+  remove: (agentId: string, docId: string) =>
+    api.delete(`/tenant/agents/${agentId}/knowledge/${docId}`).then(r => r.data),
+  reindex: (agentId: string, docId: string) =>
+    api.post<{ status: string }>(`/tenant/agents/${agentId}/knowledge/${docId}/reindex`).then(r => r.data),
+};
+
+// --- Data annotation workbench (admin) ---
+export interface AnnotationQueueItem {
+  messageId: string;
+  conversationId: string;
+  agentId: string;
+  userQuestion: string;
+  assistantReply: string;
+  rating?: number;
+  comment?: string;
+  annotated: boolean;
+  qualityScore?: number;
+  status?: string;
+  createdAt: string;
+}
+
+export interface AnnotationContextMessage {
+  id: string;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface AgentQualityStat {
+  agentId: string;
+  messageCount: number;
+  thumbsUp: number;
+  thumbsDown: number;
+  annotationCount: number;
+  promotedCount: number;
+  avgQualityScore: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
+export const annotationsApi = {
+  queue: (params?: { agentId?: string; rating?: string; status?: string; page?: number }) =>
+    api.get<AnnotationQueueItem[]>('/tenant/annotations/queue', { params }).then(r => r.data),
+  context: (messageId: string) =>
+    api.get<AnnotationContextMessage[]>(`/tenant/annotations/context/${messageId}`).then(r => r.data),
+  save: (messageId: string, data: { qualityScore: number; issueTags: string[]; idealAnswer?: string; notes?: string }) =>
+    api.put<{ status: string }>(`/tenant/annotations/${messageId}`, data).then(r => r.data),
+  promote: (messageId: string) =>
+    api.post<{ status: string; documentId: string; chunkCount: number }>(`/tenant/annotations/${messageId}/promote`).then(r => r.data),
+  stats: (agentId?: string) =>
+    api.get<AgentQualityStat[]>('/tenant/annotations/stats', { params: { agentId } }).then(r => r.data),
+  exportUrl: (params?: { agentId?: string; minScore?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.agentId) qs.set('agentId', params.agentId);
+    if (params?.minScore) qs.set('minScore', String(params.minScore));
+    return `/api/tenant/annotations/export?${qs.toString()}`;
+  },
 };
 
 export const shareApi = {

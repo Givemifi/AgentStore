@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, FileText, Globe2, Headphones, Landmark, Loader2, Menu, MessageSquare, Mic, Paperclip, PenLine, Plus, Scale, Send, Share2, Square, TowerControl, X, Zap } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, Copy, FileText, Globe2, Headphones, Landmark, Loader2, Menu, MessageSquare, Mic, Paperclip, Pencil, PenLine, Plus, RefreshCw, Scale, Send, Share2, Square, ThumbsDown, ThumbsUp, TowerControl, Trash2, X, Zap } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
-import { agentsApi, chatApi, usageApi, type ChatStreamEvent, shareApi } from '../../api/client';
+import { agentsApi, chatApi, usageApi, feedbackApi, type ChatStreamEvent, shareApi } from '../../api/client';
 import { useTenant } from '../../contexts/TenantContext';
 import type { ChatMessage, Conversation } from '../../types';
 import { ErrorState, MarkdownMessage } from '../../components/app';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import ConfirmModal from '../../components/ConfirmModal';
 import { getErrorMessage } from '../../utils/errors';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import {
@@ -170,23 +171,78 @@ function ConversationItem({
   conversation,
   isActive,
   onClick,
+  onRename,
+  onDelete,
 }: {
   conversation: Conversation;
   isActive: boolean;
   onClick: () => void;
+  onRename: (id: string, title: string) => void;
+  onDelete: (conversation: Conversation) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(conversation.title);
+
+  const commit = () => {
+    const next = title.trim();
+    setEditing(false);
+    if (next && next !== conversation.title) {
+      onRename(conversation.id, next);
+    } else {
+      setTitle(conversation.title);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className={`w-full rounded-md border px-3 py-2.5 ${isActive ? 'border-primary-500/60 bg-primary-500/10' : 'border-white/8 bg-dark-900'}`}>
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { setTitle(conversation.title); setEditing(false); }
+          }}
+          maxLength={200}
+          className="w-full rounded bg-dark-800 px-2 py-1 text-sm text-white outline-none ring-1 ring-primary-500/40"
+        />
+      </div>
+    );
+  }
+
   return (
-    <button
-      onClick={onClick}
-      className={`w-full rounded-md border px-3 py-2.5 text-left transition-colors ${
+    <div
+      className={`group relative w-full rounded-md border px-3 py-2.5 transition-colors ${
         isActive
           ? 'border-primary-500/60 bg-primary-500/10'
           : 'border-white/8 bg-dark-900 hover:border-white/8 hover:bg-dark-900'
       }`}
     >
-      <p className="truncate text-sm font-medium text-white">{conversation.title}</p>
-      <p className="mt-1 text-xs text-dark-400">Updated {formatConversationTime(conversation.updatedAt)}</p>
-    </button>
+      <button onClick={onClick} className="block w-full pr-12 text-left">
+        <p className="truncate text-sm font-medium text-white">{conversation.title}</p>
+        <p className="mt-1 text-xs text-dark-400">Updated {formatConversationTime(conversation.updatedAt)}</p>
+      </button>
+      <div className="absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          onClick={() => { setTitle(conversation.title); setEditing(true); }}
+          className="rounded p-1 text-dark-400 hover:bg-white/10 hover:text-white"
+          aria-label="Rename conversation"
+          title="Rename"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => onDelete(conversation)}
+          className="rounded p-1 text-dark-400 hover:bg-white/10 hover:text-red-400"
+          aria-label="Delete conversation"
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -224,6 +280,8 @@ function ConversationSidebarContent({
   conversationId,
   startNewChat,
   openConversation,
+  onRename,
+  onDelete,
 }: {
   agent: { name: string; category: string };
   conversations: Conversation[] | undefined;
@@ -232,6 +290,8 @@ function ConversationSidebarContent({
   conversationId: string | null;
   startNewChat: () => void;
   openConversation: (nextConversationId: string) => void;
+  onRename: (id: string, title: string) => void;
+  onDelete: (conversation: Conversation) => void;
 }) {
   return (
     <>
@@ -272,6 +332,8 @@ function ConversationSidebarContent({
                 conversation={conversation}
                 isActive={conversation.id === conversationId}
                 onClick={() => openConversation(conversation.id)}
+                onRename={onRename}
+                onDelete={onDelete}
               />
             ))}
           </div>
@@ -318,6 +380,8 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const streamingContentRef = useRef('');
+  // Ref to startNewChat so callbacks defined before it (e.g. delete mutation) can call it.
+  const startNewChatRef = useRef<(() => void) | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const conversationId = searchParams.get('conversationId')?.trim() || null;
@@ -373,6 +437,70 @@ export default function ChatPage() {
     enabled: shouldFetchMessages,
     retry: false,
   });
+
+  // Per-message feedback (thumbs up/down) for the active conversation.
+  const { data: feedbackMap } = useQuery({
+    queryKey: ['feedback', conversationId],
+    queryFn: () => feedbackApi.forConversation(conversationId!),
+    enabled: shouldFetchMessages,
+    retry: false,
+  });
+
+  const feedbackMutation = useMutation({
+    mutationFn: ({ messageId, rating }: { messageId: string; rating: 1 | -1; comment?: string }) =>
+      feedbackApi.set(messageId, rating, undefined),
+    onSettled: () => {
+      if (conversationId) void queryClient.invalidateQueries({ queryKey: ['feedback', conversationId] });
+    },
+  });
+  const removeFeedbackMutation = useMutation({
+    mutationFn: (messageId: string) => feedbackApi.remove(messageId),
+    onSettled: () => {
+      if (conversationId) void queryClient.invalidateQueries({ queryKey: ['feedback', conversationId] });
+    },
+  });
+
+  const handleFeedback = useCallback((messageId: string, rating: 1 | -1) => {
+    const current = feedbackMap?.[messageId]?.rating;
+    if (current === rating) {
+      removeFeedbackMutation.mutate(messageId);
+    } else {
+      feedbackMutation.mutate({ messageId, rating });
+    }
+  }, [feedbackMap, feedbackMutation, removeFeedbackMutation]);
+
+  // Conversation management: rename / delete.
+  const conversationsQueryKey = ['conversations', agentId, activeTenant?.tenantId];
+  const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  const renameMutation = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) => chatApi.renameConversation(id, title),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: conversationsQueryKey }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => chatApi.deleteConversation(id),
+    onSuccess: (_data, deletedId) => {
+      void queryClient.invalidateQueries({ queryKey: conversationsQueryKey });
+      queryClient.removeQueries({ queryKey: ['messages', deletedId] });
+      setPendingDelete(null);
+      if (conversationId === deletedId) {
+        startNewChatRef.current?.();
+      }
+    },
+  });
+
+  const handleRenameConversation = useCallback((id: string, title: string) => {
+    renameMutation.mutate({ id, title });
+  }, [renameMutation]);
+
+  const handleCopyMessage = useCallback((messageId: string, content: string) => {
+    void navigator.clipboard.writeText(content).then(() => {
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId((cur) => (cur === messageId ? null : cur)), 1500);
+    });
+  }, []);
 
   const remainingCredits = creditBalanceOverride ?? ((usageData?.subscriptionCredits ?? 0) + (usageData?.purchasedCredits ?? 0));
   const isCreditBalanceKnown = creditBalanceOverride !== null || usageData !== undefined;
@@ -637,6 +765,9 @@ export default function ChatPage() {
     streamingContentRef.current = '';
     focusComposer();
   };
+  useEffect(() => {
+    startNewChatRef.current = startNewChat;
+  });
 
   const openConversation = (nextConversationId: string) => {
     setIsConversationDrawerOpen(false);
@@ -856,6 +987,87 @@ export default function ChatPage() {
     void sendStreamMessage(previousUserMessage.content, conversationId, resolvedAgentId);
   };
 
+  const handleRegenerateMessage = useCallback(async (message: ChatMessage) => {
+    if (!conversationId || isStreaming || sendMessageMutation.isPending || hasInsufficientCredits) {
+      return;
+    }
+    if (message.role !== 'assistant' || message.id.startsWith('assistant-') || message.id.startsWith('user-')) {
+      return; // only persisted assistant messages can be regenerated
+    }
+
+    setComposerNotice(null);
+    setIsStreaming(true);
+    setStreamingContent('');
+    streamingContentRef.current = '';
+    abortControllerRef.current = new AbortController();
+
+    // Optimistically drop the old assistant reply so it is visibly replaced.
+    const snapshot = queryClient.getQueryData<ChatMessage[]>(['messages', conversationId]);
+    queryClient.setQueryData<ChatMessage[]>(['messages', conversationId], (current) =>
+      (current ?? []).filter((m) => m.id !== message.id),
+    );
+
+    let finishedNormally = false;
+    try {
+      await chatApi.regenerate(
+        { conversationId, messageId: message.id },
+        (event: ChatStreamEvent) => {
+          if (event.event === 'delta') {
+            streamingContentRef.current += event.data.text;
+            setStreamingContent(streamingContentRef.current);
+          } else if (event.event === 'message_done') {
+            finishedNormally = true;
+            setIsStreaming(false);
+            setCreditBalanceOverride(event.data.remainingCredits);
+            const assistantMsg: ChatMessage = {
+              id: event.data.messageId,
+              tenantId: '',
+              userId: '',
+              conversationId: event.data.conversationId,
+              agentId: message.agentId,
+              role: 'assistant',
+              content: streamingContentRef.current,
+              creditsCharged: event.data.creditsCharged,
+              model: event.data.model,
+              createdAt: new Date().toISOString(),
+            };
+            queryClient.setQueryData<ChatMessage[]>(['messages', conversationId], (current) => [
+              ...(current ?? []),
+              assistantMsg,
+            ]);
+            queryClient.invalidateQueries({ queryKey: ['usage-summary', activeTenant?.tenantId] });
+            setStreamingContent('');
+            streamingContentRef.current = '';
+          } else if (event.event === 'error') {
+            finishedNormally = true;
+            setIsStreaming(false);
+            setComposerNotice({ tone: 'error', message: event.data.message });
+            // Restore the original reply on failure (credits were refunded server-side).
+            if (snapshot) queryClient.setQueryData<ChatMessage[]>(['messages', conversationId], snapshot);
+            setStreamingContent('');
+            streamingContentRef.current = '';
+          }
+        },
+        abortControllerRef.current.signal,
+      );
+      if (!finishedNormally) {
+        setIsStreaming(false);
+        setComposerNotice({ tone: 'error', message: 'Connection interrupted. Please try again.' });
+        if (snapshot) queryClient.setQueryData<ChatMessage[]>(['messages', conversationId], snapshot);
+        setStreamingContent('');
+        streamingContentRef.current = '';
+      }
+    } catch (error) {
+      setIsStreaming(false);
+      if (!isExpectedStreamAbort(error)) {
+        setComposerNotice(getSendNotice(error));
+      }
+      if (snapshot) queryClient.setQueryData<ChatMessage[]>(['messages', conversationId], snapshot);
+      setStreamingContent('');
+      streamingContentRef.current = '';
+    }
+  }, [conversationId, isStreaming, sendMessageMutation.isPending, hasInsufficientCredits, queryClient, activeTenant?.tenantId]);
+
   const handleSendMessage = async () => {
     // Compose message text (with parsed document text) and image data URLs.
     const { message, images } = composeMessagePayload(draft, attachments);
@@ -942,6 +1154,8 @@ export default function ChatPage() {
           conversationId={conversationId}
           startNewChat={startNewChat}
           openConversation={openConversation}
+          onRename={handleRenameConversation}
+          onDelete={setPendingDelete}
         />
       </aside>
 
@@ -979,6 +1193,8 @@ export default function ChatPage() {
               conversationId={conversationId}
               startNewChat={startNewChat}
               openConversation={openConversation}
+              onRename={handleRenameConversation}
+              onDelete={setPendingDelete}
             />
           </aside>
         </div>
@@ -1150,6 +1366,47 @@ export default function ChatPage() {
                       <p className={`mt-2 text-xs ${message.role === 'user' ? 'text-primary-100' : 'text-dark-500'}`}>
                         {message.creditsCharged ?? 0} credits
                       </p>
+                    )}
+                    {message.role === 'assistant' && !assistantStatus && message.content && !message.id.startsWith('temp-') && (
+                      <div className="mt-2 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleFeedback(message.id, 1)}
+                          className={`rounded-md p-1 transition-colors hover:bg-white/8 ${feedbackMap?.[message.id]?.rating === 1 ? 'text-emerald-400' : 'text-dark-500'}`}
+                          aria-label={t('chat.feedback.helpful', { defaultValue: 'Helpful' })}
+                          title={t('chat.feedback.helpful', { defaultValue: 'Helpful' })}
+                        >
+                          <ThumbsUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFeedback(message.id, -1)}
+                          className={`rounded-md p-1 transition-colors hover:bg-white/8 ${feedbackMap?.[message.id]?.rating === -1 ? 'text-red-400' : 'text-dark-500'}`}
+                          aria-label={t('chat.feedback.notHelpful', { defaultValue: 'Not helpful' })}
+                          title={t('chat.feedback.notHelpful', { defaultValue: 'Not helpful' })}
+                        >
+                          <ThumbsDown className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyMessage(message.id, message.content)}
+                          className={`rounded-md p-1 transition-colors hover:bg-white/8 ${copiedMessageId === message.id ? 'text-emerald-400' : 'text-dark-500'}`}
+                          aria-label={t('chat.actions.copy', { defaultValue: 'Copy' })}
+                          title={t('chat.actions.copy', { defaultValue: 'Copy' })}
+                        >
+                          {copiedMessageId === message.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleRegenerateMessage(message)}
+                          disabled={isStreaming || hasInsufficientCredits}
+                          className="rounded-md p-1 text-dark-500 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                          aria-label={t('chat.actions.regenerate', { defaultValue: 'Regenerate' })}
+                          title={t('chat.actions.regenerate', { defaultValue: 'Regenerate' })}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     )}
                     {assistantStatus && (
                       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3">
@@ -1377,6 +1634,17 @@ export default function ChatPage() {
           </div>
         </div>
       </section>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => { if (pendingDelete) deleteMutation.mutate(pendingDelete.id); }}
+        title={t('chat.deleteConversation.title', { defaultValue: 'Delete conversation?' })}
+        message={t('chat.deleteConversation.message', { defaultValue: 'This will permanently delete this conversation and all its messages. This cannot be undone.' })}
+        confirmLabel={t('chat.deleteConversation.confirm', { defaultValue: 'Delete' })}
+        confirmVariant="danger"
+        loading={deleteMutation.isPending}
+      />
     </div>
   );
 }

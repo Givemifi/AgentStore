@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Send, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Send, X, Loader2, BookOpen } from 'lucide-react';
 import { tenantAgentsApi, tenantModelsApi } from '../../../api/client';
 import { useTenant } from '../../../contexts/TenantContext';
 import type { Agent, AgentCapability, AgentVisibility, AgentCreditCost } from '../../../types';
+import KnowledgeModal from './KnowledgeModal';
 
 const emptyForm = {
   name: '',
@@ -25,6 +26,7 @@ export default function AgentsTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [knowledgeAgent, setKnowledgeAgent] = useState<{ id: string; name: string } | null>(null);
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ['tenant-agents', tenantId],
@@ -344,6 +346,13 @@ export default function AgentsTab() {
                     </button>
                   )}
                   <button
+                    onClick={() => setKnowledgeAgent({ id: agent.id, name: agent.name })}
+                    className="p-2 text-primary-400 hover:bg-dark-800 rounded"
+                    title="知识库"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleEdit(agent)}
                     className="p-2 text-dark-400 hover:bg-dark-800 rounded"
                     title="Edit"
@@ -371,6 +380,14 @@ export default function AgentsTab() {
             </div>
           ))}
         </div>
+      )}
+
+      {knowledgeAgent && (
+        <KnowledgeModal
+          agentId={knowledgeAgent.id}
+          agentName={knowledgeAgent.name}
+          onClose={() => setKnowledgeAgent(null)}
+        />
       )}
     </div>
   );

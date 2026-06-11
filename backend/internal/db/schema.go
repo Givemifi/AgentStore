@@ -42,6 +42,10 @@ func AllSchemas() []CollectionSchema {
 		modelConfigsSchema(),
 		paymentConfigsSchema(),
 		shareLinksSchema(),
+		knowledgeDocumentsSchema(),
+		knowledgeChunksSchema(),
+		messageFeedbackSchema(),
+		annotationsSchema(),
 	}
 }
 
@@ -168,6 +172,12 @@ func tenantsSchema() CollectionSchema {
 						"bsonType": "long",
 						"minimum":  0,
 					},
+					"bonusGrantedPlanIds": bson.M{
+						"bsonType": "array",
+						"items": bson.M{
+							"bsonType": "objectId",
+						},
+					},
 					"seatQuantity": bson.M{
 						"bsonType": "int",
 					},
@@ -178,6 +188,9 @@ func tenantsSchema() CollectionSchema {
 						"bsonType": "objectId",
 					},
 					"defaultVideoModelConfigId": bson.M{
+						"bsonType": "objectId",
+					},
+					"defaultEmbeddingModelConfigId": bson.M{
 						"bsonType": "objectId",
 					},
 				},
@@ -797,6 +810,14 @@ func chatMessagesSchema() CollectionSchema {
 						"bsonType": "int",
 						"minimum":  0,
 					},
+					"promptTokens": bson.M{
+						"bsonType": "int",
+						"minimum":  0,
+					},
+					"completionTokens": bson.M{
+						"bsonType": "int",
+						"minimum":  0,
+					},
 					"createdAt": bson.M{
 						"bsonType": "date",
 					},
@@ -909,7 +930,7 @@ func modelConfigsSchema() CollectionSchema {
 			"providerId":    bson.M{"bsonType": "objectId"},
 			"name":          bson.M{"bsonType": "string", "minLength": 1, "maxLength": 120},
 			"displayName":   bson.M{"bsonType": "string", "minLength": 1, "maxLength": 160},
-			"modality":      bson.M{"bsonType": "string", "enum": bson.A{"text", "image", "video"}},
+			"modality":      bson.M{"bsonType": "string", "enum": bson.A{"text", "image", "video", "embedding"}},
 			"modelId":       bson.M{"bsonType": "string", "minLength": 1, "maxLength": 200},
 			"defaultParams": bson.M{"bsonType": "object"},
 			"enabled":       bson.M{"bsonType": "bool"},
@@ -961,6 +982,102 @@ func shareLinksSchema() CollectionSchema {
 					"title":     bson.M{"bsonType": "string", "maxLength": 200},
 					"messages":  bson.M{"bsonType": "array"},
 					"createdAt": bson.M{"bsonType": "date"},
+				},
+			},
+		},
+	}
+}
+
+func knowledgeDocumentsSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "knowledge_documents",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"tenantId", "agentId", "name", "sourceType", "status", "createdBy", "createdAt", "updatedAt"},
+				"properties": bson.M{
+					"tenantId":   bson.M{"bsonType": "objectId"},
+					"agentId":    bson.M{"bsonType": "string", "minLength": 1, "maxLength": 100},
+					"name":       bson.M{"bsonType": "string", "minLength": 1, "maxLength": 200},
+					"sourceType": bson.M{"bsonType": "string", "enum": bson.A{"document", "text", "qa", "annotation"}},
+					"status":     bson.M{"bsonType": "string", "enum": bson.A{"processing", "ready", "error"}},
+					"errorMessage": bson.M{"bsonType": "string", "maxLength": 500},
+					"chunkCount": bson.M{"bsonType": "int", "minimum": 0},
+					"charCount":  bson.M{"bsonType": "int", "minimum": 0},
+					"createdBy":  bson.M{"bsonType": "objectId"},
+					"createdAt":  bson.M{"bsonType": "date"},
+					"updatedAt":  bson.M{"bsonType": "date"},
+				},
+			},
+		},
+	}
+}
+
+func knowledgeChunksSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "knowledge_chunks",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"tenantId", "agentId", "documentId", "seq", "text", "createdAt"},
+				"properties": bson.M{
+					"tenantId":   bson.M{"bsonType": "objectId"},
+					"agentId":    bson.M{"bsonType": "string", "minLength": 1, "maxLength": 100},
+					"documentId": bson.M{"bsonType": "objectId"},
+					"seq":        bson.M{"bsonType": "int", "minimum": 0},
+					"text":       bson.M{"bsonType": "string", "minLength": 1},
+					"embedding":  bson.M{"bsonType": "array"},
+					"createdAt":  bson.M{"bsonType": "date"},
+				},
+			},
+		},
+	}
+}
+
+func messageFeedbackSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "message_feedback",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"tenantId", "userId", "conversationId", "messageId", "agentId", "rating", "createdAt", "updatedAt"},
+				"properties": bson.M{
+					"tenantId":       bson.M{"bsonType": "objectId"},
+					"userId":         bson.M{"bsonType": "objectId"},
+					"conversationId": bson.M{"bsonType": "objectId"},
+					"messageId":      bson.M{"bsonType": "objectId"},
+					"agentId":        bson.M{"bsonType": "string", "minLength": 1, "maxLength": 100},
+					"rating":         bson.M{"bsonType": "int", "enum": bson.A{1, -1}},
+					"comment":        bson.M{"bsonType": "string", "maxLength": 2000},
+					"createdAt":      bson.M{"bsonType": "date"},
+					"updatedAt":      bson.M{"bsonType": "date"},
+				},
+			},
+		},
+	}
+}
+
+func annotationsSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "annotations",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"tenantId", "conversationId", "messageId", "agentId", "annotatorId", "qualityScore", "status", "createdAt", "updatedAt"},
+				"properties": bson.M{
+					"tenantId":       bson.M{"bsonType": "objectId"},
+					"conversationId": bson.M{"bsonType": "objectId"},
+					"messageId":      bson.M{"bsonType": "objectId"},
+					"agentId":        bson.M{"bsonType": "string", "minLength": 1, "maxLength": 100},
+					"annotatorId":    bson.M{"bsonType": "objectId"},
+					"qualityScore":   bson.M{"bsonType": "int", "minimum": 1, "maximum": 5},
+					"issueTags":      bson.M{"bsonType": "array"},
+					"idealAnswer":    bson.M{"bsonType": "string", "maxLength": 20000},
+					"notes":          bson.M{"bsonType": "string", "maxLength": 2000},
+					"status":         bson.M{"bsonType": "string", "enum": bson.A{"annotated", "promoted"}},
+					"promotedDocumentId": bson.M{"bsonType": "objectId"},
+					"createdAt":      bson.M{"bsonType": "date"},
+					"updatedAt":      bson.M{"bsonType": "date"},
 				},
 			},
 		},
