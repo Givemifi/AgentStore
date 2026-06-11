@@ -14,7 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   mfaPending: MFAPendingState | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; displayName: string; invitationToken?: string }) => Promise<void>;
+  register: (data: { email: string; password: string; displayName: string; invitationToken?: string; refCode?: string }) => Promise<void>;
   loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   completeMfaChallenge: (mfaToken: string, code: string) => Promise<void>;
   clearMfaPending: () => void;
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMfaPending(null);
   }, []);
 
-  const register = useCallback(async (data: { email: string; password: string; displayName: string; invitationToken?: string }) => {
+  const register = useCallback(async (data: { email: string; password: string; displayName: string; invitationToken?: string; refCode?: string }) => {
     const res = await authApi.register(data);
     setStoredValue(ACCESS_TOKEN_KEY, res.accessToken);
     setStoredValue(REFRESH_TOKEN_KEY, res.refreshToken);

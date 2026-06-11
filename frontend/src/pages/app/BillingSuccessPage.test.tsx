@@ -35,7 +35,7 @@ describe('BillingSuccessPage', () => {
 
   beforeEach(() => {
     mockedNavigate = vi.fn();
-    vi.mocked(useNavigate).mockReturnValue(mockedNavigate);
+    vi.mocked(useNavigate).mockReturnValue(mockedNavigate as unknown as ReturnType<typeof useNavigate>);
   });
 
   afterEach(() => {

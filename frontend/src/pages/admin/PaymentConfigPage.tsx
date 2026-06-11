@@ -81,7 +81,7 @@ function WechatSection() {
   }, [data]);
 
   const mutation = useMutation({
-    mutationFn: (d: WechatForm) => adminApi.updatePaymentConfig('wechat', d),
+    mutationFn: (d: WechatForm) => adminApi.updatePaymentConfig('wechat', d as unknown as Record<string, unknown>),
     onSuccess: (res) => {
       if (res.warning) {
         toast.warning('已保存，但服务初始化失败：' + res.warning);
@@ -192,7 +192,7 @@ function AlipaySection() {
   }, [data]);
 
   const mutation = useMutation({
-    mutationFn: (d: AlipayForm) => adminApi.updatePaymentConfig('alipay', d),
+    mutationFn: (d: AlipayForm) => adminApi.updatePaymentConfig('alipay', d as unknown as Record<string, unknown>),
     onSuccess: (res) => {
       if (res.warning) {
         toast.warning('已保存，但服务初始化失败：' + res.warning);

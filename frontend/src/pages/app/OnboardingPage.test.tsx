@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import OnboardingPage from './OnboardingPage';
 
 const apiMocks = vi.hoisted(() => ({
@@ -87,8 +87,8 @@ describe('OnboardingPage', () => {
     // Spy on window.location.href for hard navigation tests
     locationAssignSpy.mockReset();
     originalLocationHref = Object.getOwnPropertyDescriptor(window, 'location');
-    delete (window as Record<string, unknown>).location;
-    (window as Record<string, unknown>).location = { href: '' };
+    delete (window as unknown as Record<string, unknown>).location;
+    (window as unknown as Record<string, unknown>).location = { href: '' };
     Object.defineProperty(window.location, 'href', { set: locationAssignSpy, get: () => '' });
   });
 
@@ -96,7 +96,7 @@ describe('OnboardingPage', () => {
     if (originalLocationHref) {
       Object.defineProperty(window, 'location', originalLocationHref);
     } else {
-      delete (window as Record<string, unknown>).location;
+      delete (window as unknown as Record<string, unknown>).location;
     }
   });
 
@@ -359,8 +359,6 @@ describe('OnboardingPage', () => {
 
   it('resets loading to false when completeOnboarding fails', async () => {
     const user = userEvent.setup();
-    const _setLoadingSpy = vi.fn();
-    // Override the component to inject setLoading spy (placeholder for future use)
     apiMocks.completeOnboarding.mockRejectedValue(new Error('failed'));
     renderOnboarding();
 
