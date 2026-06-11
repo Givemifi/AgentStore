@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, Globe2, Headphones, Landmark, Loader2, Menu, MessageSquare, PenLine, Plus, Scale, Send, Square, TowerControl, X, Zap } from 'lucide-react';
+import { AlertCircle, ArrowLeft, FileText, Globe2, Headphones, Landmark, Loader2, Menu, MessageSquare, Mic, Paperclip, PenLine, Plus, Scale, Send, Share2, Square, TowerControl, X, Zap } from 'lucide-react';
 import axios from 'axios';
-import { agentsApi, chatApi, usageApi, type ChatStreamEvent } from '../../api/client';
+import { useTranslation } from 'react-i18next';
+import { agentsApi, chatApi, usageApi, type ChatStreamEvent, shareApi } from '../../api/client';
 import { useTenant } from '../../contexts/TenantContext';
 import type { ChatMessage, Conversation } from '../../types';
 import { ErrorState, MarkdownMessage } from '../../components/app';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getErrorMessage } from '../../utils/errors';
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
+import {
+  prepareAttachment,
+  composeMessagePayload,
+  MAX_ATTACHMENTS,
+  type PreparedAttachment,
+} from '../../utils/attachments';
 
 type ComposerNotice = {
   tone: 'error' | 'warning';
@@ -283,10 +291,13 @@ export default function ChatPage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { activeTenant } = useTenant();
+  const { t } = useTranslation('app');
+  const [shareState, setShareState] = useState<'idle' | 'sharing' | 'copied'>('idle');
   const tenantReady = !!activeTenant;
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState('');
   const [pendingUserMessage, setPendingUserMessage] = useState<ChatMessage | null>(null);
@@ -298,6 +309,10 @@ export default function ChatPage() {
   const openDrawerButtonRef = useRef<HTMLButtonElement>(null);
   const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
+
+  // Attachment state (images sent as base64 to LLM vision; documents parsed to text)
+  const [attachments, setAttachments] = useState<PreparedAttachment[]>([]);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
 
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
@@ -414,7 +429,6 @@ export default function ChatPage() {
       }, 10);
       return () => clearTimeout(handle);
     }
-    // Update ref for next render
     previouslyOpenRef.current = isConversationDrawerOpen;
   }, [isConversationDrawerOpen]);
 
@@ -446,6 +460,82 @@ export default function ChatPage() {
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
+  }, []);
+
+  // --- Voice input (push-to-talk) ---
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setDraft((current) => {
+      const trimmed = current.trimEnd();
+      return trimmed ? `${trimmed} ${text}` : text;
+    });
+  }, []);
+
+  const {
+    supported: voiceSupported,
+    listening: isListening,
+    interim: voiceInterim,
+    error: voiceError,
+    start: startVoice,
+    stop: stopVoice,
+  } = useSpeechRecognition(handleVoiceTranscript);
+
+  useEffect(() => {
+    if (voiceError) {
+      setComposerNotice({ tone: 'error', message: voiceError });
+    }
+  }, [voiceError]);
+
+  // --- File attachments ---
+  const handlePickFiles = useCallback(async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
+
+    setComposerNotice(null);
+    setIsProcessingFiles(true);
+    try {
+      for (const file of files) {
+        // Enforce the total cap before processing each file.
+        let reachedCap = false;
+        setAttachments((current) => {
+          if (current.length >= MAX_ATTACHMENTS) {
+            reachedCap = true;
+          }
+          return current;
+        });
+        if (reachedCap) {
+          setComposerNotice({ tone: 'warning', message: `最多上传 ${MAX_ATTACHMENTS} 个附件` });
+          break;
+        }
+        try {
+          const prepared = await prepareAttachment(file);
+          setAttachments((current) =>
+            current.length >= MAX_ATTACHMENTS ? current : [...current, prepared],
+          );
+        } catch (error) {
+          setComposerNotice({ tone: 'error', message: getErrorMessage(error) });
+        }
+      }
+    } finally {
+      setIsProcessingFiles(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, []);
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((current) => current.filter((a) => a.id !== id));
+  }, []);
+
+  // Keep the message scrolled to bottom when the mobile keyboard opens/closes.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const handleResize = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    viewport.addEventListener('resize', handleResize);
+    return () => viewport.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -518,6 +608,7 @@ export default function ChatPage() {
     setIsConversationDrawerOpen(false);
     setSearchParams({});
     setDraft('');
+    setAttachments([]);
     setPendingUserMessage(null);
     setComposerNotice(null);
     // Clear streaming state
@@ -536,6 +627,7 @@ export default function ChatPage() {
     setSearchParams({ conversationId: nextConversationId });
     setPendingUserMessage(null);
     setComposerNotice(null);
+    setAttachments([]);
     // Clear streaming state
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -554,7 +646,29 @@ export default function ChatPage() {
     setIsStreaming(false);
   };
 
-  const sendStreamMessage = useCallback(async (message: string, currentConversationId: string | null, agentIdToUse: string) => {
+  const handleShareConversation = async () => {
+    if (!conversationId || shareState !== 'idle') return;
+    setShareState('sharing');
+    try {
+      const { token } = await shareApi.create(conversationId);
+      const shareUrl = `${window.location.origin}/share/${token}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setShareState('copied');
+      setTimeout(() => setShareState('idle'), 2500);
+    } catch {
+      setShareState('idle');
+    }
+  };
+
+  const sendStreamMessage = useCallback(async (
+    message: string,
+    currentConversationId: string | null,
+    agentIdToUse: string,
+    images?: string[],
+    // Original attachment objects saved before clearing the composer, so they
+    // can be restored when the stream fails (e.g. proxy timeout or LLM error).
+    originalAttachments?: PreparedAttachment[],
+  ) => {
     // Guard against missing agentId
     if (!agentIdToUse) {
       return;
@@ -562,16 +676,14 @@ export default function ChatPage() {
 
     const conversationId = currentConversationId || `new-${Date.now()}`;
     const messageId = `assistant-${Date.now()}`;
+    const imageAttachments = images && images.length > 0 ? images : undefined;
 
-    // Set streaming state
     setIsStreaming(true);
     setStreamingContent('');
     streamingContentRef.current = '';
 
-    // Create abort controller
     abortControllerRef.current = new AbortController();
 
-    // Add user message immediately
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       tenantId: '',
@@ -581,10 +693,26 @@ export default function ChatPage() {
       role: 'user',
       content: message,
       creditsCharged: 0,
+      // Attach image data URLs in-memory so the bubble can render thumbnails.
+      // These are NOT persisted to the DB (too large); we store attachmentCount instead.
+      attachments: imageAttachments,
+      attachmentCount: imageAttachments ? imageAttachments.length : 0,
       createdAt: new Date().toISOString(),
     };
     setPendingUserMessage(userMsg);
     setDraft('');
+
+    // Track whether the stream ended normally (message_done or error event).
+    // If the stream closes without either, the connection was cut (e.g. proxy
+    // timeout) and we need to recover the composer state.
+    let streamFinishedNormally = false;
+
+    const restoreComposer = () => {
+      setDraft(message);
+      if (originalAttachments && originalAttachments.length > 0) {
+        setAttachments(originalAttachments);
+      }
+    };
 
     try {
       await chatApi.stream(
@@ -592,17 +720,17 @@ export default function ChatPage() {
           agentId: agentIdToUse,
           conversationId: currentConversationId || undefined,
           message,
+          attachments: imageAttachments,
         },
         (event: ChatStreamEvent) => {
           if (event.event === 'delta') {
             streamingContentRef.current += event.data.text;
             setStreamingContent(streamingContentRef.current);
           } else if (event.event === 'message_done') {
-            // Stream complete
+            streamFinishedNormally = true;
             setIsStreaming(false);
             setCreditBalanceOverride(event.data.remainingCredits);
 
-            // Add the completed messages to the cache
             const assistantMsg: ChatMessage = {
               id: event.data.messageId,
               tenantId: '',
@@ -622,24 +750,22 @@ export default function ChatPage() {
               assistantMsg,
             ]);
 
-            // Update URL if new conversation
             if (!currentConversationId) {
               setSearchParams({ conversationId: event.data.conversationId });
               setCreatedConversationIds(prev => [...prev, event.data.conversationId]);
             }
 
-            // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['conversations', agentId, activeTenant?.tenantId] });
             queryClient.invalidateQueries({ queryKey: ['usage-summary', activeTenant?.tenantId] });
 
-            // Clear streaming state
             setStreamingContent('');
             streamingContentRef.current = '';
             setPendingUserMessage(null);
           } else if (event.event === 'error') {
+            streamFinishedNormally = true;
             setIsStreaming(false);
             setComposerNotice({ tone: 'error', message: event.data.message });
-            setDraft(message);
+            restoreComposer();
             setPendingUserMessage(null);
             setStreamingContent('');
             streamingContentRef.current = '';
@@ -647,6 +773,18 @@ export default function ChatPage() {
         },
         abortControllerRef.current.signal
       );
+
+      // Stream ended without a terminal event — connection was cut (e.g. proxy
+      // timeout while the LLM was still thinking). Recover the composer so the
+      // user can retry without losing their message or attachments.
+      if (!streamFinishedNormally) {
+        setIsStreaming(false);
+        setComposerNotice({ tone: 'error', message: 'Connection interrupted. Please try again.' });
+        restoreComposer();
+        setPendingUserMessage(null);
+        setStreamingContent('');
+        streamingContentRef.current = '';
+      }
     } catch (error) {
       if (isExpectedStreamAbort(error)) {
         // User cancelled - this is expected when stopping
@@ -674,7 +812,7 @@ export default function ChatPage() {
       } else {
         setIsStreaming(false);
         setComposerNotice(getSendNotice(error));
-        setDraft(message);
+        restoreComposer();
       }
       setPendingUserMessage(null);
       setStreamingContent('');
@@ -703,16 +841,27 @@ export default function ChatPage() {
   };
 
   const handleSendMessage = async () => {
-    const message = draft.trim();
-    // Guard: require a valid agentId
-    if (!message || sendMessageMutation.isPending || isStreaming || !resolvedAgentId || hasInsufficientCredits) {
+    // Compose message text (with parsed document text) and image data URLs.
+    const { message, images } = composeMessagePayload(draft, attachments);
+
+    // Guard: require text or at least one attachment, and a valid agentId.
+    if ((!message && images.length === 0) || sendMessageMutation.isPending || isStreaming || !resolvedAgentId || hasInsufficientCredits) {
       return;
     }
 
     setComposerNotice(null);
 
-    // Use streaming API with explicitly resolved agentId
-    await sendStreamMessage(message, conversationId, resolvedAgentId);
+    // Snapshot attachments before clearing, so they can be restored on error.
+    const snapshotAttachments = [...attachments];
+
+    // Clear attachments and draft after preparing the payload
+    // (images variable already has the base64 data extracted)
+    setAttachments([]);
+    setDraft('');
+
+    // Use streaming API with explicitly resolved agentId.
+    // Pass images and the original attachments snapshot so errors can restore them.
+    await sendStreamMessage(message, conversationId, resolvedAgentId, images.length > 0 ? images : undefined, snapshotAttachments);
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -767,7 +916,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] min-h-[34rem] flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:min-h-[40rem] lg:flex-row">
+    <div className="flex h-[calc(100dvh-10rem)] min-h-[34rem] flex-col gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[40rem] lg:flex-row">
       <aside className="hidden w-full flex-col rounded-3xl border border-dark-800 bg-dark-900/60 lg:flex lg:w-80 lg:min-w-80">
         <ConversationSidebarContent
           agent={agent}
@@ -857,10 +1006,24 @@ export default function ChatPage() {
               </div>
             </div>
 
-            <div className="inline-flex items-center gap-1.5 self-start rounded-xl border border-dark-700 bg-dark-950/60 px-3 py-2 text-sm text-dark-200">
-              <Zap className="h-4 w-4 text-primary-400" />
-              <span className="font-medium">{remainingCredits.toLocaleString()}</span>
-              <span className="text-dark-500">credits left</span>
+            <div className="flex items-center gap-2 self-start">
+              {conversationId && (
+                <button
+                  type="button"
+                  onClick={handleShareConversation}
+                  disabled={shareState !== 'idle'}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-dark-700 bg-dark-950/60 px-3 py-2 text-sm text-dark-300 transition-colors hover:border-primary-500/30 hover:text-white disabled:opacity-50"
+                  title={shareState === 'copied' ? 'Link copied!' : 'Share conversation'}
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">{shareState === 'copied' ? 'Copied!' : shareState === 'sharing' ? '...' : 'Share'}</span>
+                </button>
+              )}
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-dark-700 bg-dark-950/60 px-3 py-2 text-sm text-dark-200">
+                <Zap className="h-4 w-4 text-primary-400" />
+                <span className="font-medium">{remainingCredits.toLocaleString()}</span>
+                <span className="text-dark-500">credits left</span>
+              </div>
             </div>
           </div>
         </div>
@@ -920,7 +1083,7 @@ export default function ChatPage() {
             <ErrorState
               title="Unable to load messages."
               message={getErrorMessage(messagesError)}
-              retryLabel="Retry"
+              retryLabel={t('retry', { ns: 'common' })}
               onRetry={() => void refetchMessages()}
               isRetrying={messagesFetching}
             />
@@ -943,7 +1106,29 @@ export default function ChatPage() {
                     {message.role === 'assistant' ? (
                       <MarkdownMessage content={message.content} />
                     ) : (
-                      <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
+                      <div className="space-y-2">
+                        {/* Image attachments: show thumbnails if data available, count badge otherwise */}
+                        {(message.attachments && message.attachments.length > 0) ? (
+                          <div className={`flex flex-wrap gap-2 ${message.content ? 'mb-2' : ''}`}>
+                            {message.attachments.map((src, i) => (
+                              <img
+                                key={i}
+                                src={src}
+                                alt={`Attachment ${i + 1}`}
+                                className="h-32 max-w-[180px] rounded-lg object-cover ring-2 ring-white/20"
+                              />
+                            ))}
+                          </div>
+                        ) : (message.attachmentCount ?? 0) > 0 ? (
+                          <div className="flex items-center gap-1.5 text-sm text-primary-100">
+                            <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                            <span>{message.attachmentCount} images</span>
+                          </div>
+                        ) : null}
+                        {message.content && (
+                          <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
+                        )}
+                      </div>
                     )}
                     {((message.creditsCharged ?? 0) > 0) && (
                       <p className={`mt-2 text-xs ${message.role === 'user' ? 'text-primary-100' : 'text-dark-500'}`}>
@@ -977,7 +1162,7 @@ export default function ChatPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-dark-300">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Generating... <button onClick={handleStopStreaming} className="text-primary-400 hover:underline">Stop</button></span>
+                    <span>Generating... <button onClick={handleStopStreaming} className="text-primary-400 hover:underline">Stop</button></span>
                         </div>
                         {streamingContent && (
                           <div className="text-sm leading-6">
@@ -1001,7 +1186,10 @@ export default function ChatPage() {
           )}
         </div>
 
-        <div className="border-t border-dark-800 p-4 sm:p-5">
+        <div
+          className="border-t border-dark-800 p-4 sm:p-5"
+          style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+        >
           {activeComposerNotice && (
             <div
               className={`mb-3 rounded-2xl border px-4 py-3 text-sm ${
@@ -1024,15 +1212,113 @@ export default function ChatPage() {
             </div>
           )}
 
+          {/* Attachment previews */}
+          {attachments.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {attachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="group relative flex items-center gap-2 rounded-xl border border-dark-700 bg-dark-800 p-2"
+                >
+                  {attachment.kind === 'image' ? (
+                    <img
+                      src={attachment.dataUrl}
+                      alt={attachment.name}
+                      className="h-14 w-14 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-dark-900 text-primary-400">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                  )}
+                  <div className="max-w-[8rem] pr-1">
+                    <p className="truncate text-xs font-medium text-white">{attachment.name}</p>
+                    <p className="text-[11px] text-dark-500">
+                      {attachment.kind === 'image' ? '图片' : '文档'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(attachment.id)}
+                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-dark-700 text-dark-200 shadow transition-colors hover:bg-red-500 hover:text-white"
+                    aria-label={`移除附件 ${attachment.name}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Voice listening indicator */}
+          {isListening && (
+            <div className="mb-3 flex items-center gap-2 rounded-2xl border border-primary-500/30 bg-primary-500/10 px-4 py-2.5 text-sm text-primary-100">
+              <span className="relative flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-400 opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-primary-500" />
+              </span>
+              <span>{voiceInterim || '正在聆听… 松开按钮结束'}</span>
+            </div>
+          )}
+
           <p className="mb-3 text-xs text-dark-400">
             This message costs {requiredCredits} credits. Failed responses are not charged.
           </p>
 
-          <div className="flex items-end gap-3">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf,.doc,.docx,.txt,.md"
+            multiple
+            className="hidden"
+            onChange={(event) => void handlePickFiles(event.target.files)}
+          />
+
+          <div className="flex items-end gap-2 sm:gap-3">
+            {/* Attach button */}
+            {!isStreaming && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={attachments.length >= MAX_ATTACHMENTS || isProcessingFiles}
+                className="flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 items-center justify-center rounded-2xl bg-dark-800 text-dark-300 transition-colors hover:bg-dark-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="上传图片或文档"
+                title="上传图片或文档"
+              >
+                {isProcessingFiles ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+              </button>
+            )}
+
+            {/* Voice button (push-to-talk) */}
+            {!isStreaming && voiceSupported && (
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  startVoice();
+                }}
+                onPointerUp={() => stopVoice()}
+                onPointerLeave={() => isListening && stopVoice()}
+                onPointerCancel={() => stopVoice()}
+                disabled={sendMessageMutation.isPending}
+                className={`flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 select-none items-center justify-center rounded-2xl transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isListening
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-dark-800 text-dark-300 hover:bg-dark-700 hover:text-white'
+                }`}
+                style={{ touchAction: 'none' }}
+                aria-label="按住说话"
+                title="按住说话"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+            )}
+
             {isStreaming ? (
               <button
                 onClick={handleStopStreaming}
-                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 text-white transition-colors hover:bg-red-600"
+                className="flex h-12 min-h-[48px] w-12 min-w-[48px] items-center justify-center rounded-2xl bg-red-500 text-white transition-colors hover:bg-red-600"
                 aria-label="Stop generating"
               >
                 <Square className="h-5 w-5" />
@@ -1049,7 +1335,7 @@ export default function ChatPage() {
                   disabled={sendMessageMutation.isPending || isStreaming}
                   aria-invalid={hasInsufficientCredits}
                   aria-label={`Message ${agent.name}`}
-                  className="min-h-[52px] w-full resize-none rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 pr-12 text-sm text-white placeholder-dark-500 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                  className="min-h-[48px] w-full resize-none rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 pr-4 text-base text-white placeholder-dark-500 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
                   style={{ maxHeight: '160px' }}
                 />
               </div>
@@ -1057,8 +1343,8 @@ export default function ChatPage() {
             {!isStreaming && (
               <button
                 onClick={handleSendMessage}
-                disabled={!draft.trim() || sendMessageMutation.isPending || hasInsufficientCredits}
-                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={(!draft.trim() && attachments.length === 0) || sendMessageMutation.isPending || hasInsufficientCredits}
+                className="flex h-12 min-h-[48px] w-12 min-w-[48px] shrink-0 items-center justify-center rounded-2xl bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 {sendMessageMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -1067,7 +1353,7 @@ export default function ChatPage() {
           </div>
 
           <div className="mt-3 flex flex-col gap-1 text-xs text-dark-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>Press Enter to send, Shift+Enter for a new line.</p>
+            <p className="hidden sm:block">Press Enter to send, Shift+Enter for a new line.</p>
             <p className="inline-flex items-center gap-1.5">
               <MessageSquare className="h-3.5 w-3.5" />
               Each message costs {requiredCredits} credits.

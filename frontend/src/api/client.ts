@@ -7,6 +7,12 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Public (unauthenticated) API client — for catalog/market endpoints
+const publicApi = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+});
+
 // Auth header management
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -114,7 +120,7 @@ export const bootstrapApi = {
 
 // --- Auth ---
 export const authApi = {
-  register: (data: { email: string; password: string; displayName: string; invitationToken?: string }) =>
+  register: (data: { email: string; password: string; displayName: string; invitationToken?: string; refCode?: string }) =>
     api.post<AuthResponse>('/auth/register', data).then(r => r.data),
   login: (data: { email: string; password: string }) =>
     api.post<AuthResponse | MFARequiredResponse>('/auth/login', data).then(r => r.data),
@@ -262,6 +268,13 @@ export const adminApi = {
     api.get<{ id?: string; apiKey: string; baseURL: string; model: string; isActive: boolean }>('/admin/llm-config').then(r => r.data),
   updateLLMConfig: (data: { apiKey: string; baseURL: string; model: string; isActive: boolean }) =>
     api.put('/admin/llm-config', data).then(r => r.data),
+
+  // Payment provider configuration
+  getPaymentConfig: (provider: 'wechat' | 'alipay') =>
+    api.get<Record<string, unknown>>(`/admin/payment-config/${provider}`).then(r => r.data),
+  updatePaymentConfig: (provider: 'wechat' | 'alipay', data: Record<string, unknown>) =>
+    api.put<{ status: string; warning?: string }>(`/admin/payment-config/${provider}`, data).then(r => r.data),
+
   listConfig: () =>
     api.get<{ configs: ConfigVar[] }>('/admin/config').then(r => r.data),
   getConfig: (name: string) =>
@@ -434,6 +447,14 @@ export const agentsApi = {
     api.get<Agent>(`/chat/agents/${agentId}`).then(r => r.data),
 };
 
+// Public catalog API — no authentication required
+export const publicAgentsApi = {
+  list: () =>
+    publicApi.get<{ agents: Agent[] }>('/public/agents').then(r => r.data.agents),
+  get: (slug: string) =>
+    publicApi.get<Agent>(`/public/agents/${slug}`).then(r => r.data),
+};
+
 export const tenantAgentsApi = {
   list: () => api.get<Agent[]>('/tenant/agents').then(r => r.data),
   get: (id: string) => api.get<Agent>(`/tenant/agents/${id}`).then(r => r.data),
@@ -532,10 +553,21 @@ export const chatApi = {
     api.get<ChatMessage[]>(`/chat/conversations/${conversationId}/messages`).then(r => r.data),
 };
 
+export const shareApi = {
+  create: (conversationId: string) =>
+    api.post<{ token: string; createdAt: string }>(`/chat/conversations/${conversationId}/share`).then(r => r.data),
+  list: () =>
+    api.get<{ shares: Array<{ token: string; agentName: string; title: string; createdAt: string }> }>('/chat/share').then(r => r.data),
+  revoke: (token: string) =>
+    api.delete(`/chat/share/${token}`).then(r => r.data),
+  getPublic: (token: string) =>
+    publicApi.get<{ token: string; agentId: string; agentName: string; title: string; messages: Array<{ role: string; content: string }>; createdAt: string }>(`/public/share/${token}`).then(r => r.data),
+};
+
 // --- Billing ---
 export const billingApi = {
-  checkout: (data: { planId?: string; bundleId?: string; billingInterval?: string; seatQuantity?: number; removeBillingWaiver?: boolean }) =>
-    api.post<{ checkoutUrl?: string; waived?: boolean }>('/billing/checkout', data).then(r => r.data),
+  checkout: (data: { planId?: string; bundleId?: string; billingInterval?: string; seatQuantity?: number; removeBillingWaiver?: boolean; paymentMethod?: 'stripe' | 'wechat_h5' | 'alipay' }) =>
+    api.post<{ checkoutUrl?: string; waived?: boolean; outTradeNo?: string }>('/billing/checkout', data).then(r => r.data),
   portal: () =>
     api.post<{ portalUrl: string }>('/billing/portal').then(r => r.data),
   listTransactions: (params?: { page?: number; perPage?: number }) =>
@@ -547,7 +579,9 @@ export const billingApi = {
   cancel: () =>
     api.post<{ message: string; currentPeriodEnd?: string }>('/billing/cancel').then(r => r.data),
   getConfig: () =>
-    api.get<{ publishableKey: string }>('/billing/config').then(r => r.data),
+    api.get<{ publishableKey: string; paymentMethods: string[] }>('/billing/config').then(r => r.data),
+  getPaymentStatus: (outTradeNo: string) =>
+    api.get<{ status: 'pending' | 'completed' | 'failed'; provider: string; credits: number; outTradeNo: string }>('/billing/payment/status', { params: { outTradeNo } }).then(r => r.data),
 };
 
 // --- Branding (public, no auth) ---

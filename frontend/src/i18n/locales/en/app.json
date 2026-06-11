@@ -1,0 +1,136 @@
+{
+  "layout": {
+    "signOut": "Sign out",
+    "toggleThemeDark": "Switch to dark mode",
+    "toggleThemeLight": "Switch to light mode",
+    "messages": "Messages"
+  },
+  "nav": {
+    "agents": "Agents",
+    "credits": "Credits",
+    "history": "History",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "dashboard": {
+    "marketplace": "Agent Marketplace",
+    "headline": "Find the right AI agent for your next task.",
+    "subtext": "Search practical business Agents, try a suggested prompt, and only pay credits after a successful response.",
+    "searchLabel": "Search Agents",
+    "searchPlaceholder": "Search legal, tax, marketing, support...",
+    "recommended": "Recommended",
+    "suggestedPrompts": "Suggested prompts",
+    "creditsPerMessage": "{{count}} credits/message",
+    "start": "Start",
+    "textChat": "Text chat",
+    "bestFor": "Best for {{category}} teams",
+    "noAgentsSearch": "No Agents match your search",
+    "noAgentsSearchDesc": "Try a different keyword or category to find the right Agent for your task.",
+    "clearFilters": "Clear filters",
+    "noAgentsYet": "No agents yet",
+    "noAgentsYetDesc": "This workspace has not published any Agents yet. Check back soon or contact your administrator to publish the first Agent.",
+    "unableToLoad": "Unable to load agents right now."
+  },
+  "onboarding": {
+    "heading": "Welcome to AgentStore",
+    "subtext": "Choose a goal, pick an Agent, and start with a useful prompt.",
+    "goalStep": "Goal",
+    "agentStep": "Agent",
+    "promptStep": "Prompt",
+    "creditsStep": "Credits",
+    "goalHeading": "What do you want to accomplish first?",
+    "goalSubtext": "We will recommend a practical Agent and a first prompt.",
+    "agentHeading": "Pick your first Agent",
+    "agentSubtext_goal": "Recommended for {{goal}}",
+    "agentSubtext_default": "Suggested Agents to get started",
+    "noAgentsYet": "No Agents are published yet",
+    "goToMarketplace": "Go to marketplace",
+    "chooseDifferentGoal": "← Choose a different goal",
+    "promptHeading": "Choose your first prompt",
+    "promptSubtext": "Or type your own message after starting the chat.",
+    "skipPrompt": "Skip prompt",
+    "chooseDifferentAgent": "← Choose a different Agent",
+    "readyHeading": "You're ready to start!",
+    "creditsBalance": "You start with <strong>{{count}} credits.</strong>",
+    "creditsNote": "Credits are charged only after a successful response.",
+    "yourFirstChat": "Your first chat",
+    "back": "Back",
+    "startChatting": "Start chatting",
+    "goals": {
+      "Marketing": "Marketing",
+      "Legal": "Legal",
+      "Tax": "Tax",
+      "CustomerSupport": "Customer support",
+      "Ecommerce": "E-commerce",
+      "Strategy": "Strategy",
+      "Other": "Other"
+    }
+  },
+  "settings": {
+    "heading": "Settings",
+    "subtext": "Manage your account",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "sessions": "Sessions",
+      "billing": "Billing",
+      "agents": "Agents",
+      "models": "Models"
+    }
+  },
+  "chat": {
+    "newConversation": "New Conversation",
+    "sendMessage": "Send message",
+    "stopGenerating": "Stop generating",
+    "regenerate": "Regenerate",
+    "copyMessage": "Copy message",
+    "you": "You",
+    "assistant": "Assistant",
+    "typingIndicator": "Typing...",
+    "noConversation": "Select an agent to start chatting",
+    "insufficientCredits": "Insufficient credits. Please purchase more to continue.",
+    "errorSending": "Failed to send message"
+  },
+  "activity": {
+    "heading": "Usage History",
+    "subtext": "Track your conversation and credit usage",
+    "noActivity": "No activity yet",
+    "noActivityDesc": "Start chatting with an agent to see your usage here."
+  },
+  "plan": {
+    "heading": "Plans & Billing",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade",
+    "manage": "Manage"
+  },
+  "buyCredits": {
+    "heading": "Buy Credits",
+    "subtext": "Top up your credits to continue chatting",
+    "selectPackage": "Select a package",
+    "purchase": "Purchase",
+    "purchasing": "Processing...",
+    "payWith": "Pay with",
+    "payWithStripe": "Pay with Card",
+    "payWithWechat": "Pay with WeChat Pay",
+    "payWithAlipay": "Pay with Alipay",
+    "cnyNote": "≈ ¥{{amount}} CNY"
+  },
+  "team": {
+    "heading": "Team",
+    "inviteMember": "Invite Member",
+    "members": "Members",
+    "role": "Role",
+    "noMembers": "No team members yet"
+  },
+  "creditExplainer": {
+    "balance": "{{count}} credits available",
+    "perMessage": "~{{count}} per message",
+    "topUp": "Top up",
+    "lowBalance": "Low balance"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "networkError": "Network error. Check your connection.",
+    "unauthorized": "Session expired. Please sign in again."
+  }
+}

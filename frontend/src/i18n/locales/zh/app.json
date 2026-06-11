@@ -1,0 +1,136 @@
+{
+  "layout": {
+    "signOut": "退出登录",
+    "toggleThemeDark": "切换到深色模式",
+    "toggleThemeLight": "切换到浅色模式",
+    "messages": "消息"
+  },
+  "nav": {
+    "agents": "智能体",
+    "credits": "积分",
+    "history": "历史",
+    "settings": "设置",
+    "admin": "管理"
+  },
+  "dashboard": {
+    "marketplace": "智能体市场",
+    "headline": "为您的下一个任务找到合适的 AI 智能体。",
+    "subtext": "搜索实用的智能体，尝试推荐提示词，仅在成功响应后才消耗积分。",
+    "searchLabel": "搜索智能体",
+    "searchPlaceholder": "搜索法律、税务、营销、客服...",
+    "recommended": "推荐",
+    "suggestedPrompts": "推荐提示词",
+    "creditsPerMessage": "{{count}} 积分/条消息",
+    "start": "开始",
+    "textChat": "文本对话",
+    "bestFor": "适合{{category}}团队",
+    "noAgentsSearch": "没有匹配的智能体",
+    "noAgentsSearchDesc": "请尝试不同的关键词或分类来找到合适的智能体。",
+    "clearFilters": "清除筛选",
+    "noAgentsYet": "暂无智能体",
+    "noAgentsYetDesc": "该工作区尚未发布任何智能体，请稍后再来或联系管理员发布第一个智能体。",
+    "unableToLoad": "暂时无法加载智能体。"
+  },
+  "onboarding": {
+    "heading": "欢迎使用 AgentStore",
+    "subtext": "选择目标，挑选智能体，从推荐提示词开始对话。",
+    "goalStep": "目标",
+    "agentStep": "智能体",
+    "promptStep": "提示词",
+    "creditsStep": "积分",
+    "goalHeading": "您第一个想完成什么任务？",
+    "goalSubtext": "我们将为您推荐合适的智能体和首个提示词。",
+    "agentHeading": "选择您的第一个智能体",
+    "agentSubtext_goal": "为{{goal}}推荐",
+    "agentSubtext_default": "推荐入门智能体",
+    "noAgentsYet": "暂无已发布的智能体",
+    "goToMarketplace": "前往市场",
+    "chooseDifferentGoal": "← 选择其他目标",
+    "promptHeading": "选择您的首个提示词",
+    "promptSubtext": "您也可以在开始对话后输入自己的消息。",
+    "skipPrompt": "跳过提示词",
+    "chooseDifferentAgent": "← 选择其他智能体",
+    "readyHeading": "一切就绪！",
+    "creditsBalance": "您拥有 <strong>{{count}} 积分。</strong>",
+    "creditsNote": "仅在成功响应后才扣除积分。",
+    "yourFirstChat": "您的第一次对话",
+    "back": "返回",
+    "startChatting": "开始对话",
+    "goals": {
+      "Marketing": "营销",
+      "Legal": "法律",
+      "Tax": "税务",
+      "CustomerSupport": "客户支持",
+      "Ecommerce": "电商",
+      "Strategy": "策略",
+      "Other": "其他"
+    }
+  },
+  "settings": {
+    "heading": "设置",
+    "subtext": "管理您的账户",
+    "tabs": {
+      "profile": "个人资料",
+      "security": "安全",
+      "sessions": "会话",
+      "billing": "账单",
+      "agents": "智能体",
+      "models": "模型"
+    }
+  },
+  "chat": {
+    "newConversation": "新对话",
+    "sendMessage": "发送消息",
+    "stopGenerating": "停止生成",
+    "regenerate": "重新生成",
+    "copyMessage": "复制消息",
+    "you": "您",
+    "assistant": "助手",
+    "typingIndicator": "正在输入...",
+    "noConversation": "选择一个智能体开始对话",
+    "insufficientCredits": "积分不足，请购买更多积分以继续使用。",
+    "errorSending": "消息发送失败"
+  },
+  "activity": {
+    "heading": "使用记录",
+    "subtext": "查看您的对话和积分消耗记录",
+    "noActivity": "暂无记录",
+    "noActivityDesc": "开始与智能体对话后，您的使用记录将显示在这里。"
+  },
+  "plan": {
+    "heading": "套餐与账单",
+    "currentPlan": "当前套餐",
+    "upgrade": "升级",
+    "manage": "管理"
+  },
+  "buyCredits": {
+    "heading": "购买积分",
+    "subtext": "充值积分以继续使用",
+    "selectPackage": "选择套餐",
+    "purchase": "购买",
+    "purchasing": "处理中...",
+    "payWith": "支付方式",
+    "payWithStripe": "银行卡支付",
+    "payWithWechat": "微信支付",
+    "payWithAlipay": "支付宝",
+    "cnyNote": "≈ ¥{{amount}} 人民币"
+  },
+  "team": {
+    "heading": "团队",
+    "inviteMember": "邀请成员",
+    "members": "成员",
+    "role": "角色",
+    "noMembers": "暂无团队成员"
+  },
+  "creditExplainer": {
+    "balance": "剩余 {{count}} 积分",
+    "perMessage": "~{{count}}/条消息",
+    "topUp": "充值",
+    "lowBalance": "积分不足"
+  },
+  "errors": {
+    "generic": "出错了，请重试。",
+    "networkError": "网络错误，请检查您的连接。",
+    "unauthorized": "会话已过期，请重新登录。"
+  }
+}

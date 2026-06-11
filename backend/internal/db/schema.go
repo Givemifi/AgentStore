@@ -14,7 +14,7 @@ type CollectionSchema struct {
 	Schema     bson.M
 }
 
-// AllSchemas returns the JSON Schema validators for all 15 validated collections.
+// AllSchemas returns the JSON Schema validators for all validated collections.
 func AllSchemas() []CollectionSchema {
 	return []CollectionSchema{
 		usersSchema(),
@@ -24,6 +24,7 @@ func AllSchemas() []CollectionSchema {
 		plansSchema(),
 		creditBundlesSchema(),
 		financialTransactionsSchema(),
+		paymentOrdersSchema(),
 		webhooksSchema(),
 		apiKeysSchema(),
 		configVarsSchema(),
@@ -39,6 +40,8 @@ func AllSchemas() []CollectionSchema {
 		agentsSchema(),
 		modelProvidersSchema(),
 		modelConfigsSchema(),
+		paymentConfigsSchema(),
+		shareLinksSchema(),
 	}
 }
 
@@ -108,6 +111,14 @@ func usersSchema() CollectionSchema {
 					"themePreference": bson.M{
 						"bsonType": "string",
 						"enum":     bson.A{"light", "dark", "system", ""},
+					},
+					"referralCode": bson.M{
+						"bsonType":  "string",
+						"maxLength": 16,
+					},
+					"referredBy": bson.M{
+						"bsonType":  "string",
+						"maxLength": 16,
 					},
 				},
 			},
@@ -347,6 +358,59 @@ func financialTransactionsSchema() CollectionSchema {
 					},
 					"invoiceNumber": bson.M{
 						"bsonType": "string",
+					},
+					"paymentProvider": bson.M{
+						"bsonType": "string",
+					},
+					"outTradeNo": bson.M{
+						"bsonType": "string",
+					},
+					"createdAt": bson.M{
+						"bsonType": "date",
+					},
+				},
+			},
+		},
+	}
+}
+
+// paymentOrdersSchema validates pending domestic payment orders (WeChat/Alipay).
+func paymentOrdersSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "payment_orders",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"outTradeNo", "tenantId", "userId", "bundleId", "credits", "amountCents", "currency", "provider", "status", "createdAt"},
+				"properties": bson.M{
+					"outTradeNo": bson.M{
+						"bsonType": "string",
+					},
+					"tenantId": bson.M{
+						"bsonType": "objectId",
+					},
+					"userId": bson.M{
+						"bsonType": "objectId",
+					},
+					"bundleId": bson.M{
+						"bsonType": "objectId",
+					},
+					"credits": bson.M{
+						"bsonType": "long",
+					},
+					"amountCents": bson.M{
+						"bsonType": "long",
+					},
+					"currency": bson.M{
+						"bsonType": "string",
+					},
+					"provider": bson.M{
+						"bsonType": "string",
+						"enum":     bson.A{"wechat_h5", "alipay"},
+					},
+					"status": bson.M{
+						"bsonType": "string",
+						"enum":     bson.A{"pending", "completed", "failed"},
 					},
 					"createdAt": bson.M{
 						"bsonType": "date",
@@ -729,6 +793,10 @@ func chatMessagesSchema() CollectionSchema {
 						"bsonType": "string",
 						"enum":     bson.A{"generating", "completed", "error", "interrupted", ""},
 					},
+					"attachmentCount": bson.M{
+						"bsonType": "int",
+						"minimum":  0,
+					},
 					"createdAt": bson.M{
 						"bsonType": "date",
 					},
@@ -849,4 +917,52 @@ func modelConfigsSchema() CollectionSchema {
 			"updatedAt":     bson.M{"bsonType": "date"},
 		},
 	}}}
+}
+
+func paymentConfigsSchema() CollectionSchema {
+	return CollectionSchema{Collection: "payment_configs", Schema: bson.M{"$jsonSchema": bson.M{
+		"bsonType": "object",
+		"required": bson.A{"key"},
+		"properties": bson.M{
+			"key":          bson.M{"bsonType": "string", "enum": bson.A{"wechat_pay", "alipay"}},
+			"appId":        bson.M{"bsonType": "string"},
+			"mchId":        bson.M{"bsonType": "string"},
+			"apiV3Key":     bson.M{"bsonType": "string"},
+			"privateKey":   bson.M{"bsonType": "string"},
+			"certSerialNo": bson.M{"bsonType": "string"},
+			"publicKey":    bson.M{"bsonType": "string"},
+			"notifyUrl":    bson.M{"bsonType": "string"},
+			"returnUrl":    bson.M{"bsonType": "string"},
+			"isSandbox":    bson.M{"bsonType": "bool"},
+			"enabled":      bson.M{"bsonType": "bool"},
+			"createdAt":    bson.M{"bsonType": "date"},
+			"updatedAt":    bson.M{"bsonType": "date"},
+		},
+	}}}
+}
+
+func shareLinksSchema() CollectionSchema {
+	return CollectionSchema{
+		Collection: "share_links",
+		Schema: bson.M{
+			"$jsonSchema": bson.M{
+				"bsonType": "object",
+				"required": bson.A{"token", "tenantId", "userId", "agentId", "agentName", "createdAt"},
+				"properties": bson.M{
+					"token": bson.M{
+						"bsonType":  "string",
+						"minLength": 16,
+						"maxLength": 64,
+					},
+					"tenantId":  bson.M{"bsonType": "objectId"},
+					"userId":    bson.M{"bsonType": "objectId"},
+					"agentId":   bson.M{"bsonType": "string", "minLength": 1, "maxLength": 100},
+					"agentName": bson.M{"bsonType": "string", "minLength": 1, "maxLength": 120},
+					"title":     bson.M{"bsonType": "string", "maxLength": 200},
+					"messages":  bson.M{"bsonType": "array"},
+					"createdAt": bson.M{"bsonType": "date"},
+				},
+			},
+		},
+	}
 }

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogIn, Github, Mail, KeyRound, Fingerprint } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
 import { authApi } from '../../api/client';
 import { setStoredValue, storageKeys } from '../../utils/storageKeys';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -27,6 +29,7 @@ function MicrosoftIcon({ className }: { className?: string }) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
   const { login, mfaPending, completeMfaChallenge, clearMfaPending } = useAuth();
   const { branding } = useBranding();
   const [form, setForm] = useState({ email: '', password: '' });
@@ -48,7 +51,7 @@ export default function LoginPage() {
       navigate('/dashboard');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Invalid email or password');
+      setError(msg || t('login.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -64,7 +67,7 @@ export default function LoginPage() {
       navigate('/dashboard');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Invalid verification code');
+      setError(msg || t('mfa.invalidCode'));
     } finally {
       setLoading(false);
     }
@@ -79,7 +82,7 @@ export default function LoginPage() {
       setMagicLinkSent(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Failed to send magic link');
+      setError(msg || t('magicLink.failed'));
     } finally {
       setLoading(false);
     }
@@ -105,8 +108,8 @@ export default function LoginPage() {
     }
   };
 
-  const heading = branding.loginHeading || 'Welcome back';
-  const subtext = branding.loginSubtext || 'Sign in to your account';
+  const heading = branding.loginHeading || t('login.heading');
+  const subtext = branding.loginSubtext || t('login.subtext');
   const logoUrl = branding.logoUrl;
 
   const hasOAuth = providers && (providers.google || providers.github || providers.microsoft);
@@ -120,8 +123,8 @@ export default function LoginPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
               <KeyRound className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Two-Factor Authentication</h1>
-            <p className="text-dark-400 mt-2">Enter the code from your authenticator app or a recovery code</p>
+            <h1 className="text-2xl font-bold text-white">{t('mfa.heading')}</h1>
+            <p className="text-dark-400 mt-2">{t('mfa.subtext')}</p>
           </div>
 
           <form onSubmit={handleMfaSubmit} className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6 space-y-4">
@@ -132,7 +135,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Verification Code</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('mfa.verificationCode')}</label>
               <input
                 type="text"
                 required
@@ -142,7 +145,7 @@ export default function LoginPage() {
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors text-center text-lg tracking-widest"
-                placeholder="000000"
+                placeholder={t('mfa.codePlaceholder')}
                 maxLength={32}
               />
             </div>
@@ -152,7 +155,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Verifying...' : 'Verify'}
+              {loading ? t('mfa.verifying') : t('mfa.verify')}
             </button>
 
             <button
@@ -160,7 +163,7 @@ export default function LoginPage() {
               onClick={clearMfaPending}
               className="w-full text-sm text-dark-400 hover:text-dark-300 transition-colors"
             >
-              Back to login
+              {t('mfa.backToLogin')}
             </button>
           </form>
         </div>
@@ -178,13 +181,17 @@ export default function LoginPage() {
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-white mb-2">Check your email</h1>
-              <p className="text-dark-400 mb-6">We sent a sign-in link to <span className="text-white">{magicLinkEmail}</span></p>
+              <h1 className="text-xl font-bold text-white mb-2">{t('magicLink.sentHeading')}</h1>
+              <p className="text-dark-400 mb-6">
+                {t('magicLink.sentSubtext', { email: magicLinkEmail }).split(magicLinkEmail).map((part, i, arr) =>
+                  i < arr.length - 1 ? <span key={i}>{part}<span className="text-white">{magicLinkEmail}</span></span> : <span key={i}>{part}</span>
+                )}
+              </p>
               <button
                 onClick={() => { setShowMagicLink(false); setMagicLinkSent(false); }}
                 className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
               >
-                Back to login
+                {t('magicLink.backToLogin')}
               </button>
             </div>
           </div>
@@ -199,8 +206,8 @@ export default function LoginPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
               <Mail className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Sign in with email</h1>
-            <p className="text-dark-400 mt-2">We'll send you a sign-in link</p>
+            <h1 className="text-2xl font-bold text-white">{t('magicLink.heading')}</h1>
+            <p className="text-dark-400 mt-2">{t('magicLink.subtext')}</p>
           </div>
 
           <form onSubmit={handleMagicLink} className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6 space-y-4">
@@ -211,7 +218,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('login.email', { ns: 'common' })}</label>
               <input
                 type="email"
                 required
@@ -219,7 +226,7 @@ export default function LoginPage() {
                 value={magicLinkEmail}
                 onChange={(e) => setMagicLinkEmail(e.target.value)}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                placeholder="you@example.com"
+                placeholder={t('login.emailPlaceholder')}
               />
             </div>
 
@@ -228,7 +235,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Sending...' : 'Send sign-in link'}
+              {loading ? t('magicLink.sending') : t('magicLink.send')}
             </button>
 
             <button
@@ -236,7 +243,7 @@ export default function LoginPage() {
               onClick={() => setShowMagicLink(false)}
               className="w-full text-sm text-dark-400 hover:text-dark-300 transition-colors"
             >
-              Back to login
+              {t('magicLink.backToLogin')}
             </button>
           </form>
         </div>
@@ -248,6 +255,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        {/* Language switcher */}
+        <div className="flex justify-end mb-2">
+          <LanguageSwitcher variant="full" />
+        </div>
         <div className="text-center mb-8">
           {logoUrl ? (
             <img src={logoUrl} alt={branding.appName} className="h-14 mx-auto mb-4 object-contain" />
@@ -277,7 +288,7 @@ export default function LoginPage() {
                     className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <GoogleIcon className="w-5 h-5" />
-                    Continue with Google
+                    {t('login.continueWithGoogle')}
                   </a>
                 )}
                 {providers?.github && (
@@ -286,7 +297,7 @@ export default function LoginPage() {
                     className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <Github className="w-5 h-5" />
-                    Continue with GitHub
+                    {t('login.continueWithGitHub')}
                   </a>
                 )}
                 {providers?.microsoft && (
@@ -295,7 +306,7 @@ export default function LoginPage() {
                     className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <MicrosoftIcon className="w-4 h-4" />
-                    Continue with Microsoft
+                    {t('login.continueWithMicrosoft')}
                   </a>
                 )}
               </div>
@@ -305,7 +316,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-dark-700" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-dark-900/50 text-dark-500">or</span>
+                  <span className="px-3 bg-dark-900/50 text-dark-500">{t('or', { ns: 'common' })}</span>
                 </div>
               </div>
             </>
@@ -320,39 +331,39 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 disabled:opacity-50 transition-all"
             >
               <Fingerprint className="w-5 h-5" />
-              Sign in with passkey
+              {t('login.signInWithPasskey')}
             </button>
           )}
 
           {/* Password form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('email', { ns: 'common' })}</label>
               <input
                 type="email"
                 required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                placeholder="you@example.com"
+                placeholder={t('login.emailPlaceholder')}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('password', { ns: 'common' })}</label>
               <input
                 type="password"
                 required
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                placeholder="Your password"
+                placeholder={t('login.passwordPlaceholder')}
               />
             </div>
 
             <div className="flex items-center justify-end">
               <Link to="/forgot-password" className="text-sm text-primary-400 hover:text-primary-300 transition-colors">
-                Forgot password?
+                {t('login.forgotPassword')}
               </Link>
             </div>
 
@@ -361,7 +372,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
 
@@ -373,14 +384,14 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-2 w-full text-sm text-dark-400 hover:text-dark-300 transition-colors"
             >
               <Mail className="w-4 h-4" />
-              Sign in with email link
+              {t('login.signInWithEmailLink')}
             </button>
           )}
 
           <div className="text-center text-sm text-dark-400">
-            Don't have an account?{' '}
+            {t('login.noAccount')}{' '}
             <Link to="/signup" className="text-primary-400 hover:text-primary-300 transition-colors">
-              Sign up
+              {t('login.signUp')}
             </Link>
           </div>
         </div>

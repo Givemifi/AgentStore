@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { KeyRound, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { authApi } from '../../api/client';
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation('auth');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token') || '';
@@ -23,7 +25,7 @@ export default function ResetPasswordPage() {
       setTimeout(() => navigate('/login'), 3000);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Failed to reset password');
+      setError(msg || t('resetPassword.failed'));
     } finally {
       setLoading(false);
     }
@@ -33,10 +35,10 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
         <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-8 text-center max-w-md">
-          <h1 className="text-xl font-bold text-white mb-2">Invalid Link</h1>
-          <p className="text-dark-400 mb-4">This password reset link is invalid or has expired.</p>
+          <h1 className="text-xl font-bold text-white mb-2">{t('resetPassword.invalidLink')}</h1>
+          <p className="text-dark-400 mb-4">{t('resetPassword.invalidLinkDesc')}</p>
           <Link to="/forgot-password" className="text-primary-400 hover:text-primary-300 transition-colors">
-            Request a new link
+            {t('resetPassword.requestNewLink')}
           </Link>
         </div>
       </div>
@@ -50,14 +52,14 @@ export default function ResetPasswordPage() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-purple flex items-center justify-center mx-auto mb-4">
             <KeyRound className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Set new password</h1>
+          <h1 className="text-2xl font-bold text-white">{t('resetPassword.heading')}</h1>
         </div>
 
         <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
           {success ? (
             <div className="text-center py-4">
               <CheckCircle className="w-12 h-12 text-accent-emerald mx-auto mb-3" />
-              <p className="text-dark-300">Password reset successfully. Redirecting to login...</p>
+              <p className="text-dark-300">{t('resetPassword.success')}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -68,14 +70,14 @@ export default function ResetPasswordPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-dark-300 mb-1.5">New Password</label>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('resetPassword.newPassword')}</label>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                  placeholder="Min 10 chars, mixed case, number, special"
+                  placeholder={t('resetPassword.passwordPlaceholder')}
                 />
               </div>
 
@@ -84,7 +86,7 @@ export default function ResetPasswordPage() {
                 disabled={loading}
                 className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? t('resetPassword.resetting') : t('resetPassword.reset')}
               </button>
             </form>
           )}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -42,6 +43,9 @@ type AuthHandler struct {
 	getConfig       func(string) string
 	rateLimiter     *middleware.RateLimiter
 	telemetrySvc    *telemetry.Service
+	creditsSvc      interface {
+		GrantPurchasedCredits(ctx context.Context, tenantID primitive.ObjectID, amount int64, reason string) error
+	}
 }
 
 func NewAuthHandler(
@@ -72,6 +76,11 @@ func (h *AuthHandler) SetMicrosoftOAuth(svc *auth.MicrosoftOAuthService) { h.mic
 func (h *AuthHandler) SetGetConfig(fn func(string) string)               { h.getConfig = fn }
 func (h *AuthHandler) SetRateLimiter(rl *middleware.RateLimiter)         { h.rateLimiter = rl }
 func (h *AuthHandler) SetTelemetry(svc *telemetry.Service)               { h.telemetrySvc = svc }
+func (h *AuthHandler) SetCreditsSvc(svc interface {
+	GrantPurchasedCredits(ctx context.Context, tenantID primitive.ObjectID, amount int64, reason string) error
+}) {
+	h.creditsSvc = svc
+}
 func (h *AuthHandler) SetTOTPEncryptionKey(key []byte) {
 	if len(key) == 32 {
 		h.totpService = auth.NewTOTPServiceWithEncryption(key)
@@ -117,6 +126,7 @@ type RegisterRequest struct {
 	Password        string `json:"password"`
 	DisplayName     string `json:"displayName"`
 	InvitationToken string `json:"invitationToken,omitempty"`
+	RefCode         string `json:"refCode,omitempty"`
 }
 
 type LoginRequest struct {
@@ -237,8 +247,17 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		AuthMethods:   []models.AuthMethod{models.AuthMethodPassword},
 		EmailVerified: false,
 		IsActive:      true,
+		ReferralCode:  generateReferralCode(),
 		CreatedAt:     now,
 		UpdatedAt:     now,
+	}
+
+	// Validate and record referrer
+	if code := strings.TrimSpace(req.RefCode); code != "" {
+		var referrer models.User
+		if err := h.db.Users().FindOne(r.Context(), bson.M{"referralCode": code}).Decode(&referrer); err == nil {
+			user.ReferredBy = code
+		}
 	}
 
 	if err := validation.Validate(&user); err != nil {
@@ -605,6 +624,9 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to verify email")
 		return
 	}
+
+	// Grant referral rewards after email verification (fire-and-forget, non-blocking)
+	go h.grantReferralRewards(context.Background(), token.UserID)
 
 	h.events.Emit(events.Event{
 		Type:      events.EventUserVerified,
@@ -1954,6 +1976,17 @@ func (h *AuthHandler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 
 const defaultTrialCredits int64 = 25
 
+func (h *AuthHandler) trialCredits() int64 {
+	if h.getConfig != nil {
+		if v := h.getConfig("growth.trial_credits"); v != "" {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil && n >= 0 {
+				return n
+			}
+		}
+	}
+	return defaultTrialCredits
+}
+
 func (h *AuthHandler) createPersonalTenant(ctx context.Context, userID primitive.ObjectID, displayName string, now time.Time) {
 	slug := fmt.Sprintf("tenant-%s", primitive.NewObjectID().Hex()[:8])
 	tenant := models.Tenant{
@@ -1963,7 +1996,7 @@ func (h *AuthHandler) createPersonalTenant(ctx context.Context, userID primitive
 		IsRoot:           false,
 		IsActive:         true,
 		BillingStatus:    models.BillingStatusNone,
-		PurchasedCredits: defaultTrialCredits,
+		PurchasedCredits: h.trialCredits(),
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -2388,4 +2421,78 @@ func (h *AuthHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 func hashToken(raw string) string {
 	hash := sha256.Sum256([]byte(raw))
 	return base64.StdEncoding.EncodeToString(hash[:])
+}
+
+// generateReferralCode returns a random 8-char uppercase alphanumeric code.
+func generateReferralCode() string {
+	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no confusable O/0/1/I
+	b := make([]byte, 8)
+	rand.Read(b)
+	code := make([]byte, 8)
+	for i := range code {
+		code[i] = chars[int(b[i])%len(chars)]
+	}
+	return string(code)
+}
+
+// grantReferralRewards grants credits to both referee and referrer after email verification.
+// It is idempotent: if referralRewardedAt is already set, it does nothing.
+func (h *AuthHandler) grantReferralRewards(ctx context.Context, userID primitive.ObjectID) {
+	if h.creditsSvc == nil || h.getConfig == nil {
+		return
+	}
+
+	var user models.User
+	if err := h.db.Users().FindOne(ctx, bson.M{"_id": userID}).Decode(&user); err != nil {
+		return
+	}
+	if user.ReferredBy == "" || user.ReferralRewardedAt != nil {
+		return
+	}
+
+	// Read reward amounts from configstore
+	refereeReward := int64(0)
+	referrerReward := int64(0)
+	if v := h.getConfig("growth.referral_reward_referee"); v != "" {
+		n, _ := strconv.ParseInt(v, 10, 64)
+		refereeReward = n
+	}
+	if v := h.getConfig("growth.referral_reward_referrer"); v != "" {
+		n, _ := strconv.ParseInt(v, 10, 64)
+		referrerReward = n
+	}
+	if refereeReward <= 0 && referrerReward <= 0 {
+		return
+	}
+
+	// Mark as rewarded first (idempotency gate via conditional update)
+	now := time.Now()
+	res, err := h.db.Users().UpdateOne(ctx,
+		bson.M{"_id": userID, "referralRewardedAt": nil},
+		bson.M{"$set": bson.M{"referralRewardedAt": now}},
+	)
+	if err != nil || res.ModifiedCount == 0 {
+		return // Already rewarded or error
+	}
+
+	// Find referee's personal tenant
+	var membership models.TenantMembership
+	if err := h.db.TenantMemberships().FindOne(ctx, bson.M{
+		"userId": userID,
+		"role":   models.RoleOwner,
+	}).Decode(&membership); err == nil && refereeReward > 0 {
+		_ = h.creditsSvc.GrantPurchasedCredits(ctx, membership.TenantID, refereeReward, "referral_referee")
+	}
+
+	// Find referrer's personal tenant
+	var referrer models.User
+	if err := h.db.Users().FindOne(ctx, bson.M{"referralCode": user.ReferredBy}).Decode(&referrer); err == nil && referrerReward > 0 {
+		var referrerMembership models.TenantMembership
+		if err := h.db.TenantMemberships().FindOne(ctx, bson.M{
+			"userId": referrer.ID,
+			"role":   models.RoleOwner,
+		}).Decode(&referrerMembership); err == nil {
+			_ = h.creditsSvc.GrantPurchasedCredits(ctx, referrerMembership.TenantID, referrerReward, "referral_referrer")
+		}
+	}
 }

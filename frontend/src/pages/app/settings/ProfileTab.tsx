@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, KeyRound, CheckCircle, AlertCircle, Download, Trash2 } from 'lucide-react';
+import { User, KeyRound, CheckCircle, AlertCircle, Download, Trash2, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../../contexts/AuthContext';
 import { authApi } from '../../../api/client';
@@ -106,8 +106,8 @@ export default function ProfileTab() {
     try {
       await authApi.resendVerification(user.email);
       await refreshUser();
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -208,6 +208,36 @@ export default function ProfileTab() {
           </button>
         </form>
       </div>
+
+      {/* Invite Friends */}
+      {user?.referralCode && (
+        <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-2">
+            <Share2 className="w-5 h-5 text-primary-400" />
+            Invite Friends
+          </h2>
+          <p className="text-sm text-dark-400 mb-4">
+            Share your referral link. When a friend signs up and verifies their email, you both get bonus credits (if enabled by the platform).
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={`${window.location.origin}/signup?ref=${user.referralCode}`}
+              className="flex-1 px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-200 font-mono truncate focus:outline-none"
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${user.referralCode}`);
+                toast.success('Referral link copied!');
+              }}
+              className="px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-lg hover:bg-primary-600 transition-colors whitespace-nowrap"
+            >
+              Copy link
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-dark-500">Your code: <span className="font-mono text-dark-300">{user.referralCode}</span></p>
+        </div>
+      )}
 
       {/* Data Export */}
       <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800 rounded-2xl p-6">

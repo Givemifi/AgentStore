@@ -125,6 +125,22 @@ func (s *Service) GetRemainingCredits(ctx context.Context, tenantID primitive.Ob
 	return int(tenant.SubscriptionCredits + tenant.PurchasedCredits), nil
 }
 
+// GrantPurchasedCredits adds credits to a tenant's purchasedCredits balance.
+// Used for referral rewards, bonuses, and admin grants. Idempotency must be ensured by the caller.
+func (s *Service) GrantPurchasedCredits(ctx context.Context, tenantID primitive.ObjectID, amount int64, reason string) error {
+	if amount <= 0 {
+		return fmt.Errorf("amount must be positive")
+	}
+	_, err := s.db.Tenants().UpdateOne(ctx,
+		bson.M{"_id": tenantID},
+		bson.M{"$inc": bson.M{"purchasedCredits": amount}},
+	)
+	if err != nil {
+		return fmt.Errorf("GrantPurchasedCredits(%s, %d): %w", reason, amount, err)
+	}
+	return nil
+}
+
 func minInt64(a, b int64) int64 {
 	if a < b {
 		return a

@@ -26,12 +26,15 @@ import (
 	"agentstore/internal/metrics"
 	"agentstore/internal/middleware"
 	"agentstore/internal/models"
+	"agentstore/internal/paymentregistry"
 	"agentstore/internal/planstore"
 	stripeservice "agentstore/internal/stripe"
 	"agentstore/internal/syslog"
 	"agentstore/internal/telemetry"
 	"agentstore/internal/version"
 	"agentstore/internal/webhooks"
+
+	agentsInternal "agentstore/internal/agents"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -42,11 +45,14 @@ import (
 // For files that exist on disk, it serves them directly. For all other
 // paths it serves index.html so the SPA router can handle them.
 // When serving index.html, it replaces {{APP_NAME}} with the actual app name
-// to prevent a title flicker while JavaScript loads branding data.
+// and {{META_TAGS}} with route-specific OG/SEO tags.
 type spaHandler struct {
 	staticPath string
 	indexPath  string
 	getAppName func() string
+	// getMetaTags returns extra <meta> HTML for a given URL path.
+	// May be nil, in which case {{META_TAGS}} is replaced with an empty string.
+	getMetaTags func(urlPath string) string
 }
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +82,12 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				appName = name
 			}
 		}
+		metaTags := ""
+		if h.getMetaTags != nil {
+			metaTags = h.getMetaTags(r.URL.Path)
+		}
 		html := strings.Replace(string(data), "{{APP_NAME}}", appName, 1)
+		html = strings.Replace(html, "{{META_TAGS}}", metaTags, 1)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(html))
 		return
@@ -240,6 +251,35 @@ func main() {
 		slog.Warn("Stripe billing not configured", "reason", "missing secret key")
 	}
 
+	// Initialize payment registry — reads credentials from DB with env/yaml fallback on first start.
+	paymentReg := paymentregistry.New(database)
+	if seedErr := paymentReg.Seed(context.Background(), paymentregistry.WechatSeedConfig{
+		AppID:        cfg.WeChatPay.AppID,
+		MchID:        cfg.WeChatPay.MchID,
+		APIv3Key:     cfg.WeChatPay.APIv3Key,
+		PrivateKey:   cfg.WeChatPay.PrivateKey,
+		CertSerialNo: cfg.WeChatPay.CertSerialNo,
+		NotifyURL:    cfg.WeChatPay.NotifyURL,
+	}, paymentregistry.AlipaySeedConfig{
+		AppID:      cfg.Alipay.AppID,
+		PrivateKey: cfg.Alipay.PrivateKey,
+		PublicKey:  cfg.Alipay.PublicKey,
+		NotifyURL:  cfg.Alipay.NotifyURL,
+		ReturnURL:  cfg.Alipay.ReturnURL,
+		IsSandbox:  cfg.Alipay.IsSandbox,
+	}); seedErr != nil {
+		slog.Warn("Payment registry seed failed", "error", seedErr)
+	}
+	if reloadErr := paymentReg.Reload(context.Background()); reloadErr != nil {
+		slog.Warn("Payment registry initial load failed", "error", reloadErr)
+	}
+	if paymentReg.Wechat() != nil {
+		slog.Info("WeChat Pay configured (from DB)")
+	}
+	if paymentReg.Alipay() != nil {
+		slog.Info("Alipay configured (from DB)")
+	}
+
 	webhookEncKey, err := webhooks.ParseEncryptionKey(cfg.Webhooks.EncryptionKey)
 	if err != nil {
 		slog.Error("Invalid webhook encryption key", "error", err)
@@ -325,6 +365,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(database, jwtService, passwordService, googleOAuth, emailService, emitter, cfg.Frontend.URL, sysLogger)
 	authHandler.SetGetConfig(cfgStore.Get)
 	authHandler.SetRateLimiter(rateLimiter)
+	authHandler.SetCreditsSvc(credits.NewService(database))
 	if webhookEncKey != nil {
 		authHandler.SetTOTPEncryptionKey(webhookEncKey)
 	}
@@ -350,8 +391,9 @@ func main() {
 	bundlesHandler := handlers.NewBundlesHandler(database, sysLogger)
 	healthHandler := handlers.NewHealthHandler(healthService)
 	healthHandler.SetEmailService(emailService)
-	billingHandler := handlers.NewBillingHandler(stripeSvc, database, emitter, sysLogger, cfgStore)
+	billingHandler := handlers.NewBillingHandler(stripeSvc, paymentReg, database, emitter, sysLogger, cfgStore)
 	billingHandler.SetTelemetry(telemetrySvc)
+	paymentNotifyHandler := handlers.NewPaymentNotifyHandler(paymentReg, stripeSvc, database, emitter, sysLogger)
 	promotionsHandler := handlers.NewPromotionsHandler(database, stripeSvc, cfgStore)
 	webhookHandler := handlers.NewWebhookHandler(stripeSvc, database, emitter, sysLogger, cfgStore.Get)
 	webhookHandler.SetTelemetry(telemetrySvc)
@@ -363,11 +405,14 @@ func main() {
 	brandingHandler := handlers.NewBrandingHandler(database, cfgStore, sysLogger)
 	announcementsHandler := handlers.NewAnnouncementsHandler(database, sysLogger)
 	usageHandler := handlers.NewUsageHandler(database)
+	publicAgentsHandler := handlers.NewPublicAgentsHandler()
 	chatCreditsService := credits.NewService(database)
 	chatLLMClient := llm.NewClientWithDB(database)
 	chatModelRouter := llm.NewRouter(database)
 	chatHandler := handlers.NewChatHandler(database, chatCreditsService, chatLLMClient, chatModelRouter)
+	shareHandler := handlers.NewShareHandler(database)
 	llmConfigHandler := handlers.NewLLMConfigHandler(database)
+	paymentConfigHandler := handlers.NewPaymentConfigHandler(database, paymentReg)
 	agentHandler := handlers.NewAgentHandler(database)
 	modelSettingsHandler := handlers.NewModelSettingsHandler(database)
 	brandingHandler.SetAuthProviders(map[string]bool{
@@ -423,6 +468,11 @@ func main() {
 	api.HandleFunc("/branding/media/{id}", brandingHandler.ServeMedia).Methods("GET")
 	api.HandleFunc("/branding/page/{slug}", brandingHandler.GetPublicPage).Methods("GET")
 	api.HandleFunc("/branding/pages", brandingHandler.ListPublicPages).Methods("GET")
+
+	// --- Public catalog routes (no auth, no bootstrap guard) ---
+	api.HandleFunc("/public/agents", publicAgentsHandler.ListPublicAgents).Methods("GET")
+	api.HandleFunc("/public/agents/{slug}", publicAgentsHandler.GetPublicAgent).Methods("GET")
+	api.HandleFunc("/public/share/{token}", shareHandler.GetPublicShare).Methods("GET")
 
 	// --- Guarded routes (require system to be initialized) ---
 	guarded := api.PathPrefix("").Subrouter()
@@ -642,6 +692,9 @@ func main() {
 	chatAPI.HandleFunc("/stream", chatHandler.StreamMessage).Methods("POST")
 	chatAPI.HandleFunc("/conversations", chatHandler.ListConversations).Methods("GET")
 	chatAPI.HandleFunc("/conversations/{conversationId}/messages", chatHandler.ListMessages).Methods("GET")
+	chatAPI.HandleFunc("/conversations/{conversationId}/share", shareHandler.CreateShare).Methods("POST")
+	chatAPI.HandleFunc("/share", shareHandler.ListMyShares).Methods("GET")
+	chatAPI.HandleFunc("/share/{token}", shareHandler.RevokeShare).Methods("DELETE")
 
 	// Agent media generation routes (coming soon)
 	agentsAPI := chatAPI.PathPrefix("/agents/{agentId}").Subrouter()
@@ -682,8 +735,10 @@ func main() {
 		telemetryHandler.TrackBatch,
 	)).Methods("POST")
 
-	// Webhook route (no auth — uses Stripe signature verification)
+	// Webhook routes (no auth — verified by payment provider signatures)
 	api.HandleFunc("/billing/webhook", webhookHandler.HandleWebhook).Methods("POST")
+	api.HandleFunc("/billing/wechat/notify", paymentNotifyHandler.HandleWechatNotify).Methods("POST")
+	api.HandleFunc("/billing/alipay/notify", paymentNotifyHandler.HandleAlipayNotify).Methods("POST")
 
 	// Billing routes (require JWT + tenant)
 	billingAPI := guarded.PathPrefix("/billing").Subrouter()
@@ -693,6 +748,7 @@ func main() {
 	billingAPI.HandleFunc("/transactions/{id}/invoice", billingHandler.GetInvoice).Methods("GET")
 	billingAPI.HandleFunc("/transactions/{id}/invoice/pdf", billingHandler.GetInvoicePDF).Methods("GET")
 	billingAPI.HandleFunc("/config", billingHandler.GetConfig).Methods("GET")
+	billingAPI.HandleFunc("/payment/status", paymentNotifyHandler.GetPaymentStatus).Methods("GET")
 
 	// Billing actions that modify the subscription (owner only)
 	billingOwner := billingAPI.PathPrefix("").Subrouter()
@@ -830,19 +886,90 @@ func main() {
 	adminWrite.HandleFunc("/llm-config", llmConfigHandler.GetConfig).Methods("GET")
 	adminWrite.HandleFunc("/llm-config", llmConfigHandler.UpdateConfig).Methods("PUT")
 
+	// Payment provider configuration (admin only)
+	adminWrite.HandleFunc("/payment-config/wechat", paymentConfigHandler.GetWechat).Methods("GET")
+	adminWrite.HandleFunc("/payment-config/wechat", paymentConfigHandler.UpdateWechat).Methods("PUT")
+	adminWrite.HandleFunc("/payment-config/alipay", paymentConfigHandler.GetAlipay).Methods("GET")
+	adminWrite.HandleFunc("/payment-config/alipay", paymentConfigHandler.UpdateAlipay).Methods("PUT")
+
 	// Serve frontend static files in production
 	if cfg.Frontend.StaticDir != "" {
 		slog.Info("Serving frontend", "staticDir", cfg.Frontend.StaticDir)
+
+		// Helper: get app name from branding/config
+		getAppName := func() string {
+			var bc models.BrandingConfig
+			if err := database.BrandingConfig().FindOne(context.Background(), bson.M{}).Decode(&bc); err == nil && bc.AppName != "" {
+				return bc.AppName
+			}
+			return cfgStore.Get("app.name")
+		}
+
+		// Build OG meta tags for specific public routes
+		buildMetaTags := func(urlPath, appName string) string {
+			// /agents/:slug — agent detail page
+			if strings.HasPrefix(urlPath, "/agents/") {
+				slug := strings.TrimPrefix(urlPath, "/agents/")
+				if slug != "" {
+					if agent, _ := agentsInternal.GetAgentByID(slug); agent != nil {
+						desc := agent.Description
+						if len(desc) > 160 {
+							desc = desc[:157] + "..."
+						}
+						title := agent.Name + " — " + appName
+						return fmt.Sprintf(
+							`<meta name="description" content=%q><meta property="og:title" content=%q><meta property="og:description" content=%q><meta property="og:type" content="website">`,
+							desc, title, desc,
+						)
+					}
+				}
+			}
+			// Default site-level tags
+			siteDesc := "Discover and chat with AI agents for legal, marketing, coding, writing, and more."
+			return fmt.Sprintf(
+				`<meta name="description" content=%q><meta property="og:title" content=%q><meta property="og:description" content=%q><meta property="og:type" content="website">`,
+				siteDesc, appName, siteDesc,
+			)
+		}
+
+		// /sitemap.xml
+		router.HandleFunc("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
+			appNameVal := getAppName()
+			baseURL := cfg.Frontend.URL
+			if baseURL == "" {
+				baseURL = "https://" + r.Host
+			}
+			allAgents := agentsInternal.GetAllAgents()
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+			fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>`)
+			fmt.Fprintf(w, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)
+			fmt.Fprintf(w, `<url><loc>%s/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`, baseURL)
+			fmt.Fprintf(w, `<url><loc>%s/agents</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`, baseURL)
+			for _, a := range allAgents {
+				_ = appNameVal
+				fmt.Fprintf(w, `<url><loc>%s/agents/%s</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`, baseURL, a.ID)
+			}
+			fmt.Fprintf(w, `</urlset>`)
+		}).Methods("GET")
+
+		// /robots.txt
+		router.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+			baseURL := cfg.Frontend.URL
+			if baseURL == "" {
+				baseURL = "https://" + r.Host
+			}
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nSitemap: %s/sitemap.xml\n", baseURL)
+		}).Methods("GET")
+
 		spa := spaHandler{
 			staticPath: cfg.Frontend.StaticDir,
 			indexPath:  "index.html",
-			getAppName: func() string {
-				// Check branding config in DB first, fall back to configstore app.name.
-				var bc models.BrandingConfig
-				if err := database.BrandingConfig().FindOne(context.Background(), bson.M{}).Decode(&bc); err == nil && bc.AppName != "" {
-					return bc.AppName
-				}
-				return cfgStore.Get("app.name")
+			getAppName: getAppName,
+			getMetaTags: func(urlPath string) string {
+				return buildMetaTags(urlPath, getAppName())
 			},
 		}
 		router.PathPrefix("/").Handler(spa)

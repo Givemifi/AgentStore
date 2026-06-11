@@ -207,7 +207,6 @@ func (h *WebhookHandler) handleCheckoutCompleted(ctx context.Context, event stri
 			periodEnd = &t
 		}
 
-		// Update tenant
 		updates := bson.M{
 			"planId":               planID,
 			"billingStatus":        models.BillingStatusActive,
@@ -234,7 +233,6 @@ func (h *WebhookHandler) handleCheckoutCompleted(ctx context.Context, event stri
 				updates["seatQuantity"] = seatQty
 			}
 		}
-		// Set subscription credits from plan (combined into single update)
 		updates["subscriptionCredits"] = plan.UsageCreditsPerMonth
 		updateOp := bson.M{"$set": updates}
 		if plan.BonusCredits > 0 {
@@ -308,7 +306,6 @@ func (h *WebhookHandler) handleCheckoutCompleted(ctx context.Context, event stri
 			return fmt.Errorf("bundle not found: %s: %w", bundleIDStr, err)
 		}
 
-		// Add credits to tenant
 		if _, err := h.db.Tenants().UpdateOne(ctx, bson.M{"_id": tenantID}, bson.M{
 			"$inc": bson.M{"purchasedCredits": bundle.Credits},
 			"$set": bson.M{"updatedAt": time.Now()},
@@ -468,7 +465,6 @@ func (h *WebhookHandler) handleInvoicePaymentFailed(ctx context.Context, event s
 		return fmt.Errorf("tenant not found for subscription %s: %w", subscriptionID, err)
 	}
 
-	// Set past_due
 	if _, err := h.db.Tenants().UpdateOne(ctx, bson.M{"_id": tenant.ID}, bson.M{
 		"$set": bson.M{"billingStatus": models.BillingStatusPastDue, "updatedAt": time.Now()},
 	}); err != nil {
@@ -534,7 +530,6 @@ func (h *WebhookHandler) handleSubscriptionUpdated(ctx context.Context, event st
 
 	updates := bson.M{"updatedAt": time.Now()}
 
-	// Update period end from items
 	if sub.Items != nil && len(sub.Items.Data) > 0 {
 		periodEnd := time.Unix(sub.Items.Data[0].CurrentPeriodEnd, 0)
 		updates["currentPeriodEnd"] = periodEnd
@@ -708,7 +703,6 @@ func (h *WebhookHandler) handleDisputeCreated(ctx context.Context, event stripe.
 		return nil
 	}
 
-	// Set billing status to past_due to restrict access during dispute
 	if _, err := h.db.Tenants().UpdateOne(ctx, bson.M{"_id": tenant.ID}, bson.M{
 		"$set": bson.M{"billingStatus": models.BillingStatusPastDue, "updatedAt": time.Now()},
 	}); err != nil {

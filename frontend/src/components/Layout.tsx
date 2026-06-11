@@ -11,6 +11,7 @@ import { getStoredValue, storageKeys } from '../utils/storageKeys';
 import { messagesApi, plansApi, bundlesApi, announcementsApi } from '../api/client';
 import ImpersonationBanner from './ImpersonationBanner';
 import { MobileBottomNav } from './app';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { useState, useRef, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -243,6 +244,9 @@ export default function Layout() {
                 >
                   {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
+
+                {/* Language switcher */}
+                <LanguageSwitcher />
 
                 {/* Messages */}
                 <Link

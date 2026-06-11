@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Landmark, MessageCircle, PenLine, Scale, Search, Sparkles, TowerControl, Zap, Headphones, Globe2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { agentsApi, brandingApi, usageApi } from '../../api/client';
 import { useTenant } from '../../contexts/TenantContext';
 import { CreditExplainer, EmptyState, ErrorState } from '../../components/app';
@@ -47,6 +48,7 @@ const expertIconMap = {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('app');
   const { activeTenant } = useTenant();
   const tenantReady = !!activeTenant;
 
@@ -65,7 +67,6 @@ export default function DashboardPage() {
 
   const {
     data: usageSummary,
-    isLoading: usageLoading,
     refetch: refetchUsage,
   } = useQuery({
     queryKey: ['usage-summary', activeTenant?.tenantId],
@@ -90,12 +91,12 @@ export default function DashboardPage() {
   const availableCreditsValue = availableCredits ?? 0;
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Recommended');
+  const [selectedCategory, setSelectedCategory] = useState(() => t('dashboard.recommended'));
 
   const categories = useMemo(() => {
     const uniqueCategories = Array.from(new Set((agents ?? []).map((agent) => agent.category).filter(Boolean))).sort();
-    return ['Recommended', ...uniqueCategories];
-  }, [agents]);
+    return [t('dashboard.recommended'), ...uniqueCategories];
+  }, [agents, t]);
 
   const filteredAgents = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -106,10 +107,10 @@ export default function DashboardPage() {
         agent.description,
         ...(agent.suggestedPrompts ?? []),
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
-      const matchesCategory = selectedCategory === 'Recommended' || agent.category === selectedCategory;
+      const matchesCategory = selectedCategory === t('dashboard.recommended') || agent.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [agents, searchTerm, selectedCategory]);
+  }, [agents, searchTerm, selectedCategory, t]);
 
   const commonMessageCost = agents && agents.length > 0
     ? Math.max(1, Math.min(...agents.map((agent) => agent.creditCost?.textMessageCredits ?? 1)))
@@ -133,25 +134,25 @@ export default function DashboardPage() {
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary-200">
                 <Sparkles className="h-3.5 w-3.5" />
-                Agent Marketplace
+                {t('dashboard.marketplace')}
               </div>
               <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Find the right AI agent for your next task.
+                {t('dashboard.headline')}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-dark-300 sm:text-base">
-                Search practical business Agents, try a suggested prompt, and only pay credits after a successful response.
+                {t('dashboard.subtext')}
               </p>
-              <label className="sr-only" htmlFor="agent-search">Search Agents</label>
+              <label className="sr-only" htmlFor="agent-search">{t('dashboard.searchLabel')}</label>
               <div className="mt-6 flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-dark-950 shadow-xl shadow-black/20">
                 <Search className="h-5 w-5 text-dark-400" />
                 <input
                   id="agent-search"
                   type="search"
                   role="searchbox"
-                  aria-label="Search Agents"
+                  aria-label={t('dashboard.searchLabel')}
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search legal, tax, marketing, support..."
+                  placeholder={t('dashboard.searchPlaceholder')}
                   className="min-w-0 flex-1 bg-transparent text-sm text-dark-950 placeholder:text-dark-400 focus:outline-none"
                 />
               </div>
@@ -220,9 +221,9 @@ export default function DashboardPage() {
       ) : agents && agents.length > 0 ? (
         <EmptyState
           icon={Search}
-          title="No Agents match your search"
-          description="Try a different keyword or category to find the right Agent for your task."
-          action={{ label: 'Clear filters', onClick: () => { setSearchTerm(''); setSelectedCategory('Recommended'); } }}
+          title={t('dashboard.noAgentsSearch')}
+          description={t('dashboard.noAgentsSearchDesc')}
+          action={{ label: t('dashboard.clearFilters'), onClick: () => { setSearchTerm(''); setSelectedCategory(t('dashboard.recommended')); } }}
         />
       ) : agentsError ? null : (
         <EmptyExpertsState />
@@ -238,6 +239,7 @@ interface AgentCardProps {
 }
 
 function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
+  const { t } = useTranslation('app');
   const badge = getExpertBadge(agent);
   const ExpertIcon = getExpertIcon(agent);
 
@@ -268,12 +270,12 @@ function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
         <p className="mt-5 text-sm leading-6 text-dark-300">{agent.description}</p>
 
         <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary-300">
-          Best for {agent.category} teams
+          {t('dashboard.bestFor', { category: agent.category })}
         </p>
 
         <div className="mt-6 rounded-2xl border border-white/6 bg-dark-900/60 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-dark-400">
-            Suggested prompts
+            {t('dashboard.suggestedPrompts')}
           </p>
           <ul className="mt-3 space-y-2.5">
             {agent.suggestedPrompts?.slice(0, 3).map((example) => (
@@ -296,10 +298,10 @@ function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-dark-300">
               <Zap className="h-4 w-4 text-primary-300" />
-              <span>{agent.creditCost?.textMessageCredits ?? 1} credits/message</span>
+              <span>{t('dashboard.creditsPerMessage', { count: agent.creditCost?.textMessageCredits ?? 1 })}</span>
             </div>
             {agent.capabilities?.includes('text_chat') && (
-              <span className="text-xs text-dark-400">Text chat</span>
+              <span className="text-xs text-dark-400">{t('dashboard.textChat')}</span>
             )}
           </div>
 
@@ -308,7 +310,7 @@ function AgentCard({ agent, onStartChat, onPromptClick }: AgentCardProps) {
             className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
             aria-label={`Start with ${agent.name}`}
           >
-            Start
+            {t('dashboard.start')}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -358,11 +360,12 @@ function AgentGridSkeleton() {
 }
 
 function InlineErrorBanner({ message, onRetry, isRetrying }: { message: string; onRetry: () => void; isRetrying: boolean }) {
+  const { t } = useTranslation('app');
   return (
     <ErrorState
-      title="Unable to load agents right now."
+      title={t('dashboard.unableToLoad')}
       message={message}
-      retryLabel="Retry"
+      retryLabel={t('retry', { ns: 'common' })}
       onRetry={onRetry}
       isRetrying={isRetrying}
     />
@@ -370,11 +373,12 @@ function InlineErrorBanner({ message, onRetry, isRetrying }: { message: string; 
 }
 
 function EmptyExpertsState() {
+  const { t } = useTranslation('app');
   return (
     <EmptyState
       icon={MessageCircle}
-      title="No agents yet"
-      description="This workspace has not published any Agents yet. Check back soon or contact your administrator to publish the first Agent."
+      title={t('dashboard.noAgentsYet')}
+      description={t('dashboard.noAgentsYetDesc')}
     />
   );
 }

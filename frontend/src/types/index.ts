@@ -8,6 +8,8 @@ export interface User {
   totpEnabled: boolean;
   themePreference: 'dark' | 'light' | 'system';
   onboardingCompletedAt?: string;
+  referralCode?: string;
+  referredBy?: string;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
@@ -789,6 +791,10 @@ export interface ChatMessage {
   creditsCharged?: number;
   model?: string;
   status?: ChatMessageStatus;
+  /** Number of image attachments saved with the user message (no raw data). */
+  attachmentCount?: number;
+  /** In-session only: base64 data URLs of images sent with this message. */
+  attachments?: string[];
   createdAt: string;
 }
 
@@ -806,6 +812,7 @@ export interface ChatRequest {
   agentId: string;
   conversationId?: string;
   message: string;
+  attachments?: string[]; // base64 image data URLs for multimodal/vision
 }
 
 export interface ChatResponse {

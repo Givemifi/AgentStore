@@ -65,6 +65,7 @@ func (m *MongoDB) ensureIndexes() {
 				{Keys: bson.D{{Key: "githubId", Value: 1}}, Options: options.Index().SetSparse(true)},
 				{Keys: bson.D{{Key: "microsoftId", Value: 1}}, Options: options.Index().SetSparse(true)},
 				{Keys: bson.D{{Key: "displayName", Value: 1}}},
+				{Keys: bson.D{{Key: "referralCode", Value: 1}}, Options: options.Index().SetUnique(true).SetSparse(true)},
 			},
 		},
 		{
@@ -345,6 +346,13 @@ func (m *MongoDB) ensureIndexes() {
 				{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "modality", Value: 1}, {Key: "enabled", Value: 1}}},
 			},
 		},
+		{
+			"share_links",
+			[]mongo.IndexModel{
+				{Keys: bson.D{{Key: "token", Value: 1}}, Options: options.Index().SetUnique(true)},
+				{Keys: bson.D{{Key: "userId", Value: 1}, {Key: "createdAt", Value: -1}}},
+			},
+		},
 	}
 
 	criticalCollections := map[string]bool{
@@ -443,6 +451,10 @@ func (m *MongoDB) FinancialTransactions() *mongo.Collection {
 	return m.Database.Collection("financial_transactions")
 }
 
+func (m *MongoDB) PaymentOrders() *mongo.Collection {
+	return m.Database.Collection("payment_orders")
+}
+
 func (m *MongoDB) StripeMappings() *mongo.Collection {
 	return m.Database.Collection("stripe_mappings")
 }
@@ -531,12 +543,20 @@ func (m *MongoDB) ChatMessages() *mongo.Collection {
 	return m.Database.Collection("chat_messages")
 }
 
+func (m *MongoDB) ShareLinks() *mongo.Collection {
+	return m.Database.Collection("share_links")
+}
+
 func (m *MongoDB) LLMConfigs() *mongo.Collection {
 	return m.Database.Collection("llm_configs")
 }
 
 func (m *MongoDB) Agents() *mongo.Collection {
 	return m.Database.Collection("agents")
+}
+
+func (m *MongoDB) PaymentConfigs() *mongo.Collection {
+	return m.Database.Collection("payment_configs")
 }
 
 func (m *MongoDB) ModelProviders() *mongo.Collection {

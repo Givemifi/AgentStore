@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -17,6 +18,7 @@ import (
 	"agentstore/internal/events"
 	"agentstore/internal/middleware"
 	"agentstore/internal/models"
+	"agentstore/internal/paymentregistry"
 	stripeservice "agentstore/internal/stripe"
 	"agentstore/internal/syslog"
 	"agentstore/internal/telemetry"
@@ -30,6 +32,7 @@ import (
 
 type BillingHandler struct {
 	stripe       *stripeservice.Service
+	registry     *paymentregistry.Registry
 	db           *db.MongoDB
 	events       events.Emitter
 	syslog       *syslog.Logger
@@ -39,17 +42,35 @@ type BillingHandler struct {
 
 func (h *BillingHandler) SetTelemetry(svc *telemetry.Service) { h.telemetrySvc = svc }
 
-func NewBillingHandler(stripeSvc *stripeservice.Service, database *db.MongoDB, emitter events.Emitter, sysLogger *syslog.Logger, store *configstore.Store) *BillingHandler {
+func NewBillingHandler(stripeSvc *stripeservice.Service, reg *paymentregistry.Registry, database *db.MongoDB, emitter events.Emitter, sysLogger *syslog.Logger, store *configstore.Store) *BillingHandler {
 	return &BillingHandler{
-		stripe: stripeSvc,
-		db:     database,
-		events: emitter,
-		syslog: sysLogger,
-		store:  store,
+		stripe:   stripeSvc,
+		registry: reg,
+		db:       database,
+		events:   emitter,
+		syslog:   sysLogger,
+		store:    store,
 	}
 }
 
+// enabledPaymentMethods returns the list of configured payment providers.
+// Used by the frontend to know which checkout options to show.
+func (h *BillingHandler) enabledPaymentMethods() []string {
+	var methods []string
+	if h.stripe != nil {
+		methods = append(methods, "stripe")
+	}
+	if h.registry.Wechat() != nil {
+		methods = append(methods, "wechat_h5")
+	}
+	if h.registry.Alipay() != nil {
+		methods = append(methods, "alipay")
+	}
+	return methods
+}
+
 // Checkout creates a Stripe Checkout Session or directly assigns a plan if billing is waived.
+// For credit bundle purchases, WeChat H5 and Alipay payments are also supported.
 func (h *BillingHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenant, ok := middleware.GetTenantFromContext(ctx)
@@ -64,14 +85,19 @@ func (h *BillingHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		PlanID               string `json:"planId"`
-		BundleID             string `json:"bundleId"`
-		BillingInterval      string `json:"billingInterval"`
-		RemoveBillingWaiver  bool   `json:"removeBillingWaiver"`
+		PlanID              string `json:"planId"`
+		BundleID            string `json:"bundleId"`
+		BillingInterval     string `json:"billingInterval"`
+		RemoveBillingWaiver bool   `json:"removeBillingWaiver"`
+		PaymentMethod       string `json:"paymentMethod"` // "stripe" | "wechat_h5" | "alipay"; default = "stripe"
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
+	}
+
+	if req.PaymentMethod == "" {
+		req.PaymentMethod = "stripe"
 	}
 
 	// Read default currency from config
@@ -307,6 +333,22 @@ func (h *BillingHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// --- WeChat H5 / Alipay paths ---
+		if req.PaymentMethod == "wechat_h5" || req.PaymentMethod == "alipay" {
+			checkoutURL, outTradeNo, err := h.createDomesticPayOrder(ctx, r, tenant.ID, user.ID, bundle, req.PaymentMethod)
+			if err != nil {
+				slog.Error("Billing: domestic pay order failed", "provider", req.PaymentMethod, "error", err)
+				respondWithError(w, http.StatusInternalServerError, "Failed to create payment order")
+				return
+			}
+			respondWithJSON(w, http.StatusOK, map[string]string{
+				"checkoutUrl": checkoutURL,
+				"outTradeNo":  outTradeNo,
+			})
+			return
+		}
+
+		// --- Stripe path ---
 		if h.stripe == nil {
 			respondWithError(w, http.StatusServiceUnavailable, "Billing not configured")
 			return
@@ -340,6 +382,106 @@ func (h *BillingHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithError(w, http.StatusBadRequest, "Must specify planId or bundleId")
+}
+
+// createDomesticPayOrder creates a WeChat H5 or Alipay payment order.
+// It saves a pending PaymentOrder to MongoDB and returns (payURL, outTradeNo, error).
+func (h *BillingHandler) createDomesticPayOrder(
+	ctx context.Context,
+	r *http.Request,
+	tenantID, userID primitive.ObjectID,
+	bundle models.CreditBundle,
+	provider string,
+) (string, string, error) {
+
+	// Convert USD cents → CNY fen using configurable rate.
+	cnyPerUSD := 7.20
+	if rateStr := h.store.Get("billing.cny_per_usd"); rateStr != "" {
+		if v, err := strconv.ParseFloat(rateStr, 64); err == nil && v > 0 {
+			cnyPerUSD = v
+		}
+	}
+	amountFen := int64(math.Round(float64(bundle.PriceCents) * cnyPerUSD / 100.0 * 100.0))
+	// amountYuan for Alipay (string with 2 decimal places)
+	amountYuan := fmt.Sprintf("%.2f", float64(amountFen)/100.0)
+
+	// Unique order ID: provider prefix + tenant + timestamp + random suffix
+	randBytes := make([]byte, 4)
+	_, _ = randRead(randBytes)
+	outTradeNo := fmt.Sprintf("%s%s%d%x", providerPrefix(provider), tenantID.Hex()[:8], time.Now().UnixMilli(), randBytes)
+	if len(outTradeNo) > 32 {
+		outTradeNo = outTradeNo[:32]
+	}
+
+	// Persist pending order before calling payment API (idempotent on failure).
+	order := models.PaymentOrder{
+		OutTradeNo:  outTradeNo,
+		TenantID:    tenantID,
+		UserID:      userID,
+		BundleID:    bundle.ID,
+		BundleName:  bundle.Name,
+		Credits:     bundle.Credits,
+		AmountCents: amountFen,
+		AmountUSD:   bundle.PriceCents,
+		Currency:    "cny",
+		Provider:    provider,
+		Status:      "pending",
+		CreatedAt:   time.Now(),
+	}
+	if _, err := h.db.PaymentOrders().InsertOne(ctx, order); err != nil {
+		return "", "", fmt.Errorf("save payment order: %w", err)
+	}
+
+	var payURL string
+
+	switch provider {
+	case "wechat_h5":
+		if h.registry.Wechat() == nil {
+			return "", "", fmt.Errorf("WeChat Pay not configured")
+		}
+		clientIP := realIP(r)
+		result, err := h.registry.Wechat().CreateH5Order(ctx, outTradeNo, bundle.Name, clientIP, amountFen)
+		if err != nil {
+			return "", "", err
+		}
+		payURL = result.H5URL
+
+	case "alipay":
+		if h.registry.Alipay() == nil {
+			return "", "", fmt.Errorf("Alipay not configured")
+		}
+		ua := r.Header.Get("User-Agent")
+		result, err := h.registry.Alipay().CreatePayOrder(ctx, outTradeNo, bundle.Name, amountYuan, ua)
+		if err != nil {
+			return "", "", err
+		}
+		payURL = result.PayURL
+	}
+
+	return payURL, outTradeNo, nil
+}
+
+func providerPrefix(p string) string {
+	switch p {
+	case "wechat_h5":
+		return "WX"
+	case "alipay":
+		return "AL"
+	}
+	return "PY"
+}
+
+// realIP extracts the client IP from X-Forwarded-For or RemoteAddr.
+func realIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.SplitN(xff, ",", 2)
+		return strings.TrimSpace(parts[0])
+	}
+	ip := r.RemoteAddr
+	if idx := strings.LastIndex(ip, ":"); idx >= 0 {
+		ip = ip[:idx]
+	}
+	return strings.Trim(ip, "[]")
 }
 
 // Portal creates a Stripe Billing Portal session.
@@ -670,14 +812,20 @@ func (h *BillingHandler) CancelSubscription(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// GetConfig returns the Stripe publishable key for frontend use.
+// GetConfig returns billing configuration for the frontend, including enabled payment methods.
 func (h *BillingHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	pubKey := ""
 	if h.stripe != nil {
 		pubKey = h.stripe.PublishableKey
 	}
-	respondWithJSON(w, http.StatusOK, map[string]string{"publishableKey": pubKey})
+	respondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"publishableKey": pubKey,
+		"paymentMethods": h.enabledPaymentMethods(),
+	})
 }
+
+// randRead fills b with cryptographically random bytes.
+func randRead(b []byte) (int, error) { return rand.Read(b) }
 
 // --- Admin endpoints ---
 

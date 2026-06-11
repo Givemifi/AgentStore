@@ -368,6 +368,28 @@ var SystemDefaults = []models.ConfigVar{
 </html>`,
 		IsSystem: true,
 	},
+	// Growth settings
+	{
+		Name:        "growth.trial_credits",
+		Description: "Credits granted to a new user's personal tenant on signup. Set to 0 to disable signup credits.",
+		Type:        models.ConfigTypeString,
+		Value:       "25",
+		IsSystem:    true,
+	},
+	{
+		Name:        "growth.referral_reward_referee",
+		Description: "Credits granted to a new user who signed up via a referral link, after email verification. Set to 0 to disable.",
+		Type:        models.ConfigTypeString,
+		Value:       "0",
+		IsSystem:    true,
+	},
+	{
+		Name:        "growth.referral_reward_referrer",
+		Description: "Credits granted to the user whose referral link was used, after the referee verifies their email. Set to 0 to disable.",
+		Type:        models.ConfigTypeString,
+		Value:       "0",
+		IsSystem:    true,
+	},
 }
 
 // Seed inserts any missing system-defined variables into the database.

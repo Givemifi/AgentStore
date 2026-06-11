@@ -61,9 +61,11 @@ func toPublicAgent(agent agents.Agent) publicAgent {
 			ImageGenerationCredits: 0,
 			VideoGenerationCredits: 0,
 		},
-		Examples: append([]string(nil), agent.Examples...),
-		Icon:     agent.Icon,
-		Color:    agent.Color,
+		WelcomeMessage:   agent.WelcomeMessage,
+		SuggestedPrompts: append([]string(nil), agent.SuggestedPrompts...),
+		Examples:         append([]string(nil), agent.Examples...),
+		Icon:             agent.Icon,
+		Color:            agent.Color,
 	}
 }
 
@@ -223,9 +225,10 @@ func (h *ChatHandler) GetAgent(w http.ResponseWriter, r *http.Request) {
 
 // SendMessageRequest represents a chat message request.
 type SendMessageRequest struct {
-	AgentID        string `json:"agentId"`
-	ConversationID string `json:"conversationId,omitempty"`
-	Message        string `json:"message"`
+	AgentID        string   `json:"agentId"`
+	ConversationID string   `json:"conversationId,omitempty"`
+	Message        string   `json:"message"`
+	Attachments    []string `json:"attachments,omitempty"` // base64 image data URLs for vision
 }
 
 // SendMessageResponse represents a chat message response.
@@ -241,7 +244,37 @@ const (
 	conversationTitleMaxLength           = 48
 	streamProviderFailurePlaceholderText = "AI service is temporarily unavailable. Please try again."
 	unsupportedChatProviderMessage       = "This model provider is not supported for chat yet. Use an OpenAI-compatible provider."
+	maxChatAttachments                   = 4
 )
+
+// validImageAttachments filters attachments to valid base64 image data URLs,
+// capping the count at maxChatAttachments.
+func validImageAttachments(attachments []string) []string {
+	if len(attachments) == 0 {
+		return nil
+	}
+	valid := make([]string, 0, len(attachments))
+	for _, a := range attachments {
+		a = strings.TrimSpace(a)
+		if strings.HasPrefix(a, "data:image/") && strings.Contains(a, ";base64,") {
+			valid = append(valid, a)
+		}
+		if len(valid) >= maxChatAttachments {
+			break
+		}
+	}
+	return valid
+}
+
+// buildUserMessage returns an LLM message for the user turn, using a vision
+// message when image attachments are present.
+func buildUserMessage(text string, attachments []string) llm.Message {
+	images := validImageAttachments(attachments)
+	if len(images) > 0 {
+		return llm.NewVisionMessage("user", text, images)
+	}
+	return llm.NewTextMessage("user", text)
+}
 
 func conversationTitleFromMessage(message string) string {
 	normalized := strings.Join(strings.Fields(strings.TrimSpace(message)), " ")
@@ -415,7 +448,8 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.Message) == "" {
+	// Allow image-only messages (no text required when images are attached)
+	if strings.TrimSpace(req.Message) == "" && len(validImageAttachments(req.Attachments)) == 0 {
 		respondWithError(w, http.StatusBadRequest, "Message is required")
 		return
 	}
@@ -464,7 +498,12 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	// Get or validate conversation
 	var conversationID primitive.ObjectID
 	var createConversation bool
-	conversationTitle := conversationTitleFromMessage(req.Message)
+	// Use a default title for image-only messages (message may be empty)
+	messageForTitle := req.Message
+	if strings.TrimSpace(messageForTitle) == "" {
+		messageForTitle = "[Image]"
+	}
+	conversationTitle := conversationTitleFromMessage(messageForTitle)
 	if req.ConversationID != "" {
 		conversationID, err = primitive.ObjectIDFromHex(req.ConversationID)
 		if err != nil {
@@ -495,7 +534,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to get message history")
 		return
 	}
-	messages = append(messages, llm.Message{Role: "user", Content: req.Message})
+	messages = append(messages, buildUserMessage(req.Message, req.Attachments))
 
 	answer, usedModel, err := h.llmClient.CompleteWithConfig(ctx, requestConfig, agent.SystemPrompt, messages)
 	if err != nil {
@@ -806,6 +845,13 @@ func (h *ChatHandler) writeSSE(w http.ResponseWriter, event string, data interfa
 func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// Remove the server-level WriteTimeout for this SSE handler. The default
+	// WriteTimeout (15 s) kills long-running streams mid-response. Streaming
+	// responses can take minutes; we rely on the request context (client
+	// disconnect) and the LLM's own timeout instead.
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{}) // zero value = no deadline
+
 	// Get user and tenant from context
 	user, ok := middleware.GetUserFromContext(ctx)
 	if !ok {
@@ -825,7 +871,8 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.Message) == "" {
+	// Allow image-only messages (no text required when images are attached)
+	if strings.TrimSpace(req.Message) == "" && len(validImageAttachments(req.Attachments)) == 0 {
 		respondWithError(w, http.StatusBadRequest, "Message is required")
 		return
 	}
@@ -874,7 +921,12 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 	// Get or validate conversation
 	var conversationID primitive.ObjectID
 	var createConversation bool
-	conversationTitle := conversationTitleFromMessage(req.Message)
+	// Use a default title for image-only messages (message may be empty)
+	messageForTitle := req.Message
+	if strings.TrimSpace(messageForTitle) == "" {
+		messageForTitle = "[Image]"
+	}
+	conversationTitle := conversationTitleFromMessage(messageForTitle)
 	if req.ConversationID != "" {
 		conversationID, err = primitive.ObjectIDFromHex(req.ConversationID)
 		if err != nil {
@@ -905,7 +957,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to get message history")
 		return
 	}
-	messages = append(messages, llm.Message{Role: "user", Content: req.Message})
+	messages = append(messages, buildUserMessage(req.Message, req.Attachments))
 
 	now := time.Now()
 
@@ -937,13 +989,14 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Save user message
 	userMessage := models.ChatMessage{
-		ID:             primitive.NewObjectID(),
-		TenantID:       tenant.ID,
-		UserID:         user.ID,
-		ConversationID: conversationID,
-		AgentID:        resolvedAgent.CanonicalID,
-		Role:           "user",
-		Content:        req.Message,
+		ID:              primitive.NewObjectID(),
+		TenantID:        tenant.ID,
+		UserID:          user.ID,
+		ConversationID:  conversationID,
+		AgentID:         resolvedAgent.CanonicalID,
+		Role:            "user",
+		Content:         req.Message,
+		AttachmentCount: len(validImageAttachments(req.Attachments)),
 		CreditsCharged: 0,
 		Model:          requestConfig.Model,
 		CreatedAt:      now,
@@ -985,19 +1038,24 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 	// Callback for each delta
 	onDelta := func(content string) error {
 		fullContent.WriteString(content)
-		// Send delta event
 		return h.writeSSE(w, "delta", map[string]string{
 			"text": content,
 		})
 	}
 
-	// Call the streaming LLM
+	// Call the streaming LLM synchronously on this goroutine.
+	// All writes to w (delta events) happen here — no concurrent writer.
 	_, usedModel, err := h.llmClient.CompleteStreamWithConfig(ctx, requestConfig, agent.SystemPrompt, messages, onDelta)
+
+	// Use a fresh background context for all DB writes that happen after the
+	// request context may have been cancelled (client disconnected).
+	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer dbCancel()
 
 	// Check if request was cancelled (client disconnected)
 	if ctx.Err() == context.Canceled {
-		// Update message status to interrupted
-		_, _ = h.db.ChatMessages().UpdateOne(ctx,
+		// Update message status to interrupted using dbCtx (req ctx already done)
+		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 			bson.M{"_id": assistantMessageID},
 			bson.M{"$set": bson.M{
 				"status":  models.ChatMessageStatusInterrupted,
@@ -1016,7 +1074,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 	// Handle provider errors
 	if err != nil && err != io.EOF {
 		// Update message status to error
-		_, _ = h.db.ChatMessages().UpdateOne(ctx,
+		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 			bson.M{"_id": assistantMessageID},
 			bson.M{"$set": bson.M{
 				"status":         models.ChatMessageStatusError,
@@ -1040,9 +1098,9 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 		"conversationId": conversationID.Hex(),
 		"model":          usedModel,
 	}
-	remainingCredits, err := h.creditsSvc.DeductCredits(ctx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata)
+	remainingCredits, err := h.creditsSvc.DeductCredits(dbCtx, tenant.ID, user.ID, agent.CreditCost, "agent_chat", metadata)
 	if err != nil {
-		_, _ = h.db.ChatMessages().UpdateOne(ctx,
+		_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 			bson.M{"_id": assistantMessageID},
 			buildStreamMessageDeductionFailureUpdate(fullContent.String(), usedModel),
 		)
@@ -1053,7 +1111,7 @@ func (h *ChatHandler) StreamMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update assistant message with full content and completed status
-	_, _ = h.db.ChatMessages().UpdateOne(ctx,
+	_, _ = h.db.ChatMessages().UpdateOne(dbCtx,
 		bson.M{"_id": assistantMessageID},
 		buildStreamMessageSuccessUpdate(fullContent.String(), usedModel, agent.CreditCost),
 	)

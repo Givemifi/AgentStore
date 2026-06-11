@@ -57,10 +57,14 @@ const AdminAnnouncementsPage = lazy(() => import('./pages/admin/AnnouncementsPag
 const AdminRootMembersPage = lazy(() => import('./pages/admin/RootMembersPage'));
 const AdminPMPage = lazy(() => import('./pages/admin/PMPage'));
 const LLMConfigPage = lazy(() => import('./pages/admin/LLMConfigPage'));
+const AdminPaymentConfigPage = lazy(() => import('./pages/admin/PaymentConfigPage'));
 
 // Public pages
 import LandingPage from './pages/public/LandingPage';
 import CustomPage from './pages/public/CustomPage';
+const AgentsMarketPage = lazy(() => import('./pages/public/AgentsMarketPage'));
+const AgentDetailPage = lazy(() => import('./pages/public/AgentDetailPage'));
+const SharePage = lazy(() => import('./pages/public/SharePage'));
 
 function LazyFallback() {
   return (
@@ -140,6 +144,11 @@ export default function App() {
                     {/* Public landing page */}
                     <Route path="/" element={<LandingPage />} />
 
+                    {/* Public agent market (no auth required) */}
+                    <Route path="/agents" element={<Suspense fallback={<LazyFallback />}><AgentsMarketPage /></Suspense>} />
+                    <Route path="/agents/:slug" element={<Suspense fallback={<LazyFallback />}><AgentDetailPage /></Suspense>} />
+                    <Route path="/share/:token" element={<Suspense fallback={<LazyFallback />}><SharePage /></Suspense>} />
+
                     {/* Public custom pages */}
                     <Route path="/p/:slug" element={<CustomPage />} />
 
@@ -196,6 +205,7 @@ export default function App() {
                         <Route path="branding" element={<Suspense fallback={<LazyFallback />}><AdminBrandingPage /></Suspense>} />
                         <Route path="about" element={<Suspense fallback={<LazyFallback />}><AdminAboutPage /></Suspense>} />
                         <Route path="llm-config" element={<Suspense fallback={<LazyFallback />}><LLMConfigPage /></Suspense>} />
+                        <Route path="payment-config" element={<Suspense fallback={<LazyFallback />}><AdminPaymentConfigPage /></Suspense>} />
                       </Route>
                       <Route path="/last/*" element={<LastAdminRedirect />} />
                     </Route>

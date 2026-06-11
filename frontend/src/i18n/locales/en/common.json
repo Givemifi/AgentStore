@@ -1,0 +1,29 @@
+{
+  "or": "or",
+  "email": "Email",
+  "password": "Password",
+  "name": "Name",
+  "back": "Back",
+  "dismiss": "Dismiss",
+  "loading": "Loading...",
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "retry": "Retry",
+  "copy": "Copy",
+  "copied": "Copied!",
+  "close": "Close",
+  "confirm": "Confirm",
+  "search": "Search",
+  "clear": "Clear",
+  "submit": "Submit",
+  "yes": "Yes",
+  "no": "No",
+  "credits": "credits",
+  "admin": "Admin",
+  "lang": {
+    "en": "English",
+    "zh": "中文"
+  }
+}

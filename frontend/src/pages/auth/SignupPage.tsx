@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserPlus, Github } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -25,10 +27,13 @@ function MicrosoftIcon({ className }: { className?: string }) {
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
   const { register } = useAuth();
   const { branding } = useBranding();
   const [searchParams] = useSearchParams();
   const rawInvitation = searchParams.get('invitation') || '';
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
+  const refCode = searchParams.get('ref') || '';
   // Validate invitation token format: alphanumeric, hyphens, underscores only
   const invitationToken = /^[a-zA-Z0-9_-]{1,128}$/.test(rawInvitation) ? rawInvitation : undefined;
 
@@ -43,18 +48,18 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      await register({ ...form, invitationToken });
-      navigate('/dashboard');
+      await register({ ...form, invitationToken, refCode: refCode || undefined });
+      navigate(redirectTo);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Registration failed');
+      setError(msg || t('signup.registrationFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  const heading = branding.signupHeading || 'Create your account';
-  const defaultSubtext = invitationToken ? 'Accept your invitation and join the team' : 'Get started with your own organization';
+  const heading = branding.signupHeading || t('signup.heading');
+  const defaultSubtext = invitationToken ? t('signup.subtextInvite') : t('signup.subtext');
   const subtext = branding.signupSubtext || defaultSubtext;
   const logoUrl = branding.logoUrl;
 
@@ -63,6 +68,10 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        {/* Language switcher */}
+        <div className="flex justify-end mb-2">
+          <LanguageSwitcher variant="full" />
+        </div>
         <div className="text-center mb-8">
           {logoUrl ? (
             <img src={logoUrl} alt={branding.appName} className="h-14 mx-auto mb-4 object-contain" />
@@ -92,7 +101,7 @@ export default function SignupPage() {
                     className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <GoogleIcon className="w-5 h-5" />
-                    Continue with Google
+                    {t('login.continueWithGoogle')}
                   </a>
                 )}
                 {providers?.github && (
@@ -101,7 +110,7 @@ export default function SignupPage() {
                     className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <Github className="w-5 h-5" />
-                    Continue with GitHub
+                    {t('login.continueWithGitHub')}
                   </a>
                 )}
                 {providers?.microsoft && (
@@ -110,7 +119,7 @@ export default function SignupPage() {
                     className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-dark-800 border border-dark-700 text-white font-medium rounded-lg hover:bg-dark-700 transition-all"
                   >
                     <MicrosoftIcon className="w-4 h-4" />
-                    Continue with Microsoft
+                    {t('login.continueWithMicrosoft')}
                   </a>
                 )}
               </div>
@@ -120,7 +129,7 @@ export default function SignupPage() {
                   <div className="w-full border-t border-dark-700" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-dark-900/50 text-dark-500">or</span>
+                  <span className="px-3 bg-dark-900/50 text-dark-500">{t('or', { ns: 'common' })}</span>
                 </div>
               </div>
             </>
@@ -128,38 +137,38 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('name', { ns: 'common' })}</label>
               <input
                 type="text"
                 required
                 value={form.displayName}
                 onChange={(e) => setForm({ ...form, displayName: e.target.value })}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                placeholder="Jane Doe"
+                placeholder={t('signup.namePlaceholder')}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('email', { ns: 'common' })}</label>
               <input
                 type="email"
                 required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                placeholder="you@example.com"
+                placeholder={t('login.emailPlaceholder')}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">{t('password', { ns: 'common' })}</label>
               <input
                 type="password"
                 required
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="w-full px-4 py-2.5 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                placeholder="Min 10 chars, mixed case, number, special"
+                placeholder={t('signup.passwordPlaceholder')}
               />
             </div>
 
@@ -168,14 +177,14 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium rounded-lg hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? t('signup.creatingAccount') : t('signup.createAccount')}
             </button>
           </form>
 
           <div className="text-center text-sm text-dark-400">
-            Already have an account?{' '}
+            {t('signup.alreadyHaveAccount')}{' '}
             <Link to="/login" className="text-primary-400 hover:text-primary-300 transition-colors">
-              Sign in
+              {t('signup.signIn')}
             </Link>
           </div>
         </div>

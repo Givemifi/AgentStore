@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Settings } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { isRootTenant, role } = useTenant();
   const { branding } = useBranding();
+  const { t } = useTranslation('app');
   const location = useLocation();
   const passkeysEnabled = branding?.authProviders?.passkeys ?? false;
   const mfaConfigEnabled = branding?.authProviders?.mfa ?? false;
@@ -28,15 +30,15 @@ export default function SettingsPage() {
   const pathTab = location.pathname.endsWith('/agents') ? 'agents' : location.pathname.endsWith('/models') ? 'models' : undefined;
 
   const tabs = useMemo(() => [
-    { key: 'profile' as const, label: 'Profile' },
-    ...(showSecurityTab ? [{ key: 'security' as const, label: 'Security' }] : []),
-    { key: 'sessions' as const, label: 'Sessions' },
-    { key: 'billing' as const, label: 'Billing' },
+    { key: 'profile' as const, label: t('settings.tabs.profile') },
+    ...(showSecurityTab ? [{ key: 'security' as const, label: t('settings.tabs.security') }] : []),
+    { key: 'sessions' as const, label: t('settings.tabs.sessions') },
+    { key: 'billing' as const, label: t('settings.tabs.billing') },
     ...(canManageMarketplaceSupply ? [
-      { key: 'agents' as const, label: 'Agents' },
-      { key: 'models' as const, label: 'Models' },
+      { key: 'agents' as const, label: t('settings.tabs.agents') },
+      { key: 'models' as const, label: t('settings.tabs.models') },
     ] : []),
-  ], [showSecurityTab, canManageMarketplaceSupply]);
+  ], [showSecurityTab, canManageMarketplaceSupply, t]);
 
   const [tab, setTab] = useState<SettingsTab>(() => {
     if (pathTab && tabs.some(t => t.key === pathTab)) return pathTab as SettingsTab;
@@ -55,9 +57,9 @@ export default function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <Settings className="w-7 h-7 text-primary-400" />
-          Settings
+          {t('settings.heading')}
         </h1>
-        <p className="text-dark-400 mt-1">Manage your account</p>
+        <p className="text-dark-400 mt-1">{t('settings.subtext')}</p>
       </div>
 
       {/* Tab Navigation */}
