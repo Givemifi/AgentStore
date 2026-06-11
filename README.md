@@ -44,6 +44,8 @@ AgentStore eliminates that. Fork it, point an AI agent at it, and start building
 - CLI tools for server administration
 - Auto-versioning with database migrations
 - Production deployment on Fly.io
+- **Agent knowledge bases (RAG)** — upload domain documents per agent, retrieve relevant chunks at chat time
+- **Data annotation closed loop** — user feedback → admin workbench → promote ideal answers to knowledge base → export SFT JSONL
 
 This is open-source infrastructure for the agentic era of software — where the person with the idea is also the person who ships it. The codebase follows consistent patterns that AI agents navigate fluently, so you can keep evolving it the same way it was built.
 
@@ -227,6 +229,16 @@ If you're evaluating SaaS boilerplates, you've probably looked at ShipFast, Supa
 - Data export (GDPR-friendly)
 - Billing management (plan selection, credit purchases, invoice history, PDF download)
 - Onboarding flow
+
+### Agent Marketplace
+- 23 curated preset agents across 7 categories (legal, finance, marketing, support, coding, writing, translation)
+- SSE streaming chat with Markdown rendering and code-block copy
+- Multimodal: voice (hold-to-talk, Web Speech API), image vision, document text extraction (PDF / Word / TXT, parsed in-browser)
+- Public agent catalog (`/agents`) — browsable without login
+- Shareable conversation links
+- **Knowledge bases per agent** — admins upload docs/text/QA pairs; content is chunked, embedded (OpenAI-compatible), and retrieved via cosine similarity at chat time; retrieval failures degrade gracefully without blocking chat
+- **Data annotation workbench** (`/admin/annotations`) — review user feedback (👍/👎), score quality (1–5), tag issues (wrong fact, hallucination, etc.), write ideal answers, promote to knowledge base instantly, export SFT JSONL for fine-tuning
+- **Conversation management** — delete conversations (cascades to messages and annotations), rename inline, copy any assistant reply, regenerate a reply in place
 
 ### Built-in API Documentation
 - Interactive HTML API reference at `/api/docs` with expandable endpoint details
