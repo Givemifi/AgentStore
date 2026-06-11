@@ -1,8 +1,8 @@
 # AgentStore
 
-[![CI](https://github.com/jonradoff/agentstore/actions/workflows/ci.yml/badge.svg)](https://github.com/jonradoff/agentstore/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/jonradoff/agentstore/branch/master/graph/badge.svg)](https://codecov.io/gh/jonradoff/agentstore)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jonradoff/agentstore)](https://goreportcard.com/report/github.com/jonradoff/agentstore)
+[![CI](https://github.com/Givemifi/AgentStore/actions/workflows/ci.yml/badge.svg)](https://github.com/Givemifi/AgentStore/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Givemifi/AgentStore/branch/master/graph/badge.svg)](https://codecov.io/gh/Givemifi/AgentStore)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Givemifi/AgentStore)](https://goreportcard.com/report/github.com/Givemifi/AgentStore)
 
 **A marketplace for practical AI agents, built on an open-source SaaS foundation.**
 
@@ -335,8 +335,8 @@ A built-in [Model Context Protocol](https://modelcontextprotocol.io) server give
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/jonradoff/agentstore.git
-cd agentstore
+git clone https://github.com/Givemifi/AgentStore.git
+cd AgentStore
 ```
 
 ### 2. Run the setup script

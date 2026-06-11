@@ -38,6 +38,14 @@ func NewPromotionsHandler(database *db.MongoDB, stripeSvc *stripeservice.Service
 
 // ListPromotions returns all Stripe promotion codes.
 func (h *PromotionsHandler) ListPromotions(w http.ResponseWriter, r *http.Request) {
+	if h.stripe == nil {
+		respondWithJSON(w, http.StatusOK, map[string]interface{}{
+			"promotions":   []interface{}{},
+			"productNames": map[string]string{},
+		})
+		return
+	}
+
 	params := &stripe.PromotionCodeListParams{}
 	params.Limit = stripe.Int64(100)
 	params.AddExpand("data.coupon")
@@ -241,6 +249,11 @@ func (h *PromotionsHandler) ListEligibleProducts(w http.ResponseWriter, r *http.
 
 // CreatePromotion creates a new Stripe coupon + promotion code.
 func (h *PromotionsHandler) CreatePromotion(w http.ResponseWriter, r *http.Request) {
+	if h.stripe == nil {
+		respondWithError(w, http.StatusServiceUnavailable, "Billing not configured")
+		return
+	}
+
 	var req struct {
 		Code           string  `json:"code"`
 		Name           string  `json:"name"`
@@ -444,6 +457,11 @@ func (h *PromotionsHandler) resolveStripeProducts(ctx context.Context, itemType 
 // UpdatePromotion updates an existing promotion code and/or its coupon.
 // Stripe allows updating: promotion code active status, coupon name.
 func (h *PromotionsHandler) UpdatePromotion(w http.ResponseWriter, r *http.Request) {
+	if h.stripe == nil {
+		respondWithError(w, http.StatusServiceUnavailable, "Billing not configured")
+		return
+	}
+
 	var req struct {
 		ID         string  `json:"id"`         // Promotion code ID
 		CouponID   string  `json:"couponId"`   // Coupon ID
@@ -490,6 +508,11 @@ func (h *PromotionsHandler) UpdatePromotion(w http.ResponseWriter, r *http.Reque
 
 // DeactivatePromotion deactivates a Stripe promotion code.
 func (h *PromotionsHandler) DeactivatePromotion(w http.ResponseWriter, r *http.Request) {
+	if h.stripe == nil {
+		respondWithError(w, http.StatusServiceUnavailable, "Billing not configured")
+		return
+	}
+
 	var req struct {
 		ID string `json:"id"`
 	}

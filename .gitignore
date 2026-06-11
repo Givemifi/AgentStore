@@ -2,6 +2,9 @@
 backend/config/dev.yaml
 backend/config/prod.yaml
 
+# Local developer notes (may contain test credentials)
+LOCAL_TESTING.md
+
 # Go binaries
 backend/agentstore
 backend/agentstore-cli

@@ -2,7 +2,46 @@
 
 > 每次 AI 改动追加一条:日期、做了什么、是否改业务代码、风险、下一步。最新在上。
 
-## 2026-06-11 — 全球化完善第二批(M4a/M4b/M4c/M5)
+## 2026-06-11 — 打磨已有功能 + 开源就绪清理
+
+**本次做了什么**
+
+真实端到端测试全栈（MongoDB + 后端 :4290 + 前端 :4280），验证核心链路，发现并修复 4 个真实问题：
+
+**Bug 1 — `/api/admin/promotions` HTTP 500（非 Stripe 部署全部受影响）**
+- `backend/internal/api/handlers/promotions.go`：`ListPromotions` 无条件调用 Stripe SDK，未配置 Stripe 时直接报 500。
+- 修复：`ListPromotions` 加 `h.stripe == nil` 守卫，返回 200 + 空列表（与 billing.go 全系列守卫模式一致）。
+- 同步给 `CreatePromotion` / `UpdatePromotion` / `DeactivatePromotion` 加 503 "Billing not configured" 守卫。
+
+**Bug 2 — 前端 lint 阻断 CI（`npm run lint` 退出码 1）**
+- `frontend/src/components/PublicFooter.tsx`：`const { t } = useTranslation('common')` 从未使用，触发 `@typescript-eslint/no-unused-vars` error，阻断 ci.yml 前端 job。
+- 修复：删掉未使用的 `useTranslation` import 与 `t` 声明。Footer 文案硬编码不变。
+
+**开源清理 1 — 移除 dev.yaml 硬编码密钥**
+- `backend/config/dev.yaml:45-46`：含真实 LLM API key + base_url 明文（该字段是死配置，Go Config 结构体无 `llm` 字段，不被消费）。
+- 清空 default 值：`${OPENAI_API_KEY:}` / `${OPENAI_BASE_URL:}`。文件 gitignored，不在历史中；已建议轮换/作废该密钥。
+
+**开源清理 2 — 删除死代码与编译产物**
+- 删 `frontend/src/components/AdminRoute.tsx`（全仓 0 引用）。
+- 删 `frontend/src/components/ui/Alert.tsx` + 从 `ui/index.ts` 移除其 re-export（无任何 JSX 渲染）。
+- 删 `backend/server` 27MB 编译产物（gitignored，工作树干净）。
+
+**是否修改业务代码**：极小范围。promotions.go 加防御性 nil 守卫（只影响未配 Stripe 的路径，已配 Stripe 行为不变）。不动 credits/stripe/chat/auth 核心路径。
+
+**当前风险**
+- `promotions.go` 守卫变更：已在运行中后端上活体验证（200 + 空列表；create/update/deactivate 503）。SSE 聊天 + 积分扣费回归通过。
+- 删掉的 `Alert.tsx` 无渲染站点，tsc + 166 测试全过，无引用断裂。
+- dev.yaml 改动仅清空占位 default；real LLM 凭据从 MongoDB 读取，不受影响。
+
+**下一步建议**
+1. 46 个 React 19 lint warning（`set-state-in-effect`）留作单独一轮清理。
+2. 完成 Stripe 配置后端到端测试 Promotions 完整写操作（create/deactivate）。
+3. 轮换/作废已暴露的 `sk-OTwuyPE3...` LLM 密钥。
+4. 准备 TASKS.md 更新并发起 git commit / GitHub push（需明确要求）。
+
+---
+
+
 
 **本次做了什么**
 

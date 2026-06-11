@@ -25,6 +25,7 @@
 - **M4b — 对话分享**：`share_links` collection(快照式)；`POST /chat/conversations/:id/share`；`GET /api/public/share/:token`；ChatPage 分享按钮；`/share/:token` 公开分享页
 - **M4c — 推荐码系统**：User 模型加 `ReferralCode/ReferredBy`；注册时生成唯一推荐码；邮箱验证后异步发放双向奖励；`growth.referral_reward_referee/referrer` configstore 配置(默认 0)；Settings → Profile 「邀请好友」区块含推荐链接复制
 - **M5 — 信任合规**：GDPR 数据导出(`/auth/export-data`)和删号(`/auth/delete-account`)已实现；隐私/条款通过 branding pages(`/p/privacy-policy`, `/p/terms-of-service`)承载；`PublicFooter` 组件加到市场页；User 类型加 `referralCode/referredBy`
+- **打磨与开源就绪（2026-06-11）**：修 `/api/admin/promotions` 500（补 nil 守卫）；修前端 lint CI 阻断（PublicFooter 未使用 t）；清 dev.yaml 硬编码 LLM key；删死代码（AdminRoute、ui/Alert）和编译产物。
 
 ## 遗留问题
 
@@ -35,6 +36,8 @@
 - **推荐奖励默认为 0**：需 admin 配置 `growth.referral_reward_referee/referrer` 才能实际发奖励。
 - **分享页 OG 注入**：spaHandler 尚未对 `/share/:token` 路径单独注入对话标题 OG（可扩展）。
 - **Footer 中的联系邮件**：`PublicFooter` 中 `hello@agentstore.ai` 为占位符，上线前需更新或从 configstore 读取。
+- **46 个 lint warning 待清理**：主要是 React 19 `set-state-in-effect`（非 CI 阻断，可单独一轮处理）。
+- **admin/settings/支付流 i18n 债务**：约 57 处 CJK 硬编码字符串未走 i18n namespace（对运营方影响小，留作后续里程碑）。
 
 ## 下一步优先任务
 

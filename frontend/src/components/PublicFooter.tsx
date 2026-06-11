@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 export function PublicFooter() {
-  const { t } = useTranslation('common');
   const year = 2026;
 
   return (
