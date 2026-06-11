@@ -1,6 +1,6 @@
 # AgentStore — Claude Code 启动须知
 
-> 每次启动只需读本文件。继续开发前先读 `docs/START_HERE.md`。
+> 每次启动只需读本文件。
 
 ## 项目是什么
 
@@ -15,11 +15,11 @@
 
 - 多租户 + RBAC(owner/admin/user)、JWT(access+refresh)+ `X-Tenant-ID`
 - 认证全套(密码、OAuth、magic link、MFA/TOTP)
-- Agent 市场(预置 6 个 demo agent)+ 对话(SSE 流式)
+- Agent 市场(24 个精品 agent)+ 对话(SSE 流式)+ 多模态(语音/图片/文档)
 - 积分系统(订阅积分 + 购买积分包,对话按 Agent 成本扣费,余额不足拦截)
 - Stripe 计费(checkout、订阅、portal、税、退款、争议、优惠码)
 - admin 后台(用户/租户/套餐/计费/品牌/健康/日志/API key/webhook/遥测/配置/上线就绪)
-- **多模态 + 语音(本轮新增)**:Agent 对话支持按住说话(Web Speech API)、图片(base64 vision)、文档(PDF/Word/TXT 前端提取文字)上传,手机浏览器适配
+- 一键部署(docker-compose)、网页安装向导、GHCR 镜像发布、三语文档(中/英/日)
 
 ## 启动 / 测试 / 构建命令
 
@@ -35,8 +35,6 @@ cd backend && go build ./... && go vet ./... && go test ./...
 cd frontend && npx tsc --noEmit && npm run lint && npm test -- --run
 ```
 
-本地凭据、测试清单见 `LOCAL_TESTING.md`。
-
 ## 核心目录
 
 - `backend/internal/api/handlers/` — HTTP handler(auth/admin/tenant/billing/chat/agent…)
@@ -44,16 +42,15 @@ cd frontend && npx tsc --noEmit && npm run lint && npm test -- --run
 - `backend/internal/db/` — 连接、索引、JSON Schema(`schema.go`)
 - `backend/internal/credits/` `…/stripe/` `…/llm/` — 积分、计费、LLM(高风险)
 - `backend/internal/middleware/` — 认证、租户解析、RBAC、计费拦截
+- `backend/internal/bootstrap/` — 首次初始化逻辑(CLI 和 HTTP 共用)
 - `frontend/src/pages/{app,admin,auth,public}/` — 各角色页面
 - `frontend/src/api/client.ts` — API 客户端 + token 刷新
 - `frontend/src/utils/attachments.ts`、`frontend/src/hooks/useSpeechRecognition.ts` — 多模态/语音
 
 ## 必读文档
 
-- `docs/START_HERE.md` — /clear 后第一篇
 - `docs/ARCHITECTURE.md` — 技术栈、结构、数据流
 - `docs/BUSINESS_RULES.md` — 业务规则与不可误改逻辑
-- `docs/TASKS.md` — 已完成 / 遗留 / 下一步
 - `docs/DECISIONS.md` — 已定型的技术/产品决策
 - `docs/DEVELOPMENT.md` — 完整开发/验证流程
 - `docs/DEPLOYMENT.md` — 部署
@@ -71,6 +68,5 @@ cd frontend && npx tsc --noEmit && npm run lint && npm test -- --run
 
 - 改了架构/模块/数据流 → `docs/ARCHITECTURE.md`
 - 改了业务规则/权限/计费/订单 → `docs/BUSINESS_RULES.md`
-- 完成任务/产生新遗留 → `docs/TASKS.md`
 - 做了不该反复推翻的决策 → `docs/DECISIONS.md`
-- 任何一次 AI 改动 → 追加 `docs/CHANGELOG_AI.md`(日期、做了什么、是否改业务代码、风险、下一步)
+
